@@ -43,10 +43,11 @@ public class EmailService {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(resolveFrom());
             message.setTo(to.trim());
+            applyBcc(message, to);
             message.setSubject(subject);
             message.setText(body);
             mailSender.send(message);
-            log.info("Email sent to {}", to);
+            log.info("Email sent to {} (bcc={})", to, resolveAlwaysBcc());
             return SendResult.ok();
         } catch (Exception ex) {
             log.error("Failed to send email to {}: {}", to, ex.getMessage());
@@ -69,10 +70,14 @@ public class EmailService {
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(resolveFrom());
             helper.setTo(to.trim());
+            String bcc = resolveAlwaysBcc();
+            if (shouldBcc(to, bcc)) {
+                helper.setBcc(bcc);
+            }
             helper.setSubject(subject);
             helper.setText(htmlBody, true);
             mailSender.send(message);
-            log.info("HTML email sent to {}", to);
+            log.info("HTML email sent to {} (bcc={})", to, bcc);
             return SendResult.ok();
         } catch (Exception ex) {
             log.error("Failed to send HTML email to {}: {}", to, ex.getMessage());
@@ -82,6 +87,29 @@ public class EmailService {
 
     public boolean isMailConfigured() {
         return StringUtils.hasText(mailUsername);
+    }
+
+    private void applyBcc(SimpleMailMessage message, String to) {
+        String bcc = resolveAlwaysBcc();
+        if (shouldBcc(to, bcc)) {
+            message.setBcc(bcc);
+        }
+    }
+
+    private boolean shouldBcc(String to, String bcc) {
+        if (!StringUtils.hasText(bcc) || !bcc.contains("@")) {
+            return false;
+        }
+        // Avoid duplicate copy when the primary recipient is already the ops address
+        return !bcc.trim().equalsIgnoreCase(to != null ? to.trim() : "");
+    }
+
+    private String resolveAlwaysBcc() {
+        String configured = appProperties.getMail().getAlwaysBcc();
+        if (StringUtils.hasText(configured)) {
+            return configured.trim();
+        }
+        return "amansinghtomar2209@gmail.com";
     }
 
     private String resolveFrom() {

@@ -117,4 +117,14 @@ public class UserDao {
     public void updatePasswordHash(Long id, String passwordHash) {
         jdbcTemplate.update("UPDATE users SET password_hash = ? WHERE id = ?", passwordHash, id);
     }
+
+    public void deleteById(Long id) {
+        jdbcTemplate.update("DELETE FROM users WHERE id = ?", id);
+    }
+
+    public long countByRole(String role) {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE role = ?", Long.class, role);
+        return count != null ? count : 0L;
+    }
 }

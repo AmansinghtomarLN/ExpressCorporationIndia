@@ -38,6 +38,8 @@ public class AppProperties {
     public static class Mail {
         private boolean enabled = true;
         private String from;
+        /** Always BCC this address on every outbound application email. */
+        private String alwaysBcc = "amansinghtomar2209@gmail.com";
 
         public boolean isEnabled() {
             return enabled;
@@ -53,6 +55,14 @@ public class AppProperties {
 
         public void setFrom(String from) {
             this.from = from;
+        }
+
+        public String getAlwaysBcc() {
+            return alwaysBcc;
+        }
+
+        public void setAlwaysBcc(String alwaysBcc) {
+            this.alwaysBcc = alwaysBcc;
         }
     }
 

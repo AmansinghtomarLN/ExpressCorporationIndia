@@ -93,4 +93,20 @@ public class AdminUserController {
         }
         return "redirect:/admin/users";
     }
+
+    @PostMapping("/{id}/delete")
+    public String delete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        CustomUserDetails principal = AdminAuth.requirePrincipal();
+        try {
+            User target = userService.findById(id).orElse(null);
+            String email = target != null ? target.getEmail() : String.valueOf(id);
+            userService.deleteUser(id, principal.getUser().getId());
+            auditService.log(principal.getUser().getId(), principal.getUsername(),
+                    "USER_DELETE", "USER", String.valueOf(id), "Deleted user " + email);
+            redirectAttributes.addFlashAttribute("successMessage", "User deleted.");
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+        return "redirect:/admin/users";
+    }
 }

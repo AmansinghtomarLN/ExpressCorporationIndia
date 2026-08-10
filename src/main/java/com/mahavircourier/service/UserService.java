@@ -104,6 +104,22 @@ public class UserService implements UserDetailsService {
         userDao.updatePasswordHash(userId, passwordEncoder.encode(newPassword));
     }
 
+    /**
+     * Permanently deletes a user. Blocks deleting yourself or the last remaining ADMIN.
+     */
+    @Transactional
+    public void deleteUser(Long userId, Long actingUserId) {
+        User target = userDao.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (actingUserId != null && actingUserId.equals(userId)) {
+            throw new IllegalArgumentException("You cannot delete your own account while logged in");
+        }
+        if ("ADMIN".equalsIgnoreCase(target.getRole()) && userDao.countByRole("ADMIN") <= 1) {
+            throw new IllegalArgumentException("Cannot delete the last ADMIN account");
+        }
+        userDao.deleteById(userId);
+    }
+
     @Transactional
     public void updateProfile(User user) {
         userDao.updateProfile(user);

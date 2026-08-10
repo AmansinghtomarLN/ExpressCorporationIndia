@@ -135,6 +135,7 @@ On each successful status update:
 - Enable / disable account
 - Change role
 - Reset password
+- Delete user (cannot delete yourself or the last ADMIN)
 
 ### 4.5 Branches (`/admin/branches`)
 - Create / edit / delete branches
@@ -325,7 +326,9 @@ Without these, the app still runs; notifications are logged as `FAILED`/`SKIPPED
 - [x] Edit/delete tracking events
 - [x] Print label
 - [x] CSV export + bulk status update
-- [x] User management (create/roles/enable/reset password)
+- [x] User management (create/roles/enable/reset password/delete)
+...
+- [x] Real email via Spring Mail / Gmail SMTP (always BCC ops inbox)
 - [x] Branch CRUD
 - [x] Contact inbox
 - [x] Rate cards + freight calculation
@@ -346,7 +349,7 @@ Without these, the app still runs; notifications are logged as `FAILED`/`SKIPPED
 - [x] Daily / weekly / monthly / custom operations reports (full volume + financial calcs)
 - [x] Scheduled report emails to `app.report.email` (default: amansinghtomar2209@gmail.com)
 - [x] Manual “Email this report now” from `/admin/reports`
-- [x] Real email via Spring Mail / Gmail SMTP
+- [x] Real email via Spring Mail / Gmail SMTP (always BCC `amansinghtomar2209@gmail.com`)
 - [x] Real SMS via Twilio API (when credentials configured)
 - [x] Notification log stores SENT / FAILED / SKIPPED from real providers
 - [x] Actuator health/metrics/prometheus

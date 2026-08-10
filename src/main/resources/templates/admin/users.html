@@ -97,6 +97,11 @@
                                 <input type="password" name="password" placeholder="New password" required minlength="6">
                                 <button type="submit" class="btn btn-sm btn-dark">Reset Password</button>
                             </form>
+                            <form th:action="@{/admin/users/{id}/delete(id=${u.id})}" method="post"
+                                  onsubmit="return confirm('Delete this user permanently? This cannot be undone.');">
+                                <button type="submit" class="btn btn-sm btn-primary"
+                                        th:disabled="${#authentication != null and #authentication.name == u.email}">Delete</button>
+                            </form>
                         </div>
                     </td>
                 </tr>
