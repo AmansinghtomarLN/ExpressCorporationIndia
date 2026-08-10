@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Reports | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container">
+        <span class="eyebrow">Admin Console</span>
+        <h1>Operations Reports</h1>
+        <p>Daily, weekly and monthly reports with full volume and financial calculations.
+            Scheduled emails go to <strong th:text="${reportEmail}">ops@example.com</strong>.</p>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <form class="admin-filters" method="get" th:action="@{/admin/reports}">
+            <div class="admin-filters-row">
+                <div class="form-group">
+                    <label for="period">Period</label>
+                    <select id="period" name="period">
+                        <option value="DAILY" th:selected="${period == 'DAILY'}">Daily (today)</option>
+                        <option value="WEEKLY" th:selected="${period == 'WEEKLY'}">Weekly (this week)</option>
+                        <option value="MONTHLY" th:selected="${period == 'MONTHLY'}">Monthly (this month)</option>
+                        <option value="CUSTOM" th:selected="${period == 'CUSTOM'}">Custom range</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="from">From</label>
+                    <input type="date" id="from" name="from" th:value="${from}">
+                </div>
+                <div class="form-group">
+                    <label for="to">To</label>
+                    <input type="date" id="to" name="to" th:value="${to}">
+                </div>
+                <div class="form-group admin-filter-actions">
+                    <label>&nbsp;</label>
+                    <div class="admin-filter-buttons">
+                        <button type="submit" class="btn btn-primary">Generate</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="admin-toolbar" th:if="${report}">
+            <h2 style="margin:0;" th:text="${report.title}">Report</h2>
+            <form th:action="@{/admin/reports/email}" method="post">
+                <input type="hidden" name="period" th:value="${period}">
+                <input type="hidden" name="from" th:value="${from}">
+                <input type="hidden" name="to" th:value="${to}">
+                <button type="submit" class="btn btn-dark">Email this report now</button>
+            </form>
+        </div>
+
+        <div class="kpi-grid" th:if="${report}">
+            <div class="kpi-card"><span class="muted">Booked</span><strong th:text="${report.shipmentsBooked}">0</strong></div>
+            <div class="kpi-card"><span class="muted">Delivered</span><strong th:text="${report.deliveredInPeriod}">0</strong></div>
+            <div class="kpi-card"><span class="muted">Delivery rate %</span><strong th:text="${report.deliveryRatePct}">0</strong></div>
+            <div class="kpi-card"><span class="muted">Cancel/RTO %</span><strong th:text="${report.cancelRatePct}">0</strong></div>
+            <div class="kpi-card"><span class="muted">Freight (Rs.)</span><strong th:text="${report.totalFreight}">0</strong></div>
+            <div class="kpi-card"><span class="muted">COD (Rs.)</span><strong th:text="${report.totalCod}">0</strong></div>
+            <div class="kpi-card"><span class="muted">Collected (Rs.)</span><strong th:text="${report.collectedRevenue}">0</strong></div>
+            <div class="kpi-card"><span class="muted">Unpaid open (Rs.)</span><strong th:text="${report.unpaidInvoiceTotal}">0</strong></div>
+        </div>
+
+        <div class="form-row" th:if="${report}" style="margin-top:20px;">
+            <div class="form-card" style="margin:0;">
+                <h3>Status breakdown</h3>
+                <ul>
+                    <li th:each="e : ${report.statusBreakdown}">
+                        <span th:text="${e.key}">STATUS</span>:
+                        <strong th:text="${e.value}">0</strong>
+                    </li>
+                </ul>
+                <p th:if="${#maps.isEmpty(report.statusBreakdown)}" class="muted">No shipments in period.</p>
+            </div>
+            <div class="form-card" style="margin:0;">
+                <h3>Service &amp; cities</h3>
+                <h4>Services</h4>
+                <ul>
+                    <li th:each="e : ${report.serviceBreakdown}">
+                        <span th:text="${#strings.replace(e.key,'_',' ')}">Service</span>:
+                        <strong th:text="${e.value}">0</strong>
+                    </li>
+                </ul>
+                <h4>Top origins</h4>
+                <ul>
+                    <li th:each="e : ${report.topOriginCities}">
+                        <span th:text="${e.key}">City</span>:
+                        <strong th:text="${e.value}">0</strong>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div th:if="${report}" style="overflow-x:auto; margin-top:24px;">
+            <h3>Shipment lines</h3>
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Tracking</th>
+                    <th>Status</th>
+                    <th>Service</th>
+                    <th>Route</th>
+                    <th>Weight</th>
+                    <th>Freight</th>
+                    <th>COD</th>
+                    <th>Expected</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="line : ${report.shipmentLines}">
+                    <td th:text="${line['tracking_id']}">ID</td>
+                    <td th:text="${line['status']}">STATUS</td>
+                    <td th:text="${line['service_type']}">SVC</td>
+                    <td th:text="${line['origin_city'] + ' → ' + line['destination_city']}">Route</td>
+                    <td th:text="${line['weight_kg']}">0</td>
+                    <td th:text="${line['freight_charge']}">0</td>
+                    <td th:text="${line['cod_amount']}">0</td>
+                    <td th:text="${line['expected_delivery']}">Date</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Monitoring | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container">
+        <span class="eyebrow">Admin Console</span>
+        <h1>System Monitoring</h1>
+        <p>Live health, operational thresholds, and channel readiness. Actuator endpoints:
+            <code>/actuator/health</code>, <code>/actuator/metrics</code>, <code>/actuator/prometheus</code>.</p>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <div class="admin-toolbar">
+            <h2 style="margin:0;"
+                th:text="${snapshot.healthy} ? 'Status: HEALTHY' : 'Status: ATTENTION REQUIRED'">Status</h2>
+            <form th:action="@{/admin/monitoring/run-alerts}" method="post">
+                <button type="submit" class="btn btn-dark">Run alert check now</button>
+            </form>
+        </div>
+
+        <div class="kpi-grid" th:if="${snapshot}">
+            <div class="kpi-card">
+                <span class="muted">Database</span>
+                <strong th:text="${snapshot.databaseUp} ? 'UP' : 'DOWN'">UP</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="muted">Email configured</span>
+                <strong th:text="${snapshot.mailConfigured} ? 'YES' : 'NO'">NO</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="muted">SMS (Twilio) configured</span>
+                <strong th:text="${snapshot.smsConfigured} ? 'YES' : 'NO'">NO</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="muted">Delayed shipments</span>
+                <strong th:text="${snapshot.delayedShipments}">0</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="muted">Unpaid invoices</span>
+                <strong th:text="${snapshot.unpaidInvoices}">0</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="muted">Failed notifications</span>
+                <strong th:text="${snapshot.failedNotifications}">0</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="muted">In transit / hub</span>
+                <strong th:text="${snapshot.inTransit}">0</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="muted">Out for delivery</span>
+                <strong th:text="${snapshot.outForDelivery}">0</strong>
+            </div>
+        </div>
+
+        <div class="form-card wide" style="margin-top:20px;">
+            <h3>Active alerts</h3>
+            <div th:if="${#lists.isEmpty(snapshot.activeAlerts)}" class="alert alert-success">
+                No active alerts.
+            </div>
+            <ul th:if="${!#lists.isEmpty(snapshot.activeAlerts)}">
+                <li th:each="a : ${snapshot.activeAlerts}" th:text="${a}">Alert</li>
+            </ul>
+            <p class="muted">Alerts are also emailed automatically every 30 minutes when thresholds are breached.</p>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

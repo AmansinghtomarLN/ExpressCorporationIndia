@@ -67,8 +67,10 @@ public class SecurityConfig {
                         "/", "/home", "/about", "/services", "/branches", "/contact", "/contact/**",
                         "/track", "/track/**", "/api/track/**",
                         "/login", "/signup", "/signup/**",
-                        "/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico", "/error"
+                        "/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico", "/error",
+                        "/actuator/health", "/actuator/health/**", "/actuator/info"
                 ).permitAll()
+                .requestMatchers("/actuator/**").hasAnyRole("ADMIN", "STAFF")
                 .requestMatchers("/admin/**").hasAnyRole("ADMIN", "STAFF")
                 .anyRequest().authenticated()
             )

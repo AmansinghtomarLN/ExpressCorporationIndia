@@ -72,7 +72,7 @@ Web app for courier **booking**, **public tracking**, **customer account**, and 
 
 Admin UI lives under `/admin` with a shared admin nav:
 
-Dashboard · Shipments · Users · Branches · Contacts · Rates · Invoices · Notifications · Audit
+Dashboard · Shipments · Reports · Monitoring · Users · Branches · Contacts · Rates · Invoices · Notifications · Audit
 
 ### 4.1 Dashboard (`/admin`)
 - KPI cards:
@@ -161,14 +161,43 @@ On each successful status update:
 - Status actions: **PAID**, **UNPAID**, **COD_COLLECTED**
 
 ### 4.9 Notifications (`/admin/notifications`)
-- In-app log of simulated EMAIL/SMS on status changes
-- Not connected to real SMTP/SMS providers yet
-- Useful as a hook point for future gateway integration
+- Delivery log for EMAIL/SMS with status **SENT / FAILED / SKIPPED**
+- Driven by real Spring Mail + Twilio providers
 
 ### 4.10 Audit (`/admin/audit`)
-- Append-only log of admin mutating actions  
+- Append-only log of admin mutating actions
   (create/edit/cancel shipment, user changes, branch/rate changes, invoice status, etc.)
+- Login success / failure / logout events (with IP)
+- Scheduled report + monitor alert events
 - Shows actor email, action, entity, details, timestamp
+
+### 4.11 Reports (`/admin/reports`)
+- Generate **Daily / Weekly / Monthly / Custom** reports
+- Calculations include:
+  - Booked / delivered / cancelled-RTO counts
+  - Delivery rate %, cancel rate %
+  - Freight + COD totals, gross booked value, avg revenue/shipment, avg weight
+  - Invoice freight/COD created, collected revenue, open unpaid totals
+  - Status / service / top-origin breakdowns
+  - Up to 500 shipment detail lines
+- **Scheduled emails** (08:00):
+  - Daily → yesterday
+  - Weekly → previous Mon–Sun (Mondays)
+  - Monthly → previous month (1st)
+- Recipient: `app.report.email` (default `amansinghtomar2209@gmail.com`)
+- Manual email button on the reports page
+
+### 4.12 Monitoring (`/admin/monitoring`)
+- DB up/down, mail/SMS configuration readiness
+- Delayed shipments, unpaid invoices, failed notifications, live pipeline counts
+- Active alert list
+- Auto alert email every 30 minutes when thresholds breached
+- Manual “Run alert check now”
+- Actuator: `/actuator/health`, `/actuator/metrics`, `/actuator/prometheus` (admin-protected except health/info)
+
+### 4.13 Real notifications
+- Status changes send **real email** (to booking user’s email) and **real SMS** (Twilio → receiver phone)
+- Results logged as SENT / FAILED / SKIPPED in Notifications admin screen
 
 ---
 
@@ -183,8 +212,8 @@ On each successful status update:
 | `contact_messages` | Contact form inbox (+ read status) |
 | `rate_cards` | Pricing |
 | `invoices` | Billing / COD collection state |
-| `notifications` | Simulated notify log |
-| `audit_logs` | Admin action audit trail |
+| `notifications` | Real email/SMS delivery log (SENT/FAILED/SKIPPED) |
+| `audit_logs` | Admin action + login/logout audit trail |
 
 **Extra shipment fields (ops):**
 `assigned_branch_id`, `assigned_hub`, `courier_name`, `courier_phone`, `freight_charge`, `cod_amount`
@@ -202,6 +231,8 @@ On each successful status update:
 | `/dashboard` | Customer | My shipments |
 | `/admin` | Admin/Staff | Ops dashboard |
 | `/admin/shipments` | Admin/Staff | Shipment console |
+| `/admin/reports` | Admin/Staff | Daily/weekly/monthly reports + email |
+| `/admin/monitoring` | Admin/Staff | Health, alerts, channel readiness |
 | `/admin/users` | Admin/Staff | User management |
 | `/admin/branches` | Admin/Staff | Branch CRUD |
 | `/admin/contacts` | Admin/Staff | Contact inbox |
@@ -209,6 +240,9 @@ On each successful status update:
 | `/admin/invoices` | Admin/Staff | Invoices |
 | `/admin/notifications` | Admin/Staff | Notify log |
 | `/admin/audit` | Admin/Staff | Audit log |
+| `/actuator/health` | Public | Liveness/readiness |
+| `/actuator/metrics` | Admin/Staff | App metrics |
+| `/actuator/prometheus` | Admin/Staff | Prometheus scrape |
 
 ---
 
@@ -234,6 +268,33 @@ java -jar target/mahavir-courier.jar
 `prod` sets `spring.sql.init.mode=never` so schema/data scripts do not re-run on every restart.
 
 Env overrides: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `SERVER_PORT`, etc. (see `application.properties`).
+
+### Email + SMS setup (required for real delivery)
+
+**Gmail SMTP (reports + status emails + alerts):**
+```bash
+export MAIL_USERNAME="your-gmail@gmail.com"
+export MAIL_PASSWORD="your-gmail-app-password"   # Google Account → App passwords
+export MAIL_FROM="your-gmail@gmail.com"
+export REPORT_EMAIL="amansinghtomar2209@gmail.com"
+```
+
+**Twilio SMS (status SMS to receiver phones):**
+```bash
+export TWILIO_ACCOUNT_SID="ACxxxxxxxx"
+export TWILIO_AUTH_TOKEN="xxxxxxxx"
+export TWILIO_FROM_NUMBER="+1xxxxxxxxxx"
+```
+
+Without these, the app still runs; notifications are logged as `FAILED`/`SKIPPED`, and report emails will fail until mail is configured.
+
+### Schedules (Asia/system default JVM timezone)
+| Job | Default cron | Meaning |
+|-----|--------------|---------|
+| Daily report | `0 0 8 * * *` | 08:00 every day (covers yesterday) |
+| Weekly report | `0 0 8 * * MON` | 08:00 Mondays |
+| Monthly report | `0 0 8 1 * *` | 08:00 on the 1st |
+| Monitor alerts | `0 0/30 * * * *` | Every 30 minutes |
 
 ---
 
@@ -275,11 +336,22 @@ Env overrides: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `SERVER_PORT`, etc. (see 
 - [x] Admin nav across all admin pages
 
 ### Intentionally deferred / future
-- [ ] Real email/SMS gateway (Twilio/SMTP) — log exists, provider not wired
 - [ ] Slim public tracking API DTO (PII still exposed on API by decision)
 - [ ] Automated test suite (`src/test` still minimal/empty)
 - [ ] Favicon asset
 - [ ] Flyway/Liquibase formal migrations (currently schema.sql + idempotent ALTERs)
+- [ ] PDF/Excel report export (HTML email + on-screen report available)
+
+### Reporting / monitoring / notifications (added)
+- [x] Daily / weekly / monthly / custom operations reports (full volume + financial calcs)
+- [x] Scheduled report emails to `app.report.email` (default: amansinghtomar2209@gmail.com)
+- [x] Manual “Email this report now” from `/admin/reports`
+- [x] Real email via Spring Mail / Gmail SMTP
+- [x] Real SMS via Twilio API (when credentials configured)
+- [x] Notification log stores SENT / FAILED / SKIPPED from real providers
+- [x] Actuator health/metrics/prometheus
+- [x] Admin monitoring page + threshold alerts (email every 30 min)
+- [x] Login success/failure/logout audit events
 
 ---
 

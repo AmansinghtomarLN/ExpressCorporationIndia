@@ -67,4 +67,10 @@ public class NotificationDao {
         Number key = keyHolder.getKey();
         return key != null ? key.longValue() : null;
     }
+
+    public long countByStatus(String status) {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM notifications WHERE status = ?", Long.class, status);
+        return count != null ? count : 0L;
+    }
 }
