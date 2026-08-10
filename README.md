@@ -83,7 +83,7 @@ Without `prod`, the app uses local defaults (`spring.sql.init.mode=always`).
 
 | Role     | Email                                 | Password    |
 |----------|----------------------------------------|-------------|
-| Admin    | admin@shreemahavircourier.com          | Admin@123   |
+| Admin    | admin@expresscorporation.com          | Admin@123   |
 
 Admin console: **http://localhost:8080/admin** — after logging in as admin, use the **Admin** link
 in the header/nav (or open `/admin` directly).

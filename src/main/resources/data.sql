@@ -1,14 +1,14 @@
 -- ===========================================================================
 -- Seed data. Uses INSERT ... WHERE NOT EXISTS style guards so it's safe to
 -- re-run every startup in dev.
--- Default admin login: admin@shreemahavircourier.com / Admin@123
+-- Default admin login: admin@expresscorporation.com / Admin@123
 -- (BCrypt hash below corresponds to that password - change it in prod!)
 -- ===========================================================================
 
 INSERT INTO users (full_name, email, phone, password_hash, role)
-SELECT 'System Administrator', 'admin@shreemahavircourier.com', '9999999999',
+SELECT 'System Administrator', 'admin@expresscorporation.com', '9999999999',
        '$2a$10$OndbrhZ.oy6k7bcrpz5gFuRlF8ULj7GeXJARrdKhWjYfT1Y4/dDFu', 'ADMIN'
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'admin@shreemahavircourier.com');
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'admin@expresscorporation.com');
 
 INSERT INTO branches (branch_name, city, state, pincode, phone, address)
 SELECT * FROM (SELECT 'ECI - Mehsana HO' AS branch_name, 'Mehsana' AS city, 'Gujarat' AS state, '384001' AS pincode, '02762-123456' AS phone, 'Near Hanuman Temple, Nagalpur, Mehsana' AS address) t

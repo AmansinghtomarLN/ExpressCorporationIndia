@@ -36,7 +36,7 @@ Web app for courier **booking**, **public tracking**, **customer account**, and 
 - `CUSTOMER` → redirect to `/dashboard`
 
 **Default seeded admin**
-- Email: `admin@shreemahavircourier.com`
+- Email: `admin@expresscorporation.com`
 - Password: `Admin@123`
 - Change this before any real deployment.
 
@@ -299,7 +299,7 @@ Without these, the app still runs; notifications are logged as `FAILED`/`SKIPPED
 | Item | Value |
 |------|--------|
 | Demo tracking ID | `MH1000000001` |
-| Admin login | `admin@shreemahavircourier.com` / `Admin@123` |
+| Admin login | `admin@expresscorporation.com` / `Admin@123` |
 
 ---
 
