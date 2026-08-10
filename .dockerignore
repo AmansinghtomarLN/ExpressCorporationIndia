@@ -1,0 +1,13 @@
+target/
+.git/
+.idea/
+.vscode/
+*.iml
+*.log
+.DS_Store
+.env
+*.md
+docs/
+agent-transcripts/
+.cursor/
+**/terminals/

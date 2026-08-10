@@ -24,7 +24,40 @@ A production-ready Spring Boot web application for Express Corporation of India,
 - Customer Dashboard (view your shipments) + Book a Shipment
 - Admin Console (`/admin`) — view all shipments, add tracking status updates
 
-## 1. Prerequisites
+## Quick start with Docker (recommended)
+
+On a fresh laptop you only need **Docker Desktop** (or Docker Engine + Compose).
+No local JDK, Maven, or MySQL install required.
+
+```bash
+cd mahavir-courier
+cp .env.example .env   # optional — edit mail credentials, ports, passwords
+docker compose up --build -d
+```
+
+Wait ~1–2 minutes the first time (Maven build + MySQL init), then open **http://localhost:8080**
+
+| Service | Container   | Notes |
+|---------|-------------|--------|
+| App     | `eci-app`   | Spring Boot on port 8080 |
+| MySQL 8 | `eci-mysql` | Data persisted in volume `eci_mysql_data` |
+
+Default admin (seeded automatically): `admin@expresscorporation.com` / `Admin@123`
+
+Useful commands:
+
+```bash
+docker compose logs -f app      # follow app logs
+docker compose ps               # status
+docker compose down             # stop (keeps DB data)
+docker compose down -v          # stop and wipe MySQL volume (fresh DB next start)
+```
+
+Optional: put Gmail App Password etc. in `.env` so email works inside Docker.
+
+---
+
+## 1. Prerequisites (local run without Docker)
 
 - JDK 17+
 - Maven 3.9+

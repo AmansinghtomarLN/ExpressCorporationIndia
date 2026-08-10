@@ -1,0 +1,52 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: eci-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootroot}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-mahavir_courier}
+      MYSQL_USER: ${MYSQL_USER:-mahavir}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-mahavirpass}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - eci_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-rootroot}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+
+  app:
+    build: .
+    image: eci-courier:latest
+    container_name: eci-app
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    # Optional overrides (mail, Twilio, passwords). Copy .env.example → .env first.
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-mahavir_courier}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      DB_USERNAME: ${MYSQL_USER:-mahavir}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-mahavirpass}
+      # Keep retrying until MySQL accepts connections (first boot)
+      SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT: "-1"
+      # Schema + seed on startup (idempotent CREATE IF NOT EXISTS / guarded inserts)
+      SPRING_SQL_INIT_MODE: ${SQL_INIT_MODE:-always}
+      SERVER_PORT: "8080"
+      THYMELEAF_CACHE: "true"
+      APP_LOG_LEVEL: ${APP_LOG_LEVEL:-INFO}
+
+volumes:
+  eci_mysql_data:
