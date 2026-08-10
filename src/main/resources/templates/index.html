@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shree Mahavir Express Services | Fast &amp; Reliable Courier Delivery</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+
+<section class="hero">
+    <div class="container hero-grid">
+        <div>
+            <span class="eyebrow" style="color:#ffe08a;">India's Trusted Courier Partner</span>
+            <h1>Fast, Reliable Courier &amp; Logistics Delivery, Every Time</h1>
+            <p class="lead">Shree Mahavir Express Services delivers parcels, documents and freight across
+                500+ branches and 4000+ pin codes in India, with real-time tracking from pickup to doorstep.</p>
+            <div class="hero-actions">
+                <a href="/signup" class="btn btn-outline">Create an Account</a>
+                <a href="/services" class="btn" style="background:var(--accent); color:var(--dark);">Our Services</a>
+            </div>
+            <div class="hero-stats">
+                <div><strong>500+</strong><span>Branches Nationwide</span></div>
+                <div><strong>4000+</strong><span>Pin Codes Served</span></div>
+                <div><strong>1.5M+</strong><span>Daily Transactions</span></div>
+            </div>
+        </div>
+        <div class="hero-art">
+            <div class="icon">&#128666;</div>
+            <p style="color:#fff;">Live shipment tracking on every order &mdash; know exactly where your parcel is,
+                24x7.</p>
+        </div>
+    </div>
+</section>
+
+<div class="container">
+    <div class="track-widget">
+        <h3>Track Your Shipment</h3>
+        <p class="hint">Enter your 10-digit docket / tracking number to see the latest status instantly.</p>
+        <form id="quick-track-form" class="track-form">
+            <input type="text" id="quick-track-input" placeholder="e.g. MH1000000001" required>
+            <button type="submit" class="btn btn-primary">Track Now</button>
+        </form>
+        <div id="quick-track-result"></div>
+    </div>
+</div>
+
+<section class="section">
+    <div class="container">
+        <div class="section-title">
+            <span class="eyebrow">What We Offer</span>
+            <h2>Our Core Services</h2>
+            <p>From single documents to bulk freight, we move it reliably and on time.</p>
+        </div>
+        <div class="grid-3">
+            <div class="card">
+                <div class="icon">&#128230;</div>
+                <h3>Domestic Delivery</h3>
+                <p>Standard and express parcel delivery across India, backed by our 500+ branch network.</p>
+            </div>
+            <div class="card">
+                <div class="icon">&#127760;</div>
+                <h3>International Shipping</h3>
+                <p>Reliable cross-border courier services to major global destinations.</p>
+            </div>
+            <div class="card">
+                <div class="icon">&#128737;</div>
+                <h3>Real-Time Tracking</h3>
+                <p>Track every shipment online, from booking to final delivery, with live status updates.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="stats-band">
+    <div class="container grid-4">
+        <div><strong>2011</strong><span>Incorporated</span></div>
+        <div><strong>500+</strong><span>Branches</span></div>
+        <div><strong>4000+</strong><span>Pin Codes</span></div>
+        <div><strong>1.5M+</strong><span>Daily Shipments</span></div>
+    </div>
+</section>
+
+<section class="section section-alt">
+    <div class="container">
+        <div class="section-title">
+            <span class="eyebrow">Why Choose Us</span>
+            <h2>Built for Speed, Trust &amp; Scale</h2>
+        </div>
+        <div class="grid-4">
+            <div class="card">
+                <div class="icon">&#9889;</div>
+                <h3>Fast Delivery</h3>
+                <p>Express options get your parcel there in as little as 1-2 days.</p>
+            </div>
+            <div class="card">
+                <div class="icon">&#128274;</div>
+                <h3>Secure Handling</h3>
+                <p>Signed-for delivery and careful handling at every hub.</p>
+            </div>
+            <div class="card">
+                <div class="icon">&#128200;</div>
+                <h3>Live Tracking</h3>
+                <p>Full visibility into every stop your shipment makes.</p>
+            </div>
+            <div class="card">
+                <div class="icon">&#128176;</div>
+                <h3>Competitive Pricing</h3>
+                <p>Bulk buying power means savings passed on to you.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section" style="background:var(--primary); color:#fff; text-align:center;">
+    <div class="container">
+        <h2 style="color:#fff;">Ready to ship with us?</h2>
+        <p style="color:rgba(255,255,255,0.9);">Create a free account to book shipments online and track them from your dashboard.</p>
+        <a href="/signup" class="btn" style="background:#fff; color:var(--primary); margin-top:10px;">Sign Up Free</a>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script src="/js/script.js"></script>
+</body>
+</html>

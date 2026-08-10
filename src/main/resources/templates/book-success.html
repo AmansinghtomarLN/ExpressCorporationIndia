@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shipment Booked | Shree Mahavir Express Services</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+
+<section class="section">
+    <div class="container">
+        <div class="form-card" style="text-align:center;">
+            <div style="font-size:3rem;">&#9989;</div>
+            <h2>Shipment Booked Successfully!</h2>
+            <p>Your tracking ID is:</p>
+            <h1 style="color:var(--primary);" th:text="${bookedShipment.trackingId}">MH1000000001</h1>
+            <p>Save this number to track your shipment at any time.</p>
+
+            <div style="display:flex; gap:12px; justify-content:center; margin-top:18px; flex-wrap:wrap;">
+                <a th:href="@{/track(trackingId=${bookedShipment.trackingId})}" class="btn btn-primary">Track This Shipment</a>
+                <a href="/dashboard" class="btn btn-dark">Go to Dashboard</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

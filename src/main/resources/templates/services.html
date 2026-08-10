@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Services | Shree Mahavir Express Services</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+
+<section class="section" style="background:var(--dark); color:#fff; padding:56px 0;">
+    <div class="container">
+        <span class="eyebrow">Our Services</span>
+        <h1 style="color:#fff;">Courier &amp; Logistics Solutions for Every Need</h1>
+        <p style="color:rgba(255,255,255,0.85); max-width:640px;">
+            Whether you're sending a single document or shipping bulk freight, we have a service tailored to
+            your timeline and budget.
+        </p>
+    </div>
+</section>
+
+<section class="section">
+    <div class="container">
+        <div class="grid-3">
+            <div class="card service-card">
+                <div class="icon">&#128230;</div>
+                <h3>Domestic Standard Delivery</h3>
+                <p>Cost-effective delivery for non-urgent parcels and documents across India.</p>
+                <ul>
+                    <li>Delivery in 3-5 business days</li>
+                    <li>Coverage across 4000+ pin codes</li>
+                    <li>Online booking &amp; tracking</li>
+                </ul>
+            </div>
+            <div class="card service-card">
+                <div class="icon">&#9889;</div>
+                <h3>Domestic Express Delivery</h3>
+                <p>Priority handling and faster transit for time-sensitive shipments.</p>
+                <ul>
+                    <li>Delivery in 1-2 business days</li>
+                    <li>Priority hub processing</li>
+                    <li>SMS &amp; email status alerts</li>
+                </ul>
+            </div>
+            <div class="card service-card">
+                <div class="icon">&#127760;</div>
+                <h3>International Shipping</h3>
+                <p>Reliable cross-border delivery to major international destinations.</p>
+                <ul>
+                    <li>Delivery in 5-7 business days</li>
+                    <li>Customs documentation support</li>
+                    <li>Door-to-door tracking</li>
+                </ul>
+            </div>
+            <div class="card service-card">
+                <div class="icon">&#128666;</div>
+                <h3>Bulk &amp; Freight Logistics</h3>
+                <p>Scalable solutions for businesses shipping high volumes or heavy freight.</p>
+                <ul>
+                    <li>Dedicated account support</li>
+                    <li>Warehouse pickup scheduling</li>
+                    <li>Custom pricing for volume shippers</li>
+                </ul>
+            </div>
+            <div class="card service-card">
+                <div class="icon">&#128274;</div>
+                <h3>Secure &amp; Signed Delivery</h3>
+                <p>Signed-for delivery as standard, for extra peace of mind on valuable shipments.</p>
+                <ul>
+                    <li>Proof of delivery</li>
+                    <li>Careful, tracked handling</li>
+                    <li>Optional insurance add-on</li>
+                </ul>
+            </div>
+            <div class="card service-card">
+                <div class="icon">&#128202;</div>
+                <h3>Real-Time Tracking API</h3>
+                <p>Integrate our tracking system directly into your e-commerce store or ERP.</p>
+                <ul>
+                    <li>Webhook &amp; API access</li>
+                    <li>Live shipment status updates</li>
+                    <li>Built for developers</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section section-alt" style="text-align:center;">
+    <div class="container">
+        <h2>Not sure which service fits your shipment?</h2>
+        <p>Sign up and book a shipment in minutes, or contact our team for bulk shipping rates.</p>
+        <div style="display:flex; gap:14px; justify-content:center; margin-top:14px;">
+            <a href="/signup" class="btn btn-primary">Sign Up &amp; Book</a>
+            <a href="/contact" class="btn btn-dark">Contact Sales</a>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

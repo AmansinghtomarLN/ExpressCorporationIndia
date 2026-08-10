@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Branch Network | Shree Mahavir Express Services</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+
+<section class="section" style="background:var(--dark); color:#fff; padding:56px 0;">
+    <div class="container">
+        <span class="eyebrow">Branch Network</span>
+        <h1 style="color:#fff;">500+ Branches Across India</h1>
+        <p style="color:rgba(255,255,255,0.85); max-width:640px;">
+            Find your nearest Shree Mahavir Express branch for booking, drop-off, and customer support.
+        </p>
+    </div>
+</section>
+
+<section class="section">
+    <div class="container">
+        <div class="grid-3">
+            <div class="card" th:each="branch : ${branches}">
+                <div class="icon">&#127970;</div>
+                <h3 th:text="${branch.branchName}">Branch Name</h3>
+                <p th:text="${branch.address}">Address</p>
+                <p><strong th:text="${branch.city} + ', ' + ${branch.state} + ' - ' + ${branch.pincode}">City, State</strong></p>
+                <p th:if="${branch.phone}">&#9742; <span th:text="${branch.phone}">Phone</span></p>
+            </div>
+        </div>
+
+        <div th:if="${#lists.isEmpty(branches)}" class="alert alert-info" style="margin-top:20px;">
+            Branch information is being updated. Please contact us for your nearest branch.
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

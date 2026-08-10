@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Shree Mahavir Express Services</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+
+<section class="section">
+    <div class="container">
+        <div class="form-card">
+            <h2 style="text-align:center;">Login to Your Account</h2>
+            <p style="text-align:center;">Track shipments, book new deliveries, and manage your account.</p>
+
+            <div class="alert alert-success" th:if="${registered}">
+                Account created successfully! Please log in below.
+            </div>
+            <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+            <div class="alert alert-info" th:if="${infoMessage}" th:text="${infoMessage}"></div>
+
+            <form th:action="@{/login}" method="post">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" required autofocus placeholder="you@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required placeholder="Your password">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Login</button>
+            </form>
+
+            <p style="text-align:center; margin-top:18px;">
+                Don't have an account? <a href="/signup" style="color:var(--primary); font-weight:600;">Sign up</a>
+            </p>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

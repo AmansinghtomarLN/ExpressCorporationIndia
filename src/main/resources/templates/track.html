@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Shipment | Shree Mahavir Express Services</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+
+<section class="section" style="background:var(--dark); color:#fff; padding:56px 0;">
+    <div class="container">
+        <span class="eyebrow">Track Shipment</span>
+        <h1 style="color:#fff;">Track Your Courier</h1>
+        <p style="color:rgba(255,255,255,0.85); max-width:640px;">
+            Enter your tracking / docket number below to see the latest status and complete journey of your parcel.
+        </p>
+    </div>
+</section>
+
+<section class="section">
+    <div class="container">
+        <div class="form-card wide">
+            <form th:action="@{/track}" method="get" class="track-form">
+                <input type="text" name="trackingId" th:value="${trackingId}"
+                       placeholder="e.g. MH1000000001" required>
+                <button type="submit" class="btn btn-primary">Track Now</button>
+            </form>
+        </div>
+
+        <div th:if="${notFound}" class="alert alert-error" style="max-width:760px; margin:24px auto 0;">
+            No shipment found for tracking ID <strong th:text="${trackingId}"></strong>.
+            Please check the number and try again.
+        </div>
+
+        <div th:if="${shipment}" class="form-card wide" style="margin-top:24px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div>
+                    <h2 style="margin-bottom:4px;" th:text="${shipment.trackingId}">MH1000000001</h2>
+                    <p style="margin:0;">
+                        <span th:text="${shipment.originCity}">Origin</span> &rarr;
+                        <span th:text="${shipment.destinationCity}">Destination</span>
+                    </p>
+                </div>
+                <span class="status-badge" th:classappend="'status-' + ${shipment.status}"
+                      th:text="${#strings.replace(shipment.status,'_',' ')}">STATUS</span>
+            </div>
+
+            <div class="form-row" style="margin-top:20px;">
+                <div>
+                    <h4>Sender</h4>
+                    <p th:text="${shipment.senderName}">Sender Name</p>
+                    <p th:text="${shipment.senderAddress}">Sender Address</p>
+                </div>
+                <div>
+                    <h4>Receiver</h4>
+                    <p th:text="${shipment.receiverName}">Receiver Name</p>
+                    <p th:text="${shipment.receiverAddress}">Receiver Address</p>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div><h4>Service Type</h4><p th:text="${#strings.replace(shipment.serviceType,'_',' ')}">Service</p></div>
+                <div><h4>Expected Delivery</h4>
+                    <p th:text="${shipment.expectedDelivery != null ? shipment.expectedDelivery : 'To be updated'}">Date</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top:24px;">Shipment Journey</h3>
+            <div class="timeline">
+                <!-- events are returned oldest-first from the service, which reads naturally as a journey -->
+                <div class="timeline-item" th:each="event : ${shipment.events}">
+                    <div class="t-status" th:text="${#strings.replace(event.status,'_',' ')} + ' — ' + ${event.location}">Status — Location</div>
+                    <div class="t-meta" th:text="${#temporals.format(event.eventTime, 'dd MMM yyyy, hh:mm a')}">Date</div>
+                    <div th:if="${event.remarks}" th:text="${event.remarks}">Remarks</div>
+                </div>
+                <div th:if="${#lists.isEmpty(shipment.events)}">
+                    <p>No tracking updates yet. Please check back soon.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

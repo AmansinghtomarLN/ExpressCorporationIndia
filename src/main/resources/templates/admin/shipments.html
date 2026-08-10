@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Shipments | Shree Mahavir Express Services</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+
+<section class="section">
+    <div class="container">
+        <span class="eyebrow">Admin Console</span>
+        <h1>All Shipments</h1>
+        <p>Update shipment status and add tracking events for customers.</p>
+
+        <div style="overflow-x:auto;">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Tracking ID</th>
+                    <th>Sender</th>
+                    <th>Receiver</th>
+                    <th>Route</th>
+                    <th>Status</th>
+                    <th>Booked On</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="s : ${shipments}">
+                    <td th:text="${s.trackingId}">MH1000000001</td>
+                    <td th:text="${s.senderName}">Sender</td>
+                    <td th:text="${s.receiverName}">Receiver</td>
+                    <td th:text="${s.originCity} + ' → ' + ${s.destinationCity}">Route</td>
+                    <td>
+                        <span class="status-badge" th:classappend="'status-' + ${s.status}"
+                              th:text="${#strings.replace(s.status,'_',' ')}">STATUS</span>
+                    </td>
+                    <td th:text="${#temporals.format(s.createdAt, 'dd MMM yyyy')}">Date</td>
+                    <td><a th:href="@{/admin/shipments/{id}(id=${s.id})}" class="btn btn-sm btn-primary">Manage</a></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${#lists.isEmpty(shipments)}" class="alert alert-info" style="margin-top:16px;">
+            No shipments booked yet.
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

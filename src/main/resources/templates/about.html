@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Us | Shree Mahavir Express Services</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+
+<section class="section" style="background:var(--dark); color:#fff; padding:56px 0;">
+    <div class="container">
+        <span class="eyebrow">About Us</span>
+        <h1 style="color:#fff;">Delivering Trust Since 2011</h1>
+        <p style="color:rgba(255,255,255,0.85); max-width:640px;">
+            Shree Mahavir Express Services Pvt. Ltd. is one of India's fastest-growing courier and logistics
+            companies, connecting businesses and individuals across the country with fast, secure delivery.
+        </p>
+    </div>
+</section>
+
+<section class="section">
+    <div class="container">
+        <div class="grid-3" style="grid-template-columns: 1fr 1fr;">
+            <div>
+                <h2>Our Story</h2>
+                <p>Incorporated in November 2011 with just 10 branches, Shree Mahavir Express Services has grown
+                    into a nationwide network of over 500 branches, serving more than 4,000 pin codes and handling
+                    around 1.5 million transactions every day.</p>
+                <p>What started as a small regional courier operation has become a trusted logistics partner for
+                    e-commerce businesses, enterprises, and individuals who need fast, dependable delivery
+                    across India and abroad.</p>
+            </div>
+            <div>
+                <h2>Our Mission</h2>
+                <p>To provide fast, reliable and affordable courier and logistics solutions, backed by
+                    technology that gives every customer full visibility into their shipment's journey.</p>
+                <p>We combine an extensive branch network with a modern, easy-to-use online tracking platform,
+                    so you always know where your parcel is - from pickup to final delivery.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="stats-band">
+    <div class="container grid-4">
+        <div><strong>2011</strong><span>Year Established</span></div>
+        <div><strong>500+</strong><span>Branches Across India</span></div>
+        <div><strong>4000+</strong><span>Pin Codes Covered</span></div>
+        <div><strong>1.5M+</strong><span>Daily Transactions</span></div>
+    </div>
+</section>
+
+<section class="section section-alt">
+    <div class="container">
+        <div class="section-title">
+            <span class="eyebrow">Our Values</span>
+            <h2>What Drives Us</h2>
+        </div>
+        <div class="grid-3">
+            <div class="card">
+                <div class="icon">&#9989;</div>
+                <h3>Reliability</h3>
+                <p>Every parcel is handled with care and delivered on schedule, every time.</p>
+            </div>
+            <div class="card">
+                <div class="icon">&#129309;</div>
+                <h3>Customer First</h3>
+                <p>Our support teams and branch network exist to make shipping effortless for you.</p>
+            </div>
+            <div class="card">
+                <div class="icon">&#128272;</div>
+                <h3>Transparency</h3>
+                <p>Real-time tracking means no guesswork about where your shipment is.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

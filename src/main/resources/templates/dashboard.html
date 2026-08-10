@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Account | Shree Mahavir Express Services</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+
+<section class="section">
+    <div class="container">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div>
+                <span class="eyebrow">My Account</span>
+                <h1>Welcome, <span th:text="${user.fullName}">Customer</span></h1>
+                <p th:text="${user.email}">customer@example.com</p>
+            </div>
+            <a href="/book" class="btn btn-primary">+ Book a New Shipment</a>
+        </div>
+
+        <h3 style="margin-top:30px;">Your Shipments</h3>
+
+        <div th:if="${#lists.isEmpty(shipments)}" class="alert alert-info">
+            You haven't booked any shipments yet. <a href="/book" style="font-weight:600;">Book your first one now.</a>
+        </div>
+
+        <div th:if="${!#lists.isEmpty(shipments)}" style="overflow-x:auto;">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Tracking ID</th>
+                    <th>Route</th>
+                    <th>Service</th>
+                    <th>Status</th>
+                    <th>Booked On</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="s : ${shipments}">
+                    <td th:text="${s.trackingId}">MH1000000001</td>
+                    <td th:text="${s.originCity} + ' → ' + ${s.destinationCity}">Origin → Destination</td>
+                    <td th:text="${#strings.replace(s.serviceType,'_',' ')}">Service</td>
+                    <td>
+                        <span class="status-badge" th:classappend="'status-' + ${s.status}"
+                              th:text="${#strings.replace(s.status,'_',' ')}">STATUS</span>
+                    </td>
+                    <td th:text="${#temporals.format(s.createdAt, 'dd MMM yyyy')}">Date</td>
+                    <td><a th:href="@{/track(trackingId=${s.trackingId})}" class="btn btn-sm btn-dark">Track</a></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

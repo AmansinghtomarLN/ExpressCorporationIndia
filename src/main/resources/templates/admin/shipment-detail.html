@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Shipment Detail | Shree Mahavir Express Services</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+
+<section class="section">
+    <div class="container" style="display:grid; grid-template-columns: 1.3fr 1fr; gap:30px;">
+        <div>
+            <span class="eyebrow">Admin Console</span>
+            <h1 th:text="${shipment.trackingId}">MH1000000001</h1>
+            <span class="status-badge" th:classappend="'status-' + ${shipment.status}"
+                  th:text="${#strings.replace(shipment.status,'_',' ')}">STATUS</span>
+
+            <div class="form-row" style="margin-top:20px;">
+                <div>
+                    <h4>Sender</h4>
+                    <p th:text="${shipment.senderName}">Sender</p>
+                    <p th:text="${shipment.senderPhone}">Phone</p>
+                    <p th:text="${shipment.senderAddress}">Address</p>
+                </div>
+                <div>
+                    <h4>Receiver</h4>
+                    <p th:text="${shipment.receiverName}">Receiver</p>
+                    <p th:text="${shipment.receiverPhone}">Phone</p>
+                    <p th:text="${shipment.receiverAddress}">Address</p>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div><h4>Route</h4><p th:text="${shipment.originCity} + ' → ' + ${shipment.destinationCity}">Route</p></div>
+                <div><h4>Service</h4><p th:text="${#strings.replace(shipment.serviceType,'_',' ')}">Service</p></div>
+            </div>
+
+            <h3 style="margin-top:24px;">Tracking History</h3>
+            <div class="timeline">
+                <div class="timeline-item" th:each="event : ${shipment.events}">
+                    <div class="t-status" th:text="${#strings.replace(event.status,'_',' ')} + ' — ' + ${event.location}">Status — Location</div>
+                    <div class="t-meta" th:text="${#temporals.format(event.eventTime, 'dd MMM yyyy, hh:mm a')}">Date</div>
+                    <div th:if="${event.remarks}" th:text="${event.remarks}">Remarks</div>
+                </div>
+                <div th:if="${#lists.isEmpty(shipment.events)}">
+                    <p>No tracking events yet.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-card" style="margin:0;">
+            <h3>Add Tracking Update</h3>
+            <form th:action="@{/admin/shipments/{id}/update(id=${shipment.id})}" method="post">
+                <div class="form-group">
+                    <label for="status">Status</label>
+                    <select id="status" name="status" required>
+                        <option th:each="st : ${statuses}" th:value="${st}"
+                                th:text="${#strings.replace(st,'_',' ')}">STATUS</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="location">Location</label>
+                    <input type="text" id="location" name="location" required placeholder="e.g. Ahmedabad Hub">
+                </div>
+                <div class="form-group">
+                    <label for="remarks">Remarks (optional)</label>
+                    <textarea id="remarks" name="remarks" rows="3" placeholder="Additional notes for the customer"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Add Update</button>
+            </form>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

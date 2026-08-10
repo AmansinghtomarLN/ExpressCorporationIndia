@@ -1,0 +1,42 @@
+<header th:fragment="header" class="site-header">
+    <div class="topbar">
+        <div class="container topbar-inner">
+            <div class="topbar-contact">
+                <span>&#9742; +91-98765-43210</span>
+                <span>&#9993; support@shreemahavircourier.com</span>
+            </div>
+            <div class="topbar-links">
+                <a href="/branches">Find a Branch</a>
+                <span sec:authorize="!isAuthenticated()">
+                    <a href="/login">Login</a> / <a href="/signup">Sign Up</a>
+                </span>
+                <span sec:authorize="isAuthenticated()">
+                    <a href="/dashboard">My Account</a> /
+                    <a href="/logout" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>
+                    <form id="logout-form" action="/logout" method="post" style="display:none;"></form>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <nav class="navbar container">
+        <a class="brand" href="/">
+            <span class="brand-mark">SM</span>
+            <span class="brand-text">Shree Mahavir<br><small>EXPRESS SERVICES</small></span>
+        </a>
+
+        <input type="checkbox" id="nav-toggle" class="nav-toggle">
+        <label for="nav-toggle" class="nav-burger">&#9776;</label>
+
+        <ul class="nav-links">
+            <li><a href="/">Home</a></li>
+            <li><a href="/about">About Us</a></li>
+            <li><a href="/services">Services</a></li>
+            <li><a href="/branches">Branch Network</a></li>
+            <li><a href="/track">Track Shipment</a></li>
+            <li><a href="/contact">Contact Us</a></li>
+            <li sec:authorize="isAuthenticated()"><a href="/book" class="btn-nav">Book a Shipment</a></li>
+            <li sec:authorize="!isAuthenticated()"><a href="/signup" class="btn-nav">Get Started</a></li>
+        </ul>
+    </nav>
+</header>
