@@ -101,7 +101,7 @@ Dashboard · Shipments · Reports · Monitoring · Users · Branches · Contacts
 - Edit shipment details
 - Assign branch / hub / courier name & phone
 - Cancel shipment (terminal)
-- Add tracking update with **allowed next statuses only** (transition rules)
+- Add tracking update with **all statuses** available in Next Status
 - Require location on update
 - Edit / delete individual tracking events
 - Print label (`/admin/shipments/{id}/label`)
@@ -112,16 +112,11 @@ Dashboard · Shipments · Reports · Monitoring · Users · Branches · Contacts
 - Bulk status update: `/admin/shipments/bulk`  
   CSV format: `trackingId,status,location,remarks`
 
-### 4.3 Status workflow (enforced for admin updates)
+### 4.3 Status workflow
 
-```
-BOOKED            → PICKED_UP, CANCELLED
-PICKED_UP         → IN_TRANSIT, AT_HUB, CANCELLED, RTO
-IN_TRANSIT        → AT_HUB, OUT_FOR_DELIVERY, RTO
-AT_HUB            → IN_TRANSIT, OUT_FOR_DELIVERY
-OUT_FOR_DELIVERY  → DELIVERED, RTO
-DELIVERED / CANCELLED / RTO → (terminal — no further transitions)
-```
+Admin can set any known status when adding a tracking update:
+
+`BOOKED` · `PICKED_UP` · `IN_TRANSIT` · `AT_HUB` · `OUT_FOR_DELIVERY` · `DELIVERED` · `CANCELLED` · `RTO`
 
 On each successful status update:
 - Tracking event is appended
@@ -322,7 +317,7 @@ Without these, the app still runs; notifications are logged as `FAILED`/`SKIPPED
 - [x] Admin dashboard KPIs
 - [x] Admin create/edit/cancel shipment
 - [x] Assign branch / hub / courier
-- [x] Status transition rules + location validation
+- [x] All statuses selectable on tracking update + location validation
 - [x] Edit/delete tracking events
 - [x] Print label
 - [x] CSV export + bulk status update
@@ -377,7 +372,7 @@ Without these, the app still runs; notifications are logged as `FAILED`/`SKIPPED
 
 1. Prefer adding admin screens under `/admin/...` with `hasAnyRole("ADMIN","STAFF")`.
 2. Call `AuditService.log(...)` on every mutating admin action.
-3. For status changes, go through `ShipmentService.addTrackingUpdate(...)` so transitions + notifications stay consistent.
+3. For status changes, go through `ShipmentService.addTrackingUpdate(...)` so notifications stay consistent.
 4. Keep `prod` profile mandatory in deployment so SQL init stays off.
 
 ---

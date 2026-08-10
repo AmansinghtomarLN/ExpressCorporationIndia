@@ -130,7 +130,6 @@ public class AdminShipmentController {
         Shipment shipment = shipmentOpt.get();
         model.addAttribute("shipment", shipment);
         model.addAttribute("statuses", STATUSES);
-        model.addAttribute("allowedNext", StatusTransitions.allowedNext(shipment.getStatus()));
         model.addAttribute("branches", branchService.findAll());
         return "admin/shipment-detail";
     }

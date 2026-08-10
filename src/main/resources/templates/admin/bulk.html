@@ -29,7 +29,7 @@ ECI1000000001,IN_TRANSIT,Ahmedabad Hub,Departed origin
 ECI1000000002,OUT_FOR_DELIVERY,Surat Branch,With courier</pre>
             <ul style="margin:12px 0 20px; padding-left:18px; list-style:disc;">
                 <li style="margin-bottom:6px; color:var(--gray-700);">Header row is optional.</li>
-                <li style="margin-bottom:6px; color:var(--gray-700);"><code>status</code> must be an allowed next status for that shipment.</li>
+                <li style="margin-bottom:6px; color:var(--gray-700);"><code>status</code> must be a known status (BOOKED, PICKED_UP, IN_TRANSIT, AT_HUB, OUT_FOR_DELIVERY, DELIVERED, CANCELLED, RTO).</li>
                 <li style="margin-bottom:6px; color:var(--gray-700);"><code>location</code> is required; <code>remarks</code> is optional.</li>
             </ul>
 

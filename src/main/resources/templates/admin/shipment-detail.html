@@ -216,13 +216,13 @@
                     <p class="hint muted">Current status:
                         <strong th:text="${#strings.replace(shipment.status,'_',' ')}">STATUS</strong>
                     </p>
-                    <form th:action="@{/admin/shipments/{id}/update(id=${shipment.id})}" method="post"
-                          th:if="${allowedNext != null and !#lists.isEmpty(allowedNext)}">
+                    <form th:action="@{/admin/shipments/{id}/update(id=${shipment.id})}" method="post">
                         <div class="form-group">
                             <label for="status">Next Status</label>
                             <select id="status" name="status" required>
-                                <option th:each="st : ${allowedNext}"
+                                <option th:each="st : ${statuses}"
                                         th:value="${st}"
+                                        th:selected="${st == shipment.status}"
                                         th:text="${#strings.replace(st,'_',' ')}">STATUS</option>
                             </select>
                         </div>
@@ -236,9 +236,6 @@
                         </div>
                         <button type="submit" class="btn btn-primary btn-block">Add Update</button>
                     </form>
-                    <div class="alert alert-info" th:if="${allowedNext == null or #lists.isEmpty(allowedNext)}">
-                        No further status transitions are allowed for this shipment.
-                    </div>
                 </div>
 
                 <div class="form-card" style="margin:0 0 20px;">
