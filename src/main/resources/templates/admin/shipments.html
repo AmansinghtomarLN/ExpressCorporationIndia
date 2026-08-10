@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin | Shipments | Shree Mahavir Express Services</title>
+    <title>Admin | Shipments | Express Corporation of India</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -70,6 +70,7 @@
                     <th>Receiver</th>
                     <th>Route</th>
                     <th>Status</th>
+                    <th>Expected Delivery</th>
                     <th>Booked On</th>
                     <th></th>
                 </tr>
@@ -90,6 +91,7 @@
                         <span class="status-badge" th:classappend="'status-' + ${s.status}"
                               th:text="${#strings.replace(s.status,'_',' ')}">STATUS</span>
                     </td>
+                    <td th:text="${s.expectedDelivery != null ? #temporals.format(s.expectedDelivery, 'dd MMM yyyy') : '—'}">Date</td>
                     <td th:text="${#temporals.format(s.createdAt, 'dd MMM yyyy')}">Date</td>
                     <td><a th:href="@{/admin/shipments/{id}(id=${s.id})}" class="btn btn-sm btn-primary">Manage</a></td>
                 </tr>

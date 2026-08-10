@@ -1,6 +1,6 @@
-# Shree Mahavir Express Services — Courier Booking & Tracking Web App
+# Express Corporation of India — Courier Booking & Tracking Web App
 
-A production-ready Spring Boot web application modeled on shreemahavircourier.com, built with:
+A production-ready Spring Boot web application for Express Corporation of India, built with:
 
 - **Java 17 + Spring Boot 3.3**
 - **Spring MVC + Thymeleaf** (server-rendered pages)

@@ -11,25 +11,31 @@ SELECT 'System Administrator', 'admin@shreemahavircourier.com', '9999999999',
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = 'admin@shreemahavircourier.com');
 
 INSERT INTO branches (branch_name, city, state, pincode, phone, address)
-SELECT * FROM (SELECT 'Mahavir Express - Mehsana HO' AS branch_name, 'Mehsana' AS city, 'Gujarat' AS state, '384001' AS pincode, '02762-123456' AS phone, 'Near Hanuman Temple, Nagalpur, Mehsana' AS address) t
-WHERE NOT EXISTS (SELECT 1 FROM branches WHERE branch_name = 'Mahavir Express - Mehsana HO');
+SELECT * FROM (SELECT 'ECI - Mehsana HO' AS branch_name, 'Mehsana' AS city, 'Gujarat' AS state, '384001' AS pincode, '02762-123456' AS phone, 'Near Hanuman Temple, Nagalpur, Mehsana' AS address) t
+WHERE NOT EXISTS (SELECT 1 FROM branches WHERE branch_name IN ('ECI - Mehsana HO', 'Mahavir Express - Mehsana HO'));
 
 INSERT INTO branches (branch_name, city, state, pincode, phone, address)
-SELECT * FROM (SELECT 'Mahavir Express - Ahmedabad', 'Ahmedabad', 'Gujarat', '380001', '079-1234567', 'C.G. Road, Ahmedabad') t
-WHERE NOT EXISTS (SELECT 1 FROM branches WHERE branch_name = 'Mahavir Express - Ahmedabad');
+SELECT * FROM (SELECT 'ECI - Ahmedabad', 'Ahmedabad', 'Gujarat', '380001', '079-1234567', 'C.G. Road, Ahmedabad') t
+WHERE NOT EXISTS (SELECT 1 FROM branches WHERE branch_name IN ('ECI - Ahmedabad', 'Mahavir Express - Ahmedabad'));
 
 INSERT INTO branches (branch_name, city, state, pincode, phone, address)
-SELECT * FROM (SELECT 'Mahavir Express - Mumbai', 'Mumbai', 'Maharashtra', '400001', '022-9876543', 'Fort, Mumbai') t
-WHERE NOT EXISTS (SELECT 1 FROM branches WHERE branch_name = 'Mahavir Express - Mumbai');
+SELECT * FROM (SELECT 'ECI - Mumbai', 'Mumbai', 'Maharashtra', '400001', '022-9876543', 'Fort, Mumbai') t
+WHERE NOT EXISTS (SELECT 1 FROM branches WHERE branch_name IN ('ECI - Mumbai', 'Mahavir Express - Mumbai'));
 
 INSERT INTO branches (branch_name, city, state, pincode, phone, address)
-SELECT * FROM (SELECT 'Mahavir Express - Delhi', 'New Delhi', 'Delhi', '110001', '011-4567890', 'Connaught Place, New Delhi') t
-WHERE NOT EXISTS (SELECT 1 FROM branches WHERE branch_name = 'Mahavir Express - Delhi');
+SELECT * FROM (SELECT 'ECI - Delhi', 'New Delhi', 'Delhi', '110001', '011-4567890', 'Connaught Place, New Delhi') t
+WHERE NOT EXISTS (SELECT 1 FROM branches WHERE branch_name IN ('ECI - Delhi', 'Mahavir Express - Delhi'));
 
 INSERT INTO branches (branch_name, city, state, pincode, phone, address)
-SELECT * FROM (SELECT 'Mahavir Express - Jaipur', 'Jaipur', 'Rajasthan', '302001', '0141-2345678', 'MI Road, Jaipur') t
-WHERE NOT EXISTS (SELECT 1 FROM branches WHERE branch_name = 'Mahavir Express - Jaipur');
+SELECT * FROM (SELECT 'ECI - Jaipur', 'Jaipur', 'Rajasthan', '302001', '0141-2345678', 'MI Road, Jaipur') t
+WHERE NOT EXISTS (SELECT 1 FROM branches WHERE branch_name IN ('ECI - Jaipur', 'Mahavir Express - Jaipur'));
 
+-- Rename legacy branch labels if they still use the old company name
+UPDATE branches SET branch_name = 'ECI - Mehsana HO' WHERE branch_name = 'Mahavir Express - Mehsana HO';
+UPDATE branches SET branch_name = 'ECI - Ahmedabad' WHERE branch_name = 'Mahavir Express - Ahmedabad';
+UPDATE branches SET branch_name = 'ECI - Mumbai' WHERE branch_name = 'Mahavir Express - Mumbai';
+UPDATE branches SET branch_name = 'ECI - Delhi' WHERE branch_name = 'Mahavir Express - Delhi';
+UPDATE branches SET branch_name = 'ECI - Jaipur' WHERE branch_name = 'Mahavir Express - Jaipur';
 -- Demo shipment so a visitor can try the tracking widget immediately
 INSERT INTO shipments (tracking_id, sender_name, sender_phone, sender_address, receiver_name, receiver_phone,
                         receiver_address, origin_city, destination_city, weight_kg, service_type, status, expected_delivery)

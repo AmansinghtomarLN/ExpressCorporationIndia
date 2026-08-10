@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
-    <title>Admin | Shipment Detail | Shree Mahavir Express Services</title>
+    <title>Admin | Shipment Detail | Express Corporation of India</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
@@ -41,6 +41,16 @@
             <div class="form-row">
                 <div><h4>Route</h4><p th:text="${shipment.originCity} + ' → ' + ${shipment.destinationCity}">Route</p></div>
                 <div><h4>Service</h4><p th:text="${#strings.replace(shipment.serviceType,'_',' ')}">Service</p></div>
+            </div>
+            <div class="form-row">
+                <div>
+                    <h4>Expected Delivery</h4>
+                    <p th:text="${shipment.expectedDelivery != null ? #temporals.format(shipment.expectedDelivery, 'dd MMM yyyy') : 'To be updated'}">Date</p>
+                </div>
+                <div>
+                    <h4>Booked On</h4>
+                    <p th:text="${#temporals.format(shipment.createdAt, 'dd MMM yyyy')}">Date</p>
+                </div>
             </div>
 
             <h3 style="margin-top:24px;">Tracking History</h3>

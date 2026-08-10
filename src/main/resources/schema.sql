@@ -1,5 +1,5 @@
 -- ===========================================================================
--- Shree Mahavir Courier - schema
+-- Express Corporation of India - schema
 -- Idempotent: safe to run on every startup in dev (spring.sql.init.mode=always)
 -- ===========================================================================
 
