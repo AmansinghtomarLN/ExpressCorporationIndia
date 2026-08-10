@@ -33,7 +33,7 @@ public class TrackingEventDao {
 
     public List<TrackingEvent> findByShipmentId(Long shipmentId) {
         return jdbcTemplate.query(
-                "SELECT * FROM tracking_events WHERE shipment_id = ? ORDER BY event_time ASC",
+                "SELECT * FROM tracking_events WHERE shipment_id = ? ORDER BY event_time ASC, id ASC",
                 EVENT_ROW_MAPPER, shipmentId);
     }
 

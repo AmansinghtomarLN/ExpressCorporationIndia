@@ -40,6 +40,10 @@ public class BookingForm {
     private BigDecimal weightKg;
 
     @NotBlank(message = "Please select a service type")
+    @Pattern(
+            regexp = "DOMESTIC_STANDARD|DOMESTIC_EXPRESS|INTERNATIONAL",
+            message = "Please select a valid service type"
+    )
     private String serviceType;
 
     public String getSenderName() {

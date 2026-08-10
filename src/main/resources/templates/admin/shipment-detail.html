@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
     <title>Admin | Shipment Detail | Shree Mahavir Express Services</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
@@ -10,12 +12,16 @@
 <div th:replace="~{fragments/header :: header}"></div>
 
 <section class="section">
-    <div class="container" style="display:grid; grid-template-columns: 1.3fr 1fr; gap:30px;">
+    <div class="container admin-detail-grid">
         <div>
+            <p><a th:href="@{/admin}" class="muted">&larr; Back to all shipments</a></p>
             <span class="eyebrow">Admin Console</span>
             <h1 th:text="${shipment.trackingId}">MH1000000001</h1>
             <span class="status-badge" th:classappend="'status-' + ${shipment.status}"
                   th:text="${#strings.replace(shipment.status,'_',' ')}">STATUS</span>
+
+            <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"
+                 style="margin-top:16px;"></div>
 
             <div class="form-row" style="margin-top:20px;">
                 <div>
@@ -39,7 +45,8 @@
 
             <h3 style="margin-top:24px;">Tracking History</h3>
             <div class="timeline">
-                <div class="timeline-item" th:each="event : ${shipment.events}">
+                <div class="timeline-item" th:each="event, iterStat : ${shipment.events}"
+                     th:classappend="${iterStat.last} ? ' latest'">
                     <div class="t-status" th:text="${#strings.replace(event.status,'_',' ')} + ' — ' + ${event.location}">Status — Location</div>
                     <div class="t-meta" th:text="${#temporals.format(event.eventTime, 'dd MMM yyyy, hh:mm a')}">Date</div>
                     <div th:if="${event.remarks}" th:text="${event.remarks}">Remarks</div>
@@ -52,11 +59,16 @@
 
         <div class="form-card" style="margin:0;">
             <h3>Add Tracking Update</h3>
+            <p class="hint">Current status:
+                <strong th:text="${#strings.replace(shipment.status,'_',' ')}">STATUS</strong>
+            </p>
             <form th:action="@{/admin/shipments/{id}/update(id=${shipment.id})}" method="post">
                 <div class="form-group">
                     <label for="status">Status</label>
                     <select id="status" name="status" required>
-                        <option th:each="st : ${statuses}" th:value="${st}"
+                        <option th:each="st : ${statuses}"
+                                th:value="${st}"
+                                th:selected="${st == shipment.status}"
                                 th:text="${#strings.replace(st,'_',' ')}">STATUS</option>
                     </select>
                 </div>

@@ -63,16 +63,27 @@ java -jar target/mahavir-courier.jar
 
 The app starts on **http://localhost:8080**
 
+### Production run (required)
+
+Deployments **must** activate the `prod` profile so schema/data scripts do not re-run on every restart
+(`spring.sql.init.mode=never`):
+
+```bash
+export SPRING_PROFILES_ACTIVE=prod
+# or:
+java -jar target/mahavir-courier.jar --spring.profiles.active=prod
+```
+
+Without `prod`, the app uses local defaults (`spring.sql.init.mode=always`).
+
 ## 5. Default logins (seeded by `data.sql`)
 
 | Role     | Email                                 | Password    |
 |----------|----------------------------------------|-------------|
 | Admin    | admin@shreemahavircourier.com          | Admin@123   |
 
-Admin console: **http://localhost:8080/admin** (after logging in as admin, go there directly —
-the default post-login redirect goes to the customer dashboard for everyone; admins can navigate
-to `/admin` manually, or you can change `defaultSuccessUrl` in `SecurityConfig` to branch by role
-if you prefer automatic redirection).
+Admin console: **http://localhost:8080/admin** — after logging in as admin, use the **Admin** link
+in the header/nav (or open `/admin` directly).
 
 Sign up for a normal **customer** account at `/signup` to book and track your own shipments.
 
@@ -108,12 +119,13 @@ src/main/resources/
 
 ## 8. Production deployment notes
 
+- **Always run with the `prod` profile in deployment.** Set `SPRING_PROFILES_ACTIVE=prod` (or
+  `--spring.profiles.active=prod`). This turns off automatic schema/data init
+  (`spring.sql.init.mode=never` via `application-prod.properties`) so restarts do not re-run
+  `schema.sql` / `data.sql`.
 - **Never commit real DB credentials.** Use environment variables or a secrets manager.
-- Run with the `prod` profile: `java -jar mahavir-courier.jar --spring.profiles.active=prod`
-  - This disables Thymeleaf caching=false→true, tightens logging, and turns off automatic
-    schema init (`SQL_INIT_MODE=never`) so restarts don't re-run schema/data scripts.
-  - For real deployments, run `schema.sql` once (e.g. via a migration tool such as Flyway or
-    manually) rather than relying on `spring.sql.init` in the long run.
+- For real deployments, run `schema.sql` once (e.g. via a migration tool such as Flyway or
+  manually) rather than relying on `spring.sql.init` in the long run.
 - **Change the seeded admin password immediately** in a real deployment — either update it via
   SQL with a freshly generated BCrypt hash, or add an admin "change password" screen.
 - Put this behind a reverse proxy (Nginx) with HTTPS/TLS termination in production.

@@ -11,9 +11,11 @@
                     <a href="/login">Login</a> / <a href="/signup">Sign Up</a>
                 </span>
                 <span sec:authorize="isAuthenticated()">
-                    <a href="/dashboard">My Account</a> /
+                    <a href="/dashboard">My Account</a>
+                    <span sec:authorize="hasRole('ADMIN')"> / <a href="/admin">Admin</a></span>
+                    /
                     <a href="/logout" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>
-                    <form id="logout-form" action="/logout" method="post" style="display:none;"></form>
+                    <form id="logout-form" th:action="@{/logout}" method="post" style="display:none;"></form>
                 </span>
             </div>
         </div>
@@ -35,6 +37,7 @@
             <li><a href="/branches">Branch Network</a></li>
             <li><a href="/track">Track Shipment</a></li>
             <li><a href="/contact">Contact Us</a></li>
+            <li sec:authorize="hasRole('ADMIN')"><a href="/admin">Admin</a></li>
             <li sec:authorize="isAuthenticated()"><a href="/book" class="btn-nav">Book a Shipment</a></li>
             <li sec:authorize="!isAuthenticated()"><a href="/signup" class="btn-nav">Get Started</a></li>
         </ul>

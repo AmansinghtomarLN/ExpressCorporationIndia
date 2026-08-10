@@ -13,7 +13,53 @@
     <div class="container">
         <span class="eyebrow">Admin Console</span>
         <h1>All Shipments</h1>
-        <p>Update shipment status and add tracking events for customers.</p>
+        <p>Search, filter, and update shipment status for customers.</p>
+
+        <form class="admin-filters" method="get" th:action="@{/admin}">
+            <div class="admin-filters-row">
+                <div class="form-group admin-search">
+                    <label for="q">Search</label>
+                    <input type="text" id="q" name="q" th:value="${q}"
+                           placeholder="Tracking ID, sender, receiver, or phone">
+                </div>
+                <div class="form-group">
+                    <label for="status">Status</label>
+                    <select id="status" name="status">
+                        <option value="">All statuses</option>
+                        <option th:each="st : ${statuses}"
+                                th:value="${st}"
+                                th:selected="${st == statusFilter}"
+                                th:text="${#strings.replace(st,'_',' ')}">STATUS</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="size">Per page</label>
+                    <select id="size" name="size">
+                        <option th:each="opt : ${pageSizeOptions}"
+                                th:value="${opt}"
+                                th:selected="${opt == pageResult.size}"
+                                th:text="${opt}">10</option>
+                    </select>
+                </div>
+                <div class="form-group admin-filter-actions">
+                    <label>&nbsp;</label>
+                    <div class="admin-filter-buttons">
+                        <button type="submit" class="btn btn-primary">Apply</button>
+                        <a class="btn btn-dark" th:href="@{/admin}">Reset</a>
+                    </div>
+                </div>
+            </div>
+            <input type="hidden" name="page" value="1">
+        </form>
+
+        <div class="admin-results-meta" th:if="${pageResult.totalElements > 0}">
+            Showing
+            <strong th:text="${pageResult.fromIndex}">1</strong>–
+            <strong th:text="${pageResult.toIndex}">10</strong>
+            of
+            <strong th:text="${pageResult.totalElements}">0</strong>
+            shipments
+        </div>
 
         <div style="overflow-x:auto;">
             <table class="data-table">
@@ -31,8 +77,14 @@
                 <tbody>
                 <tr th:each="s : ${shipments}">
                     <td th:text="${s.trackingId}">MH1000000001</td>
-                    <td th:text="${s.senderName}">Sender</td>
-                    <td th:text="${s.receiverName}">Receiver</td>
+                    <td>
+                        <div th:text="${s.senderName}">Sender</div>
+                        <small class="muted" th:text="${s.senderPhone}">Phone</small>
+                    </td>
+                    <td>
+                        <div th:text="${s.receiverName}">Receiver</div>
+                        <small class="muted" th:text="${s.receiverPhone}">Phone</small>
+                    </td>
                     <td th:text="${s.originCity} + ' → ' + ${s.destinationCity}">Route</td>
                     <td>
                         <span class="status-badge" th:classappend="'status-' + ${s.status}"
@@ -46,7 +98,20 @@
         </div>
 
         <div th:if="${#lists.isEmpty(shipments)}" class="alert alert-info" style="margin-top:16px;">
-            No shipments booked yet.
+            No shipments found for the current filters.
+        </div>
+
+        <div class="pagination" th:if="${pageResult.totalPages > 1}">
+            <a class="btn btn-sm btn-dark"
+               th:classappend="${!pageResult.hasPrevious} ? ' disabled'"
+               th:href="@{/admin(q=${q}, status=${statusFilter}, page=${pageResult.page - 1}, size=${pageResult.size})}">Previous</a>
+
+            <span class="pagination-info"
+                  th:text="'Page ' + ${pageResult.page} + ' of ' + ${pageResult.totalPages}">Page 1 of 1</span>
+
+            <a class="btn btn-sm btn-dark"
+               th:classappend="${!pageResult.hasNext} ? ' disabled'"
+               th:href="@{/admin(q=${q}, status=${statusFilter}, page=${pageResult.page + 1}, size=${pageResult.size})}">Next</a>
         </div>
     </div>
 </section>

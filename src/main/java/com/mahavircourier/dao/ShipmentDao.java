@@ -12,6 +12,7 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -96,6 +97,45 @@ public class ShipmentDao {
     public List<Shipment> findRecent(int limit) {
         return jdbcTemplate.query(
                 "SELECT * FROM shipments ORDER BY created_at DESC LIMIT ?", SHIPMENT_ROW_MAPPER, limit);
+    }
+
+    /**
+     * Admin search: optional free-text query (tracking id, sender/receiver name or phone)
+     * and optional exact status filter, with LIMIT/OFFSET pagination.
+     */
+    public List<Shipment> search(String query, String status, int limit, int offset) {
+        StringBuilder sql = new StringBuilder("SELECT * FROM shipments WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+        appendSearchFilters(sql, params, query, status);
+        sql.append(" ORDER BY updated_at DESC, created_at DESC LIMIT ? OFFSET ?");
+        params.add(limit);
+        params.add(offset);
+        return jdbcTemplate.query(sql.toString(), SHIPMENT_ROW_MAPPER, params.toArray());
+    }
+
+    public long countSearch(String query, String status) {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM shipments WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+        appendSearchFilters(sql, params, query, status);
+        Long count = jdbcTemplate.queryForObject(sql.toString(), Long.class, params.toArray());
+        return count != null ? count : 0L;
+    }
+
+    private void appendSearchFilters(StringBuilder sql, List<Object> params, String query, String status) {
+        if (query != null && !query.isBlank()) {
+            String like = "%" + query.trim() + "%";
+            sql.append(" AND (tracking_id LIKE ? OR sender_name LIKE ? OR receiver_name LIKE ?")
+                    .append(" OR sender_phone LIKE ? OR receiver_phone LIKE ?)");
+            params.add(like);
+            params.add(like);
+            params.add(like);
+            params.add(like);
+            params.add(like);
+        }
+        if (status != null && !status.isBlank()) {
+            sql.append(" AND status = ?");
+            params.add(status.trim());
+        }
     }
 
     public Long save(Shipment s) {

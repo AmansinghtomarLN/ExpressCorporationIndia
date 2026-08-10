@@ -273,6 +273,50 @@ table.data-table th, table.data-table td {
 }
 table.data-table th { background: var(--gray-100); font-weight: 700; }
 
+.muted { color: var(--gray-500); font-size: 0.85rem; text-decoration: none; }
+.muted:hover { color: var(--primary); }
+
+.admin-filters {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin: 22px 0 16px;
+    box-shadow: var(--shadow);
+}
+.admin-filters-row {
+    display: grid;
+    grid-template-columns: 2.2fr 1.2fr 0.8fr auto;
+    gap: 14px;
+    align-items: end;
+}
+.admin-filters .form-group { margin-bottom: 0; }
+.admin-filter-buttons { display: flex; gap: 8px; }
+.admin-results-meta { margin-bottom: 12px; font-size: 0.9rem; color: var(--gray-700); }
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 22px;
+}
+.pagination-info { font-size: 0.9rem; color: var(--gray-700); }
+.btn.disabled, a.disabled {
+    pointer-events: none;
+    opacity: 0.45;
+}
+.admin-detail-grid {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 30px;
+}
+.timeline-item.latest::before {
+    background: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent);
+}
+.timeline-item.latest .t-status { color: var(--primary); }
+
 /* ---------- Footer ---------- */
 .site-footer { background: var(--dark); color: rgba(255,255,255,0.75); padding-top: 50px; }
 .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1.2fr; gap: 30px; padding-bottom: 30px; }
@@ -305,8 +349,11 @@ table.data-table th { background: var(--gray-100); font-weight: 700; }
     }
     .nav-toggle:checked ~ .nav-links { display: flex; }
     .form-row { grid-template-columns: 1fr; }
+    .admin-filters-row { grid-template-columns: 1fr 1fr; }
+    .admin-detail-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
     .grid-3, .grid-4, .footer-grid { grid-template-columns: 1fr; }
     .hero h1 { font-size: 1.9rem; }
+    .admin-filters-row { grid-template-columns: 1fr; }
 }
