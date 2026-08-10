@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | New Shipment | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container">
+        <p><a th:href="@{/admin/shipments}" class="muted">&larr; Back to shipments</a></p>
+        <span class="eyebrow">Admin Console</span>
+        <h1>New Shipment</h1>
+        <p>Create an admin booking for Express Corporation of India.</p>
+
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <div class="form-card wide" style="margin:24px 0 0;">
+            <form th:object="${form}" method="post" th:action="@{/admin/shipments}">
+
+                <h4>Sender Details</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="senderName">Sender Name</label>
+                        <input type="text" id="senderName" th:field="*{senderName}" required>
+                        <div class="error-text" th:if="${#fields.hasErrors('senderName')}" th:errors="*{senderName}"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="senderPhone">Sender Phone</label>
+                        <input type="text" id="senderPhone" th:field="*{senderPhone}" required>
+                        <div class="error-text" th:if="${#fields.hasErrors('senderPhone')}" th:errors="*{senderPhone}"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="senderAddress">Sender Address</label>
+                    <textarea id="senderAddress" rows="2" th:field="*{senderAddress}" required></textarea>
+                    <div class="error-text" th:if="${#fields.hasErrors('senderAddress')}" th:errors="*{senderAddress}"></div>
+                </div>
+
+                <h4 style="margin-top:20px;">Receiver Details</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="receiverName">Receiver Name</label>
+                        <input type="text" id="receiverName" th:field="*{receiverName}" required>
+                        <div class="error-text" th:if="${#fields.hasErrors('receiverName')}" th:errors="*{receiverName}"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="receiverPhone">Receiver Phone</label>
+                        <input type="text" id="receiverPhone" th:field="*{receiverPhone}" required>
+                        <div class="error-text" th:if="${#fields.hasErrors('receiverPhone')}" th:errors="*{receiverPhone}"></div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="receiverAddress">Receiver Address</label>
+                    <textarea id="receiverAddress" rows="2" th:field="*{receiverAddress}" required></textarea>
+                    <div class="error-text" th:if="${#fields.hasErrors('receiverAddress')}" th:errors="*{receiverAddress}"></div>
+                </div>
+
+                <h4 style="margin-top:20px;">Shipment Details</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="originCity">Origin City</label>
+                        <input type="text" id="originCity" th:field="*{originCity}" required>
+                        <div class="error-text" th:if="${#fields.hasErrors('originCity')}" th:errors="*{originCity}"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="destinationCity">Destination City</label>
+                        <input type="text" id="destinationCity" th:field="*{destinationCity}" required>
+                        <div class="error-text" th:if="${#fields.hasErrors('destinationCity')}" th:errors="*{destinationCity}"></div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="weightKg">Weight (kg)</label>
+                        <input type="number" step="0.1" min="0.1" id="weightKg" th:field="*{weightKg}" required>
+                        <div class="error-text" th:if="${#fields.hasErrors('weightKg')}" th:errors="*{weightKg}"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="serviceType">Service Type</label>
+                        <select id="serviceType" th:field="*{serviceType}" required>
+                            <option value="DOMESTIC_STANDARD">Domestic Standard (3-5 days)</option>
+                            <option value="DOMESTIC_EXPRESS">Domestic Express (1-2 days)</option>
+                            <option value="INTERNATIONAL">International (5-7 days)</option>
+                        </select>
+                        <div class="error-text" th:if="${#fields.hasErrors('serviceType')}" th:errors="*{serviceType}"></div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="codAmount">COD Amount (Rs.)</label>
+                        <input type="number" step="0.01" min="0" id="codAmount" th:field="*{codAmount}">
+                        <div class="error-text" th:if="${#fields.hasErrors('codAmount')}" th:errors="*{codAmount}"></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="expectedDelivery">Expected Delivery</label>
+                        <input type="date" id="expectedDelivery" th:field="*{expectedDelivery}">
+                        <div class="error-text" th:if="${#fields.hasErrors('expectedDelivery')}" th:errors="*{expectedDelivery}"></div>
+                    </div>
+                </div>
+
+                <h4 style="margin-top:20px;">Assignment</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="assignedBranchId">Branch</label>
+                        <select id="assignedBranchId" th:field="*{assignedBranchId}">
+                            <option value="">— Select branch —</option>
+                            <option th:each="b : ${branches}"
+                                    th:value="${b.id}"
+                                    th:text="${b.branchName + ' (' + b.city + ')'}">Branch</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="assignedHub">Hub</label>
+                        <input type="text" id="assignedHub" th:field="*{assignedHub}" placeholder="e.g. Ahmedabad Hub">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="courierName">Courier Name</label>
+                        <input type="text" id="courierName" th:field="*{courierName}">
+                    </div>
+                    <div class="form-group">
+                        <label for="courierPhone">Courier Phone</label>
+                        <input type="text" id="courierPhone" th:field="*{courierPhone}">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Create Shipment</button>
+            </form>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

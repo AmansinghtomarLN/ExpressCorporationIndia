@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Dashboard | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container">
+        <span class="eyebrow">Admin Console</span>
+        <h1>Dashboard</h1>
+        <p>Operations overview for Express Corporation of India.</p>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <div class="kpi-grid" th:if="${stats}">
+            <div class="kpi-card">
+                <span class="muted">Total Shipments</span>
+                <strong th:text="${stats.totalShipments}">0</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="muted">Booked</span>
+                <strong th:text="${stats.booked}">0</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="muted">In Transit</span>
+                <strong th:text="${stats.inTransit}">0</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="muted">Out for Delivery</span>
+                <strong th:text="${stats.outForDelivery}">0</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="muted">Delivered</span>
+                <strong th:text="${stats.delivered}">0</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="muted">Delayed</span>
+                <strong th:text="${stats.delayed}">0</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="muted">Unread Contacts</span>
+                <strong th:text="${stats.unreadContacts}">0</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="muted">Unpaid Invoices</span>
+                <strong th:text="${stats.unpaidInvoices}">0</strong>
+            </div>
+        </div>
+
+        <div class="admin-toolbar">
+            <h2 style="margin:0;">Recent Shipments</h2>
+            <a class="btn btn-sm btn-primary" th:href="@{/admin/shipments}">View all</a>
+        </div>
+
+        <div style="overflow-x:auto;">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Tracking ID</th>
+                    <th>Route</th>
+                    <th>Status</th>
+                    <th>Expected Delivery</th>
+                    <th>Booked On</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="s : ${recentShipments}">
+                    <td th:text="${s.trackingId}">ECI1000000001</td>
+                    <td th:text="${s.originCity} + ' → ' + ${s.destinationCity}">Route</td>
+                    <td>
+                        <span class="status-badge" th:classappend="'status-' + ${s.status}"
+                              th:text="${#strings.replace(s.status,'_',' ')}">STATUS</span>
+                    </td>
+                    <td th:text="${s.expectedDelivery != null ? #temporals.format(s.expectedDelivery, 'dd MMM yyyy') : '—'}">Date</td>
+                    <td th:text="${s.createdAt != null ? #temporals.format(s.createdAt, 'dd MMM yyyy') : '—'}">Date</td>
+                    <td><a th:href="@{/admin/shipments/{id}(id=${s.id})}" class="btn btn-sm btn-primary">Manage</a></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${recentShipments == null or #lists.isEmpty(recentShipments)}" class="alert alert-info" style="margin-top:16px;">
+            No recent shipments to show.
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

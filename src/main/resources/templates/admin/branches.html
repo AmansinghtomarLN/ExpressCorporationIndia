@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Branches | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container">
+        <span class="eyebrow">Admin Console</span>
+        <h1>Branches</h1>
+        <p>Manage the Express Corporation of India branch network.</p>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <div class="form-card wide" style="margin:24px 0;">
+            <h3 th:text="${editBranch != null} ? 'Edit Branch' : 'Create Branch'">Create Branch</h3>
+            <form method="post"
+                  th:action="${editBranch != null} ? @{/admin/branches/{id}/edit(id=${editBranch.id})} : @{/admin/branches}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="branchName">Branch Name</label>
+                        <input type="text" id="branchName" name="branchName" required
+                               th:value="${editBranch != null ? editBranch.branchName : ''}">
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Phone</label>
+                        <input type="text" id="phone" name="phone"
+                               th:value="${editBranch != null ? editBranch.phone : ''}">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="city">City</label>
+                        <input type="text" id="city" name="city" required
+                               th:value="${editBranch != null ? editBranch.city : ''}">
+                    </div>
+                    <div class="form-group">
+                        <label for="state">State</label>
+                        <input type="text" id="state" name="state" required
+                               th:value="${editBranch != null ? editBranch.state : ''}">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="pincode">Pincode</label>
+                        <input type="text" id="pincode" name="pincode" required
+                               th:value="${editBranch != null ? editBranch.pincode : ''}">
+                    </div>
+                    <div class="form-group">
+                        <label for="address">Address</label>
+                        <input type="text" id="address" name="address"
+                               th:value="${editBranch != null ? editBranch.address : ''}">
+                    </div>
+                </div>
+                <div class="admin-filter-buttons">
+                    <button type="submit" class="btn btn-primary"
+                            th:text="${editBranch != null} ? 'Update Branch' : 'Create Branch'">Create Branch</button>
+                    <a class="btn btn-dark" th:if="${editBranch != null}" th:href="@{/admin/branches}">Cancel Edit</a>
+                </div>
+            </form>
+        </div>
+
+        <div style="overflow-x:auto;">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>City</th>
+                    <th>State</th>
+                    <th>Pincode</th>
+                    <th>Phone</th>
+                    <th>Address</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="b : ${branches}">
+                    <td th:text="${b.branchName}">Branch</td>
+                    <td th:text="${b.city}">City</td>
+                    <td th:text="${b.state}">State</td>
+                    <td th:text="${b.pincode}">000000</td>
+                    <td th:text="${b.phone != null ? b.phone : '—'}">Phone</td>
+                    <td th:text="${b.address != null ? b.address : '—'}">Address</td>
+                    <td>
+                        <div class="admin-filter-buttons">
+                            <a class="btn btn-sm btn-dark" th:href="@{/admin/branches(editId=${b.id})}">Edit</a>
+                            <form th:action="@{/admin/branches/{id}/delete(id=${b.id})}" method="post"
+                                  onsubmit="return confirm('Delete this branch?');">
+                                <button type="submit" class="btn btn-sm btn-primary">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${branches == null or #lists.isEmpty(branches)}" class="alert alert-info" style="margin-top:16px;">
+            No branches found.
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

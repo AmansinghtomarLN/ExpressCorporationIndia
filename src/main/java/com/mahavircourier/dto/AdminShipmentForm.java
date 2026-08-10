@@ -6,8 +6,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
-public class BookingForm {
+public class AdminShipmentForm {
 
     @NotBlank(message = "Sender name is required")
     private String senderName;
@@ -46,8 +47,15 @@ public class BookingForm {
     )
     private String serviceType;
 
+    private Long assignedBranchId;
+    private String assignedHub;
+    private String courierName;
+    private String courierPhone;
+
     @DecimalMin(value = "0.0", message = "COD amount cannot be negative")
     private BigDecimal codAmount;
+
+    private LocalDate expectedDelivery;
 
     public String getSenderName() {
         return senderName;
@@ -129,11 +137,51 @@ public class BookingForm {
         this.serviceType = serviceType;
     }
 
+    public Long getAssignedBranchId() {
+        return assignedBranchId;
+    }
+
+    public void setAssignedBranchId(Long assignedBranchId) {
+        this.assignedBranchId = assignedBranchId;
+    }
+
+    public String getAssignedHub() {
+        return assignedHub;
+    }
+
+    public void setAssignedHub(String assignedHub) {
+        this.assignedHub = assignedHub;
+    }
+
+    public String getCourierName() {
+        return courierName;
+    }
+
+    public void setCourierName(String courierName) {
+        this.courierName = courierName;
+    }
+
+    public String getCourierPhone() {
+        return courierPhone;
+    }
+
+    public void setCourierPhone(String courierPhone) {
+        this.courierPhone = courierPhone;
+    }
+
     public BigDecimal getCodAmount() {
         return codAmount;
     }
 
     public void setCodAmount(BigDecimal codAmount) {
         this.codAmount = codAmount;
+    }
+
+    public LocalDate getExpectedDelivery() {
+        return expectedDelivery;
+    }
+
+    public void setExpectedDelivery(LocalDate expectedDelivery) {
+        this.expectedDelivery = expectedDelivery;
     }
 }

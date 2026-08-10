@@ -61,3 +61,16 @@ INSERT INTO tracking_events (shipment_id, status, location, remarks, event_time)
 SELECT s.id, 'IN_TRANSIT', 'Ahmedabad Sorting Hub', 'Departed from sorting hub towards destination', DATE_SUB(NOW(), INTERVAL 1 DAY)
 FROM shipments s WHERE s.tracking_id = 'MH1000000001'
   AND NOT EXISTS (SELECT 1 FROM tracking_events e WHERE e.shipment_id = s.id AND e.status = 'IN_TRANSIT');
+
+-- Default rate cards (freight pricing)
+INSERT INTO rate_cards (service_type, min_weight_kg, max_weight_kg, base_rate, per_kg_rate, active)
+SELECT 'DOMESTIC_STANDARD', 0, 999, 80.00, 15.00, 1
+WHERE NOT EXISTS (SELECT 1 FROM rate_cards WHERE service_type = 'DOMESTIC_STANDARD');
+
+INSERT INTO rate_cards (service_type, min_weight_kg, max_weight_kg, base_rate, per_kg_rate, active)
+SELECT 'DOMESTIC_EXPRESS', 0, 999, 120.00, 25.00, 1
+WHERE NOT EXISTS (SELECT 1 FROM rate_cards WHERE service_type = 'DOMESTIC_EXPRESS');
+
+INSERT INTO rate_cards (service_type, min_weight_kg, max_weight_kg, base_rate, per_kg_rate, active)
+SELECT 'INTERNATIONAL', 0, 999, 450.00, 80.00, 1
+WHERE NOT EXISTS (SELECT 1 FROM rate_cards WHERE service_type = 'INTERNATIONAL');

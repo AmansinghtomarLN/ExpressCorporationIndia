@@ -2,19 +2,16 @@ package com.mahavircourier.model;
 
 import java.time.LocalDateTime;
 
-public class User {
+public class ContactMessage {
 
     private Long id;
-    private String fullName;
+    private String name;
     private String email;
     private String phone;
-    private String passwordHash;
-    private String role;       // CUSTOMER | ADMIN | STAFF
-    private boolean enabled = true;
+    private String subject;
+    private String message;
+    private String status;
     private LocalDateTime createdAt;
-
-    public User() {
-    }
 
     public Long getId() {
         return id;
@@ -24,12 +21,12 @@ public class User {
         this.id = id;
     }
 
-    public String getFullName() {
-        return fullName;
+    public String getName() {
+        return name;
     }
 
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getEmail() {
@@ -48,28 +45,28 @@ public class User {
         this.phone = phone;
     }
 
-    public String getPasswordHash() {
-        return passwordHash;
+    public String getSubject() {
+        return subject;
     }
 
-    public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
+    public void setSubject(String subject) {
+        this.subject = subject;
     }
 
-    public String getRole() {
-        return role;
+    public String getMessage() {
+        return message;
     }
 
-    public void setRole(String role) {
-        this.role = role;
+    public void setMessage(String message) {
+        this.message = message;
     }
 
-    public boolean isEnabled() {
-        return enabled;
+    public String getStatus() {
+        return status;
     }
 
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public LocalDateTime getCreatedAt() {

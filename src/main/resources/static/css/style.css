@@ -317,6 +317,85 @@ table.data-table th { background: var(--gray-100); font-weight: 700; }
 }
 .timeline-item.latest .t-status { color: var(--primary); }
 
+/* ---------- Admin console ---------- */
+.admin-nav {
+    background: var(--white);
+    border-bottom: 1px solid var(--gray-200);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+.admin-nav-inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 4px;
+    padding: 10px 20px;
+}
+.admin-nav a {
+    display: inline-block;
+    padding: 8px 14px;
+    border-radius: var(--radius);
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+.admin-nav a:hover {
+    background: var(--gray-100);
+    color: var(--primary);
+}
+.admin-nav a.active {
+    background: rgba(193, 18, 31, 0.1);
+    color: var(--primary);
+}
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin: 24px 0 28px;
+}
+.kpi-card {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 18px 20px;
+}
+.kpi-card .muted {
+    display: block;
+    margin-bottom: 6px;
+}
+.kpi-card strong {
+    display: block;
+    font-size: 1.7rem;
+    color: var(--dark);
+    line-height: 1.2;
+}
+
+.admin-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    margin: 18px 0 8px;
+}
+.admin-inline-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+.admin-inline-form select,
+.admin-inline-form input[type="password"],
+.admin-inline-form input[type="text"] {
+    padding: 7px 10px;
+    border-radius: var(--radius);
+    border: 1px solid var(--gray-200);
+    font-size: 0.85rem;
+    font-family: inherit;
+}
+
 /* ---------- Footer ---------- */
 .site-footer { background: var(--dark); color: rgba(255,255,255,0.75); padding-top: 50px; }
 .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1.2fr; gap: 30px; padding-bottom: 30px; }
@@ -351,9 +430,11 @@ table.data-table th { background: var(--gray-100); font-weight: 700; }
     .form-row { grid-template-columns: 1fr; }
     .admin-filters-row { grid-template-columns: 1fr 1fr; }
     .admin-detail-grid { grid-template-columns: 1fr; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 600px) {
     .grid-3, .grid-4, .footer-grid { grid-template-columns: 1fr; }
     .hero h1 { font-size: 1.9rem; }
     .admin-filters-row { grid-template-columns: 1fr; }
+    .kpi-grid { grid-template-columns: 1fr; }
 }

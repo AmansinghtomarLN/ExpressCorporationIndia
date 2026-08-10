@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Notifications | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container">
+        <span class="eyebrow">Admin Console</span>
+        <h1>Notifications</h1>
+        <p>Outbound SMS/email notification log for Express Corporation of India.</p>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <div style="overflow-x:auto; margin-top:22px;">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>When</th>
+                    <th>Channel</th>
+                    <th>Recipient</th>
+                    <th>Subject</th>
+                    <th>Body</th>
+                    <th>Status</th>
+                    <th>Shipment</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="n : ${notifications}">
+                    <td th:text="${n.createdAt != null ? #temporals.format(n.createdAt, 'dd MMM yyyy, hh:mm a') : '—'}">Date</td>
+                    <td th:text="${n.channel}">EMAIL</td>
+                    <td th:text="${n.recipient}">recipient</td>
+                    <td th:text="${n.subject != null ? n.subject : '—'}">Subject</td>
+                    <td th:text="${n.body}">Body</td>
+                    <td>
+                        <span class="status-badge status-DELIVERED" th:text="${n.status}">SENT</span>
+                    </td>
+                    <td>
+                        <a th:if="${n.shipmentId != null}"
+                           th:href="@{/admin/shipments/{id}(id=${n.shipmentId})}"
+                           th:text="'#' + ${n.shipmentId}">#1</a>
+                        <span th:if="${n.shipmentId == null}">—</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${notifications == null or #lists.isEmpty(notifications)}" class="alert alert-info" style="margin-top:16px;">
+            No notifications logged yet.
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

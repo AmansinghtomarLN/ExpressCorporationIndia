@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Bulk Update | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container">
+        <p><a th:href="@{/admin/shipments}" class="muted">&larr; Back to shipments</a></p>
+        <span class="eyebrow">Admin Console</span>
+        <h1>Bulk Status Update</h1>
+        <p>Update multiple shipments at once for Express Corporation of India.</p>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+        <div class="alert alert-info" th:if="${bulkSummary}" th:text="${bulkSummary}"></div>
+
+        <div class="form-card wide" style="margin-top:24px;">
+            <h3>CSV Instructions</h3>
+            <p>Provide one row per shipment using this format:</p>
+            <pre class="muted" style="background:var(--gray-100);padding:14px;border-radius:8px;overflow-x:auto;">trackingId,status,location,remarks
+ECI1000000001,IN_TRANSIT,Ahmedabad Hub,Departed origin
+ECI1000000002,OUT_FOR_DELIVERY,Surat Branch,With courier</pre>
+            <ul style="margin:12px 0 20px; padding-left:18px; list-style:disc;">
+                <li style="margin-bottom:6px; color:var(--gray-700);">Header row is optional.</li>
+                <li style="margin-bottom:6px; color:var(--gray-700);"><code>status</code> must be an allowed next status for that shipment.</li>
+                <li style="margin-bottom:6px; color:var(--gray-700);"><code>location</code> is required; <code>remarks</code> is optional.</li>
+            </ul>
+
+            <form th:action="@{/admin/shipments/bulk}" method="post" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="csvText">Paste CSV</label>
+                    <textarea id="csvText" name="csvText" rows="10"
+                              placeholder="trackingId,status,location,remarks"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="csvFile">Or upload a CSV file</label>
+                    <input type="file" id="csvFile" name="csvFile" accept=".csv,text/csv">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Run Bulk Update</button>
+            </form>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

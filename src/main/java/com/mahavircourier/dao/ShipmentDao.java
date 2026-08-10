@@ -8,10 +8,14 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -54,8 +58,49 @@ public class ShipmentDao {
         if (updated != null) {
             s.setUpdatedAt(updated.toLocalDateTime());
         }
+        mapOptionalColumns(rs, s);
         return s;
     };
+
+    private static void mapOptionalColumns(ResultSet rs, Shipment s) throws SQLException {
+        if (hasColumn(rs, "assigned_branch_id")) {
+            long branchId = rs.getLong("assigned_branch_id");
+            s.setAssignedBranchId(rs.wasNull() ? null : branchId);
+        }
+        if (hasColumn(rs, "assigned_hub")) {
+            s.setAssignedHub(rs.getString("assigned_hub"));
+        }
+        if (hasColumn(rs, "courier_name")) {
+            s.setCourierName(rs.getString("courier_name"));
+        }
+        if (hasColumn(rs, "courier_phone")) {
+            s.setCourierPhone(rs.getString("courier_phone"));
+        }
+        if (hasColumn(rs, "freight_charge")) {
+            BigDecimal freight = rs.getBigDecimal("freight_charge");
+            s.setFreightCharge(freight != null ? freight : BigDecimal.ZERO);
+        } else {
+            s.setFreightCharge(BigDecimal.ZERO);
+        }
+        if (hasColumn(rs, "cod_amount")) {
+            BigDecimal cod = rs.getBigDecimal("cod_amount");
+            s.setCodAmount(cod != null ? cod : BigDecimal.ZERO);
+        } else {
+            s.setCodAmount(BigDecimal.ZERO);
+        }
+        if (hasColumn(rs, "assigned_branch_name")) {
+            s.setAssignedBranchName(rs.getString("assigned_branch_name"));
+        }
+    }
+
+    private static boolean hasColumn(ResultSet rs, String columnLabel) {
+        try {
+            rs.findColumn(columnLabel);
+            return true;
+        } catch (SQLException e) {
+            return false;
+        }
+    }
 
     public Optional<Shipment> findByTrackingId(String trackingId) {
         try {
@@ -71,7 +116,9 @@ public class ShipmentDao {
     public Optional<Shipment> findById(Long id) {
         try {
             Shipment shipment = jdbcTemplate.queryForObject(
-                    "SELECT * FROM shipments WHERE id = ?", SHIPMENT_ROW_MAPPER, id);
+                    "SELECT s.*, b.branch_name AS assigned_branch_name FROM shipments s " +
+                            "LEFT JOIN branches b ON b.id = s.assigned_branch_id WHERE s.id = ?",
+                    SHIPMENT_ROW_MAPPER, id);
             return Optional.ofNullable(shipment);
         } catch (EmptyResultDataAccessException e) {
             return Optional.empty();
@@ -92,6 +139,13 @@ public class ShipmentDao {
 
     public List<Shipment> findAll() {
         return jdbcTemplate.query("SELECT * FROM shipments ORDER BY created_at DESC", SHIPMENT_ROW_MAPPER);
+    }
+
+    public List<Shipment> findAllForExport() {
+        return jdbcTemplate.query(
+                "SELECT s.*, b.branch_name AS assigned_branch_name FROM shipments s " +
+                        "LEFT JOIN branches b ON b.id = s.assigned_branch_id ORDER BY s.created_at DESC",
+                SHIPMENT_ROW_MAPPER);
     }
 
     public List<Shipment> findRecent(int limit) {
@@ -121,6 +175,25 @@ public class ShipmentDao {
         return count != null ? count : 0L;
     }
 
+    public long countAll() {
+        Long count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM shipments", Long.class);
+        return count != null ? count : 0L;
+    }
+
+    public long countByStatus(String status) {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM shipments WHERE status = ?", Long.class, status);
+        return count != null ? count : 0L;
+    }
+
+    public long countDelayed() {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM shipments WHERE expected_delivery < CURDATE() " +
+                        "AND status NOT IN ('DELIVERED','CANCELLED','RTO')",
+                Long.class);
+        return count != null ? count : 0L;
+    }
+
     private void appendSearchFilters(StringBuilder sql, List<Object> params, String query, String status) {
         if (query != null && !query.isBlank()) {
             String like = "%" + query.trim() + "%";
@@ -144,8 +217,9 @@ public class ShipmentDao {
             PreparedStatement ps = connection.prepareStatement(
                     "INSERT INTO shipments (tracking_id, sender_name, sender_phone, sender_address, " +
                             "receiver_name, receiver_phone, receiver_address, origin_city, destination_city, " +
-                            "weight_kg, service_type, status, booked_by_user_id, expected_delivery) " +
-                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            "weight_kg, service_type, status, booked_by_user_id, expected_delivery, " +
+                            "assigned_branch_id, assigned_hub, courier_name, courier_phone, freight_charge, cod_amount) " +
+                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, s.getTrackingId());
             ps.setString(2, s.getSenderName());
@@ -162,17 +236,55 @@ public class ShipmentDao {
             if (s.getBookedByUserId() != null) {
                 ps.setLong(13, s.getBookedByUserId());
             } else {
-                ps.setNull(13, java.sql.Types.BIGINT);
+                ps.setNull(13, Types.BIGINT);
             }
             if (s.getExpectedDelivery() != null) {
                 ps.setDate(14, Date.valueOf(s.getExpectedDelivery()));
             } else {
-                ps.setNull(14, java.sql.Types.DATE);
+                ps.setNull(14, Types.DATE);
             }
+            if (s.getAssignedBranchId() != null) {
+                ps.setLong(15, s.getAssignedBranchId());
+            } else {
+                ps.setNull(15, Types.BIGINT);
+            }
+            ps.setString(16, s.getAssignedHub());
+            ps.setString(17, s.getCourierName());
+            ps.setString(18, s.getCourierPhone());
+            ps.setBigDecimal(19, s.getFreightCharge() != null ? s.getFreightCharge() : BigDecimal.ZERO);
+            ps.setBigDecimal(20, s.getCodAmount() != null ? s.getCodAmount() : BigDecimal.ZERO);
             return ps;
         }, keyHolder);
         Number key = keyHolder.getKey();
         return key != null ? key.longValue() : null;
+    }
+
+    public void update(Shipment s) {
+        jdbcTemplate.update(
+                "UPDATE shipments SET sender_name = ?, sender_phone = ?, sender_address = ?, " +
+                        "receiver_name = ?, receiver_phone = ?, receiver_address = ?, " +
+                        "origin_city = ?, destination_city = ?, weight_kg = ?, service_type = ?, " +
+                        "status = ?, expected_delivery = ?, assigned_branch_id = ?, assigned_hub = ?, " +
+                        "courier_name = ?, courier_phone = ?, freight_charge = ?, cod_amount = ? WHERE id = ?",
+                s.getSenderName(),
+                s.getSenderPhone(),
+                s.getSenderAddress(),
+                s.getReceiverName(),
+                s.getReceiverPhone(),
+                s.getReceiverAddress(),
+                s.getOriginCity(),
+                s.getDestinationCity(),
+                s.getWeightKg(),
+                s.getServiceType(),
+                s.getStatus(),
+                s.getExpectedDelivery() != null ? Date.valueOf(s.getExpectedDelivery()) : null,
+                s.getAssignedBranchId(),
+                s.getAssignedHub(),
+                s.getCourierName(),
+                s.getCourierPhone(),
+                s.getFreightCharge() != null ? s.getFreightCharge() : BigDecimal.ZERO,
+                s.getCodAmount() != null ? s.getCodAmount() : BigDecimal.ZERO,
+                s.getId());
     }
 
     public void updateStatus(Long shipmentId, String status) {

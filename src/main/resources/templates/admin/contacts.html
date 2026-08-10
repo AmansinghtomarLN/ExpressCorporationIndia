@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Contacts | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container">
+        <span class="eyebrow">Admin Console</span>
+        <h1>Contact Inbox</h1>
+        <p>Messages submitted through the Express Corporation of India contact form.</p>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <div style="overflow-x:auto; margin-top:22px;">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Subject</th>
+                    <th>Message</th>
+                    <th>Received</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="c : ${contacts}">
+                    <td>
+                        <span class="status-badge"
+                              th:classappend="${c.status == 'UNREAD'} ? ' status-OUT_FOR_DELIVERY' : ' status-DELIVERED'"
+                              th:text="${c.status}">UNREAD</span>
+                    </td>
+                    <td th:text="${c.name}">Name</td>
+                    <td th:text="${c.email}">email@example.com</td>
+                    <td th:text="${c.phone != null ? c.phone : '—'}">Phone</td>
+                    <td th:text="${c.subject != null ? c.subject : '—'}">Subject</td>
+                    <td th:text="${c.message}">Message</td>
+                    <td th:text="${c.createdAt != null ? #temporals.format(c.createdAt, 'dd MMM yyyy, hh:mm a') : '—'}">Date</td>
+                    <td>
+                        <div class="admin-filter-buttons">
+                            <form th:if="${c.status == 'UNREAD'}"
+                                  th:action="@{/admin/contacts/{id}/read(id=${c.id})}" method="post">
+                                <button type="submit" class="btn btn-sm btn-dark">Mark Read</button>
+                            </form>
+                            <form th:action="@{/admin/contacts/{id}/delete(id=${c.id})}" method="post"
+                                  onsubmit="return confirm('Delete this message?');">
+                                <button type="submit" class="btn btn-sm btn-primary">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${contacts == null or #lists.isEmpty(contacts)}" class="alert alert-info" style="margin-top:16px;">
+            No contact messages yet.
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

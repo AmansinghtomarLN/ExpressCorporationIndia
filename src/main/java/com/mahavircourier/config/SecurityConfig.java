@@ -3,15 +3,22 @@ package com.mahavircourier.config;
 import com.mahavircourier.service.UserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
-import org.springframework.http.HttpStatus;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
 @Configuration
 @EnableWebSecurity
@@ -31,20 +38,38 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, DaoAuthenticationProvider authProvider) throws Exception {
+    public AuthenticationSuccessHandler adminAwareSuccessHandler() {
+        return new AuthenticationSuccessHandler() {
+            @Override
+            public void onAuthenticationSuccess(HttpServletRequest request,
+                                                HttpServletResponse response,
+                                                Authentication authentication) throws IOException {
+                boolean adminOrStaff = authentication.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .anyMatch(a -> "ROLE_ADMIN".equals(a) || "ROLE_STAFF".equals(a));
+                if (adminOrStaff) {
+                    response.sendRedirect(request.getContextPath() + "/admin");
+                } else {
+                    response.sendRedirect(request.getContextPath() + "/dashboard");
+                }
+            }
+        };
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http,
+                                           DaoAuthenticationProvider authProvider,
+                                           AuthenticationSuccessHandler adminAwareSuccessHandler) throws Exception {
         http
             .authenticationProvider(authProvider)
             .authorizeHttpRequests(auth -> auth
-                // Public marketing + tracking pages
                 .requestMatchers(
                         "/", "/home", "/about", "/services", "/branches", "/contact", "/contact/**",
                         "/track", "/track/**", "/api/track/**",
                         "/login", "/signup", "/signup/**",
                         "/css/**", "/js/**", "/images/**", "/webjars/**", "/favicon.ico", "/error"
                 ).permitAll()
-                // Admin-only console
-                .requestMatchers("/admin/**").hasRole("ADMIN")
-                // Everything else (dashboard, booking) requires a logged-in user
+                .requestMatchers("/admin/**").hasAnyRole("ADMIN", "STAFF")
                 .anyRequest().authenticated()
             )
             .formLogin(form -> form
@@ -52,7 +77,7 @@ public class SecurityConfig {
                 .loginProcessingUrl("/login")
                 .usernameParameter("email")
                 .passwordParameter("password")
-                .defaultSuccessUrl("/dashboard", false)
+                .successHandler(adminAwareSuccessHandler)
                 .failureUrl("/login?error=true")
                 .permitAll()
             )
@@ -67,7 +92,6 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                 .sessionConcurrency(concurrency -> concurrency.maximumSessions(3))
             )
-            // Sensible security headers for production
             .headers(headers -> headers
                 .frameOptions(frame -> frame.deny())
             )

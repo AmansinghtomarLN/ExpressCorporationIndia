@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Rates | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container">
+        <span class="eyebrow">Admin Console</span>
+        <h1>Rate Cards</h1>
+        <p>Configure freight rates for Express Corporation of India services.</p>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <div class="form-card wide" style="margin:24px 0;">
+            <h3 th:text="${editRate != null} ? 'Edit Rate Card' : 'Create Rate Card'">Create Rate Card</h3>
+            <form method="post"
+                  th:action="${editRate != null} ? @{/admin/rates/{id}/edit(id=${editRate.id})} : @{/admin/rates}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="serviceType">Service Type</label>
+                        <select id="serviceType" name="serviceType" required>
+                            <option value="DOMESTIC_STANDARD"
+                                    th:selected="${editRate != null and editRate.serviceType == 'DOMESTIC_STANDARD'}">Domestic Standard</option>
+                            <option value="DOMESTIC_EXPRESS"
+                                    th:selected="${editRate != null and editRate.serviceType == 'DOMESTIC_EXPRESS'}">Domestic Express</option>
+                            <option value="INTERNATIONAL"
+                                    th:selected="${editRate != null and editRate.serviceType == 'INTERNATIONAL'}">International</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="active">Active</label>
+                        <select id="active" name="active">
+                            <option value="true" th:selected="${editRate == null or editRate.active}">Yes</option>
+                            <option value="false" th:selected="${editRate != null and !editRate.active}">No</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="minWeightKg">Min Weight (kg)</label>
+                        <input type="number" step="0.1" min="0" id="minWeightKg" name="minWeightKg" required
+                               th:value="${editRate != null ? editRate.minWeightKg : 0}">
+                    </div>
+                    <div class="form-group">
+                        <label for="maxWeightKg">Max Weight (kg)</label>
+                        <input type="number" step="0.1" min="0" id="maxWeightKg" name="maxWeightKg" required
+                               th:value="${editRate != null ? editRate.maxWeightKg : 999}">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="baseRate">Base Rate (Rs.)</label>
+                        <input type="number" step="0.01" min="0" id="baseRate" name="baseRate" required
+                               th:value="${editRate != null ? editRate.baseRate : ''}">
+                    </div>
+                    <div class="form-group">
+                        <label for="perKgRate">Per Kg Rate (Rs.)</label>
+                        <input type="number" step="0.01" min="0" id="perKgRate" name="perKgRate" required
+                               th:value="${editRate != null ? editRate.perKgRate : 0}">
+                    </div>
+                </div>
+                <div class="admin-filter-buttons">
+                    <button type="submit" class="btn btn-primary"
+                            th:text="${editRate != null} ? 'Update Rate' : 'Create Rate'">Create Rate</button>
+                    <a class="btn btn-dark" th:if="${editRate != null}" th:href="@{/admin/rates}">Cancel Edit</a>
+                </div>
+            </form>
+        </div>
+
+        <div style="overflow-x:auto;">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Service</th>
+                    <th>Weight Range</th>
+                    <th>Base Rate</th>
+                    <th>Per Kg</th>
+                    <th>Active</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="r : ${rates}">
+                    <td th:text="${#strings.replace(r.serviceType,'_',' ')}">Service</td>
+                    <td th:text="${r.minWeightKg + ' – ' + r.maxWeightKg + ' kg'}">0 – 999 kg</td>
+                    <td th:text="${'Rs. ' + #numbers.formatDecimal(r.baseRate, 1, 2)}">Rs. 0.00</td>
+                    <td th:text="${'Rs. ' + #numbers.formatDecimal(r.perKgRate, 1, 2)}">Rs. 0.00</td>
+                    <td>
+                        <span class="status-badge" th:classappend="${r.active} ? ' status-DELIVERED' : ' status-CANCELLED'"
+                              th:text="${r.active} ? 'ACTIVE' : 'INACTIVE'">ACTIVE</span>
+                    </td>
+                    <td th:text="${r.createdAt != null ? #temporals.format(r.createdAt, 'dd MMM yyyy') : '—'}">Date</td>
+                    <td>
+                        <div class="admin-filter-buttons">
+                            <a class="btn btn-sm btn-dark" th:href="@{/admin/rates(editId=${r.id})}">Edit</a>
+                            <form th:action="@{/admin/rates/{id}/delete(id=${r.id})}" method="post"
+                                  onsubmit="return confirm('Delete this rate card?');">
+                                <button type="submit" class="btn btn-sm btn-primary">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${rates == null or #lists.isEmpty(rates)}" class="alert alert-info" style="margin-top:16px;">
+            No rate cards configured.
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

@@ -23,8 +23,17 @@ public class Shipment {
     private String status;
     private Long bookedByUserId;
     private LocalDate expectedDelivery;
+    private Long assignedBranchId;
+    private String assignedHub;
+    private String courierName;
+    private String courierPhone;
+    private BigDecimal freightCharge;
+    private BigDecimal codAmount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    /** Transient display name for assigned branch (not persisted). */
+    private String assignedBranchName;
 
     private List<TrackingEvent> events = new ArrayList<>();
 
@@ -148,6 +157,54 @@ public class Shipment {
         this.expectedDelivery = expectedDelivery;
     }
 
+    public Long getAssignedBranchId() {
+        return assignedBranchId;
+    }
+
+    public void setAssignedBranchId(Long assignedBranchId) {
+        this.assignedBranchId = assignedBranchId;
+    }
+
+    public String getAssignedHub() {
+        return assignedHub;
+    }
+
+    public void setAssignedHub(String assignedHub) {
+        this.assignedHub = assignedHub;
+    }
+
+    public String getCourierName() {
+        return courierName;
+    }
+
+    public void setCourierName(String courierName) {
+        this.courierName = courierName;
+    }
+
+    public String getCourierPhone() {
+        return courierPhone;
+    }
+
+    public void setCourierPhone(String courierPhone) {
+        this.courierPhone = courierPhone;
+    }
+
+    public BigDecimal getFreightCharge() {
+        return freightCharge;
+    }
+
+    public void setFreightCharge(BigDecimal freightCharge) {
+        this.freightCharge = freightCharge;
+    }
+
+    public BigDecimal getCodAmount() {
+        return codAmount;
+    }
+
+    public void setCodAmount(BigDecimal codAmount) {
+        this.codAmount = codAmount;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -162,6 +219,14 @@ public class Shipment {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getAssignedBranchName() {
+        return assignedBranchName;
+    }
+
+    public void setAssignedBranchName(String assignedBranchName) {
+        this.assignedBranchName = assignedBranchName;
     }
 
     public List<TrackingEvent> getEvents() {

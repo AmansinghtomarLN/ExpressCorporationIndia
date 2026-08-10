@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Label | ' + ${shipment.trackingId} + ' | Express Corporation of India'">Label | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body.label-page { background: #f5f5f5; }
+        .label-actions { padding: 16px 20px; text-align: center; }
+        .shipping-label {
+            max-width: 720px;
+            margin: 0 auto 40px;
+            background: #fff;
+            border: 2px solid #1c1c1e;
+            padding: 28px 32px;
+        }
+        .label-brand {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #1c1c1e;
+            padding-bottom: 14px;
+            margin-bottom: 18px;
+        }
+        .label-brand strong { font-size: 1.25rem; letter-spacing: 0.5px; }
+        .label-barcode {
+            font-family: "Courier New", Courier, monospace;
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-align: center;
+            padding: 14px;
+            border: 1px dashed #868e96;
+            margin: 18px 0;
+        }
+        .label-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .label-grid h4 { margin-bottom: 6px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: #868e96; }
+        .label-meta { margin-top: 20px; display: flex; gap: 28px; flex-wrap: wrap; }
+        @media print {
+            .no-print { display: none !important; }
+            body.label-page { background: #fff; }
+            .shipping-label { border-width: 1px; margin: 0; max-width: none; }
+        }
+    </style>
+</head>
+<body class="label-page">
+<div class="label-actions no-print">
+    <button type="button" class="btn btn-primary" onclick="window.print()">Print Label</button>
+    <a class="btn btn-dark" th:href="@{/admin/shipments/{id}(id=${shipment.id})}">Back to shipment</a>
+</div>
+
+<div class="shipping-label" th:if="${shipment}">
+    <div class="label-brand">
+        <div>
+            <strong>Express Corporation of India</strong>
+            <div class="muted">ECI Courier Label</div>
+        </div>
+        <div class="brand-mark" style="width:40px;height:40px;font-size:0.95rem;">ECI</div>
+    </div>
+
+    <div class="label-barcode" th:text="${shipment.trackingId}">ECI1000000001</div>
+
+    <div class="label-grid">
+        <div>
+            <h4>From (Sender)</h4>
+            <p th:text="${shipment.senderName}">Sender</p>
+            <p th:text="${shipment.senderPhone}">Phone</p>
+            <p th:text="${shipment.senderAddress}">Address</p>
+            <p th:text="${shipment.originCity}">Origin</p>
+        </div>
+        <div>
+            <h4>To (Receiver)</h4>
+            <p th:text="${shipment.receiverName}">Receiver</p>
+            <p th:text="${shipment.receiverPhone}">Phone</p>
+            <p th:text="${shipment.receiverAddress}">Address</p>
+            <p th:text="${shipment.destinationCity}">Destination</p>
+        </div>
+    </div>
+
+    <div class="label-meta">
+        <div>
+            <h4 style="margin-bottom:4px;font-size:0.8rem;text-transform:uppercase;letter-spacing:1px;color:#868e96;">Service</h4>
+            <p th:text="${#strings.replace(shipment.serviceType,'_',' ')}">Service</p>
+        </div>
+        <div>
+            <h4 style="margin-bottom:4px;font-size:0.8rem;text-transform:uppercase;letter-spacing:1px;color:#868e96;">Weight</h4>
+            <p th:text="${shipment.weightKg} + ' kg'">0.5 kg</p>
+        </div>
+        <div th:if="${shipment.codAmount != null and shipment.codAmount > 0}">
+            <h4 style="margin-bottom:4px;font-size:0.8rem;text-transform:uppercase;letter-spacing:1px;color:#868e96;">COD</h4>
+            <p th:text="${'Rs. ' + #numbers.formatDecimal(shipment.codAmount, 1, 2)}">Rs. 0.00</p>
+        </div>
+    </div>
+</div>
+</body>
+</html>

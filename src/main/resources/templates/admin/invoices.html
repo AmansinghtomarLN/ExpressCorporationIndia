@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Invoices | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container">
+        <span class="eyebrow">Admin Console</span>
+        <h1>Invoices</h1>
+        <p>Track freight and COD collections for Express Corporation of India.</p>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <div style="overflow-x:auto; margin-top:22px;">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Invoice #</th>
+                    <th>Tracking ID</th>
+                    <th>Freight</th>
+                    <th>COD</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="inv : ${invoices}">
+                    <td th:text="${inv.invoiceNumber}">INV-20260101-0001</td>
+                    <td>
+                        <a th:if="${inv.shipmentId != null}"
+                           th:href="@{/admin/shipments/{id}(id=${inv.shipmentId})}"
+                           th:text="${inv.trackingId != null ? inv.trackingId : ('#' + inv.shipmentId)}">Tracking</a>
+                        <span th:if="${inv.shipmentId == null}">—</span>
+                    </td>
+                    <td th:text="${'Rs. ' + #numbers.formatDecimal(inv.freightAmount, 1, 2)}">Rs. 0.00</td>
+                    <td th:text="${'Rs. ' + #numbers.formatDecimal(inv.codAmount, 1, 2)}">Rs. 0.00</td>
+                    <td th:text="${'Rs. ' + #numbers.formatDecimal(inv.totalAmount, 1, 2)}">Rs. 0.00</td>
+                    <td>
+                        <span class="status-badge"
+                              th:classappend="${inv.status == 'PAID'} ? ' status-DELIVERED' : (${inv.status == 'COD_COLLECTED'} ? ' status-AT_HUB' : ' status-OUT_FOR_DELIVERY')"
+                              th:text="${#strings.replace(inv.status,'_',' ')}">UNPAID</span>
+                    </td>
+                    <td th:text="${inv.createdAt != null ? #temporals.format(inv.createdAt, 'dd MMM yyyy') : '—'}">Date</td>
+                    <td>
+                        <div class="admin-filter-buttons" style="flex-wrap:wrap;">
+                            <form th:action="@{/admin/invoices/{id}/paid(id=${inv.id})}" method="post">
+                                <button type="submit" class="btn btn-sm btn-primary">Mark PAID</button>
+                            </form>
+                            <form th:action="@{/admin/invoices/{id}/unpaid(id=${inv.id})}" method="post">
+                                <button type="submit" class="btn btn-sm btn-dark">Mark UNPAID</button>
+                            </form>
+                            <form th:action="@{/admin/invoices/{id}/cod-collected(id=${inv.id})}" method="post">
+                                <button type="submit" class="btn btn-sm btn-dark">COD Collected</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${invoices == null or #lists.isEmpty(invoices)}" class="alert alert-info" style="margin-top:16px;">
+            No invoices found.
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

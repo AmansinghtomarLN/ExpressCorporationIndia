@@ -8,14 +8,24 @@
 </head>
 <body>
 <div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
 
 <section class="section">
     <div class="container">
         <span class="eyebrow">Admin Console</span>
         <h1>All Shipments</h1>
-        <p>Search, filter, and update shipment status for customers.</p>
+        <p>Search, filter, and manage shipments for Express Corporation of India.</p>
 
-        <form class="admin-filters" method="get" th:action="@{/admin}">
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <div class="admin-toolbar">
+            <a class="btn btn-primary" th:href="@{/admin/shipments/new}">New Shipment</a>
+            <a class="btn btn-dark" th:href="@{/admin/shipments/export.csv}">Export CSV</a>
+            <a class="btn btn-dark" th:href="@{/admin/shipments/bulk}">Bulk Update</a>
+        </div>
+
+        <form class="admin-filters" method="get" th:action="@{/admin/shipments}">
             <div class="admin-filters-row">
                 <div class="form-group admin-search">
                     <label for="q">Search</label>
@@ -45,14 +55,14 @@
                     <label>&nbsp;</label>
                     <div class="admin-filter-buttons">
                         <button type="submit" class="btn btn-primary">Apply</button>
-                        <a class="btn btn-dark" th:href="@{/admin}">Reset</a>
+                        <a class="btn btn-dark" th:href="@{/admin/shipments}">Reset</a>
                     </div>
                 </div>
             </div>
             <input type="hidden" name="page" value="1">
         </form>
 
-        <div class="admin-results-meta" th:if="${pageResult.totalElements > 0}">
+        <div class="admin-results-meta" th:if="${pageResult != null and pageResult.totalElements > 0}">
             Showing
             <strong th:text="${pageResult.fromIndex}">1</strong>–
             <strong th:text="${pageResult.toIndex}">10</strong>
@@ -71,13 +81,15 @@
                     <th>Route</th>
                     <th>Status</th>
                     <th>Expected Delivery</th>
+                    <th>Freight</th>
+                    <th>COD</th>
                     <th>Booked On</th>
                     <th></th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr th:each="s : ${shipments}">
-                    <td th:text="${s.trackingId}">MH1000000001</td>
+                    <td th:text="${s.trackingId}">ECI1000000001</td>
                     <td>
                         <div th:text="${s.senderName}">Sender</div>
                         <small class="muted" th:text="${s.senderPhone}">Phone</small>
@@ -92,7 +104,9 @@
                               th:text="${#strings.replace(s.status,'_',' ')}">STATUS</span>
                     </td>
                     <td th:text="${s.expectedDelivery != null ? #temporals.format(s.expectedDelivery, 'dd MMM yyyy') : '—'}">Date</td>
-                    <td th:text="${#temporals.format(s.createdAt, 'dd MMM yyyy')}">Date</td>
+                    <td th:text="${s.freightCharge != null ? 'Rs. ' + #numbers.formatDecimal(s.freightCharge, 1, 2) : '—'}">Rs. 0.00</td>
+                    <td th:text="${s.codAmount != null ? 'Rs. ' + #numbers.formatDecimal(s.codAmount, 1, 2) : '—'}">Rs. 0.00</td>
+                    <td th:text="${s.createdAt != null ? #temporals.format(s.createdAt, 'dd MMM yyyy') : '—'}">Date</td>
                     <td><a th:href="@{/admin/shipments/{id}(id=${s.id})}" class="btn btn-sm btn-primary">Manage</a></td>
                 </tr>
                 </tbody>
@@ -103,17 +117,17 @@
             No shipments found for the current filters.
         </div>
 
-        <div class="pagination" th:if="${pageResult.totalPages > 1}">
+        <div class="pagination" th:if="${pageResult != null and pageResult.totalPages > 1}">
             <a class="btn btn-sm btn-dark"
                th:classappend="${!pageResult.hasPrevious} ? ' disabled'"
-               th:href="@{/admin(q=${q}, status=${statusFilter}, page=${pageResult.page - 1}, size=${pageResult.size})}">Previous</a>
+               th:href="@{/admin/shipments(q=${q}, status=${statusFilter}, page=${pageResult.page - 1}, size=${pageResult.size})}">Previous</a>
 
             <span class="pagination-info"
                   th:text="'Page ' + ${pageResult.page} + ' of ' + ${pageResult.totalPages}">Page 1 of 1</span>
 
             <a class="btn btn-sm btn-dark"
                th:classappend="${!pageResult.hasNext} ? ' disabled'"
-               th:href="@{/admin(q=${q}, status=${statusFilter}, page=${pageResult.page + 1}, size=${pageResult.size})}">Next</a>
+               th:href="@{/admin/shipments(q=${q}, status=${statusFilter}, page=${pageResult.page + 1}, size=${pageResult.size})}">Next</a>
         </div>
     </div>
 </section>

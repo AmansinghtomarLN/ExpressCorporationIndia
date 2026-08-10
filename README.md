@@ -6,8 +6,11 @@ A production-ready Spring Boot web application for Express Corporation of India,
 - **Spring MVC + Thymeleaf** (server-rendered pages)
 - **Spring JDBC (`JdbcTemplate`)** — plain JDBC, no JPA/Hibernate, as requested
 - **MySQL 8** database
-- **Spring Security** — login / signup, BCrypt password hashing, role-based access (`CUSTOMER`, `ADMIN`)
+- **Spring Security** — login / signup, BCrypt password hashing, role-based access (`CUSTOMER`, `STAFF`, `ADMIN`)
 - Courier **booking + real-time tracking** with a status timeline
+- Full **admin operations console** (shipments, users, branches, contacts, rates, invoices, notifications, audit)
+
+> **Capability reference:** see [`docs/CAPABILITIES.md`](docs/CAPABILITIES.md) for a tracked inventory of what is implemented, roles, URLs, status workflow, and deferred items.
 
 ## Pages / Sections (matching the reference site)
 

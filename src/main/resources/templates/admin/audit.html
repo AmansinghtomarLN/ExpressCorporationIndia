@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Audit Log | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container">
+        <span class="eyebrow">Admin Console</span>
+        <h1>Audit Log</h1>
+        <p>Administrative activity history for Express Corporation of India.</p>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <div style="overflow-x:auto; margin-top:22px;">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>When</th>
+                    <th>Actor</th>
+                    <th>Action</th>
+                    <th>Entity</th>
+                    <th>Entity ID</th>
+                    <th>Details</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="a : ${auditLogs}">
+                    <td th:text="${a.createdAt != null ? #temporals.format(a.createdAt, 'dd MMM yyyy, hh:mm a') : '—'}">Date</td>
+                    <td>
+                        <div th:text="${a.actorEmail != null ? a.actorEmail : 'system'}">actor@example.com</div>
+                        <small class="muted" th:if="${a.actorUserId}" th:text="'User #' + ${a.actorUserId}">User #1</small>
+                    </td>
+                    <td th:text="${a.action}">ACTION</td>
+                    <td th:text="${a.entityType}">Shipment</td>
+                    <td th:text="${a.entityId != null ? a.entityId : '—'}">1</td>
+                    <td th:text="${a.details != null ? a.details : '—'}">Details</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${auditLogs == null or #lists.isEmpty(auditLogs)}" class="alert alert-info" style="margin-top:16px;">
+            No audit entries yet.
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

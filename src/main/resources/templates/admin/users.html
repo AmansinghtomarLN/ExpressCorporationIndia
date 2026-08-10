@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Users | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container">
+        <span class="eyebrow">Admin Console</span>
+        <h1>Users</h1>
+        <p>Manage customer, staff, and admin accounts for Express Corporation of India.</p>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <div class="form-card wide" style="margin:24px 0;">
+            <h3>Create User</h3>
+            <form th:action="@{/admin/users}" method="post">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="fullName">Full Name</label>
+                        <input type="text" id="fullName" name="fullName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="phone">Phone</label>
+                        <input type="text" id="phone" name="phone" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required minlength="6">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="role">Role</label>
+                    <select id="role" name="role" required>
+                        <option value="CUSTOMER">CUSTOMER</option>
+                        <option value="STAFF">STAFF</option>
+                        <option value="ADMIN">ADMIN</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Create User</button>
+            </form>
+        </div>
+
+        <div style="overflow-x:auto;">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="u : ${users}">
+                    <td th:text="${u.fullName}">Name</td>
+                    <td th:text="${u.email}">email@example.com</td>
+                    <td th:text="${u.phone}">Phone</td>
+                    <td th:text="${u.role}">CUSTOMER</td>
+                    <td>
+                        <span class="status-badge" th:classappend="${u.enabled} ? ' status-DELIVERED' : ' status-CANCELLED'"
+                              th:text="${u.enabled} ? 'ENABLED' : 'DISABLED'">ENABLED</span>
+                    </td>
+                    <td th:text="${u.createdAt != null ? #temporals.format(u.createdAt, 'dd MMM yyyy') : '—'}">Date</td>
+                    <td>
+                        <div class="admin-filter-buttons" style="flex-wrap:wrap;">
+                            <form th:action="@{/admin/users/{id}/enabled(id=${u.id})}" method="post">
+                                <input type="hidden" name="enabled" th:value="${!u.enabled}">
+                                <button type="submit" class="btn btn-sm btn-dark"
+                                        th:text="${u.enabled} ? 'Disable' : 'Enable'">Disable</button>
+                            </form>
+                            <form th:action="@{/admin/users/{id}/role(id=${u.id})}" method="post" class="admin-inline-form">
+                                <select name="role" required>
+                                    <option value="CUSTOMER" th:selected="${u.role == 'CUSTOMER'}">CUSTOMER</option>
+                                    <option value="STAFF" th:selected="${u.role == 'STAFF'}">STAFF</option>
+                                    <option value="ADMIN" th:selected="${u.role == 'ADMIN'}">ADMIN</option>
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-primary">Set Role</button>
+                            </form>
+                            <form th:action="@{/admin/users/{id}/password(id=${u.id})}" method="post" class="admin-inline-form">
+                                <input type="password" name="password" placeholder="New password" required minlength="6">
+                                <button type="submit" class="btn btn-sm btn-dark">Reset Password</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${users == null or #lists.isEmpty(users)}" class="alert alert-info" style="margin-top:16px;">
+            No users found.
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

@@ -71,6 +71,17 @@ public class UserDao {
         return jdbcTemplate.query("SELECT * FROM users ORDER BY created_at DESC", USER_ROW_MAPPER);
     }
 
+    public List<User> search(String query) {
+        if (query == null || query.isBlank()) {
+            return findAll();
+        }
+        String like = "%" + query.trim() + "%";
+        return jdbcTemplate.query(
+                "SELECT * FROM users WHERE full_name LIKE ? OR email LIKE ? OR phone LIKE ? " +
+                        "OR role LIKE ? ORDER BY created_at DESC",
+                USER_ROW_MAPPER, like, like, like, like);
+    }
+
     public Long save(User user) {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(connection -> {
@@ -87,5 +98,23 @@ public class UserDao {
         }, keyHolder);
         Number key = keyHolder.getKey();
         return key != null ? key.longValue() : null;
+    }
+
+    public void updateProfile(User user) {
+        jdbcTemplate.update(
+                "UPDATE users SET full_name = ?, email = ?, phone = ? WHERE id = ?",
+                user.getFullName(), user.getEmail(), user.getPhone(), user.getId());
+    }
+
+    public void updateEnabled(Long id, boolean enabled) {
+        jdbcTemplate.update("UPDATE users SET enabled = ? WHERE id = ?", enabled, id);
+    }
+
+    public void updateRole(Long id, String role) {
+        jdbcTemplate.update("UPDATE users SET role = ? WHERE id = ?", role, id);
+    }
+
+    public void updatePasswordHash(Long id, String passwordHash) {
+        jdbcTemplate.update("UPDATE users SET password_hash = ? WHERE id = ?", passwordHash, id);
     }
 }

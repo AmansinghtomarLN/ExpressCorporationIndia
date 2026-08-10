@@ -10,88 +10,276 @@
 </head>
 <body>
 <div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
 
 <section class="section">
-    <div class="container admin-detail-grid">
-        <div>
-            <p><a th:href="@{/admin}" class="muted">&larr; Back to all shipments</a></p>
-            <span class="eyebrow">Admin Console</span>
-            <h1 th:text="${shipment.trackingId}">MH1000000001</h1>
-            <span class="status-badge" th:classappend="'status-' + ${shipment.status}"
-                  th:text="${#strings.replace(shipment.status,'_',' ')}">STATUS</span>
-
-            <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"
-                 style="margin-top:16px;"></div>
-
-            <div class="form-row" style="margin-top:20px;">
-                <div>
-                    <h4>Sender</h4>
-                    <p th:text="${shipment.senderName}">Sender</p>
-                    <p th:text="${shipment.senderPhone}">Phone</p>
-                    <p th:text="${shipment.senderAddress}">Address</p>
-                </div>
-                <div>
-                    <h4>Receiver</h4>
-                    <p th:text="${shipment.receiverName}">Receiver</p>
-                    <p th:text="${shipment.receiverPhone}">Phone</p>
-                    <p th:text="${shipment.receiverAddress}">Address</p>
-                </div>
+    <div class="container">
+        <p><a th:href="@{/admin/shipments}" class="muted">&larr; Back to shipments</a></p>
+        <span class="eyebrow">Admin Console</span>
+        <div class="admin-toolbar" style="align-items:flex-start;">
+            <div>
+                <h1 th:text="${shipment.trackingId}">ECI1000000001</h1>
+                <span class="status-badge" th:classappend="'status-' + ${shipment.status}"
+                      th:text="${#strings.replace(shipment.status,'_',' ')}">STATUS</span>
             </div>
-
-            <div class="form-row">
-                <div><h4>Route</h4><p th:text="${shipment.originCity} + ' → ' + ${shipment.destinationCity}">Route</p></div>
-                <div><h4>Service</h4><p th:text="${#strings.replace(shipment.serviceType,'_',' ')}">Service</p></div>
-            </div>
-            <div class="form-row">
-                <div>
-                    <h4>Expected Delivery</h4>
-                    <p th:text="${shipment.expectedDelivery != null ? #temporals.format(shipment.expectedDelivery, 'dd MMM yyyy') : 'To be updated'}">Date</p>
-                </div>
-                <div>
-                    <h4>Booked On</h4>
-                    <p th:text="${#temporals.format(shipment.createdAt, 'dd MMM yyyy')}">Date</p>
-                </div>
-            </div>
-
-            <h3 style="margin-top:24px;">Tracking History</h3>
-            <div class="timeline">
-                <div class="timeline-item" th:each="event, iterStat : ${shipment.events}"
-                     th:classappend="${iterStat.last} ? ' latest'">
-                    <div class="t-status" th:text="${#strings.replace(event.status,'_',' ')} + ' — ' + ${event.location}">Status — Location</div>
-                    <div class="t-meta" th:text="${#temporals.format(event.eventTime, 'dd MMM yyyy, hh:mm a')}">Date</div>
-                    <div th:if="${event.remarks}" th:text="${event.remarks}">Remarks</div>
-                </div>
-                <div th:if="${#lists.isEmpty(shipment.events)}">
-                    <p>No tracking events yet.</p>
-                </div>
+            <div class="admin-filter-buttons">
+                <a class="btn btn-sm btn-dark" th:href="@{/admin/shipments/{id}/label(id=${shipment.id})}">Print Label</a>
+                <a class="btn btn-sm btn-dark" th:href="@{/admin/shipments}">Back</a>
             </div>
         </div>
 
-        <div class="form-card" style="margin:0;">
-            <h3>Add Tracking Update</h3>
-            <p class="hint">Current status:
-                <strong th:text="${#strings.replace(shipment.status,'_',' ')}">STATUS</strong>
-            </p>
-            <form th:action="@{/admin/shipments/{id}/update(id=${shipment.id})}" method="post">
-                <div class="form-group">
-                    <label for="status">Status</label>
-                    <select id="status" name="status" required>
-                        <option th:each="st : ${statuses}"
-                                th:value="${st}"
-                                th:selected="${st == shipment.status}"
-                                th:text="${#strings.replace(st,'_',' ')}">STATUS</option>
-                    </select>
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}" style="margin-top:16px;"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}" style="margin-top:16px;"></div>
+
+        <div class="admin-detail-grid" style="margin-top:24px;">
+            <div>
+                <div class="form-row">
+                    <div>
+                        <h4>Sender</h4>
+                        <p th:text="${shipment.senderName}">Sender</p>
+                        <p th:text="${shipment.senderPhone}">Phone</p>
+                        <p th:text="${shipment.senderAddress}">Address</p>
+                    </div>
+                    <div>
+                        <h4>Receiver</h4>
+                        <p th:text="${shipment.receiverName}">Receiver</p>
+                        <p th:text="${shipment.receiverPhone}">Phone</p>
+                        <p th:text="${shipment.receiverAddress}">Address</p>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="location">Location</label>
-                    <input type="text" id="location" name="location" required placeholder="e.g. Ahmedabad Hub">
+
+                <div class="form-row">
+                    <div>
+                        <h4>Route</h4>
+                        <p th:text="${shipment.originCity} + ' → ' + ${shipment.destinationCity}">Route</p>
+                    </div>
+                    <div>
+                        <h4>Service</h4>
+                        <p th:text="${#strings.replace(shipment.serviceType,'_',' ')}">Service</p>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="remarks">Remarks (optional)</label>
-                    <textarea id="remarks" name="remarks" rows="3" placeholder="Additional notes for the customer"></textarea>
+                <div class="form-row">
+                    <div>
+                        <h4>Weight</h4>
+                        <p th:text="${shipment.weightKg} + ' kg'">0.5 kg</p>
+                    </div>
+                    <div>
+                        <h4>Expected Delivery</h4>
+                        <p th:text="${shipment.expectedDelivery != null ? #temporals.format(shipment.expectedDelivery, 'dd MMM yyyy') : 'To be updated'}">Date</p>
+                    </div>
                 </div>
-                <button type="submit" class="btn btn-primary btn-block">Add Update</button>
-            </form>
+                <div class="form-row">
+                    <div>
+                        <h4>Freight</h4>
+                        <p th:text="${shipment.freightCharge != null ? 'Rs. ' + #numbers.formatDecimal(shipment.freightCharge, 1, 2) : '—'}">Rs. 0.00</p>
+                    </div>
+                    <div>
+                        <h4>COD</h4>
+                        <p th:text="${shipment.codAmount != null ? 'Rs. ' + #numbers.formatDecimal(shipment.codAmount, 1, 2) : '—'}">Rs. 0.00</p>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div>
+                        <h4>Assigned Branch</h4>
+                        <p th:text="${shipment.assignedBranchName != null ? shipment.assignedBranchName : (shipment.assignedBranchId != null ? 'Branch #' + shipment.assignedBranchId : '—')}">—</p>
+                    </div>
+                    <div>
+                        <h4>Hub</h4>
+                        <p th:text="${shipment.assignedHub != null and !#strings.isEmpty(shipment.assignedHub) ? shipment.assignedHub : '—'}">—</p>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div>
+                        <h4>Courier</h4>
+                        <p th:text="${shipment.courierName != null and !#strings.isEmpty(shipment.courierName) ? shipment.courierName : '—'}">—</p>
+                        <p class="muted" th:if="${shipment.courierPhone}" th:text="${shipment.courierPhone}">Phone</p>
+                    </div>
+                    <div>
+                        <h4>Booked On</h4>
+                        <p th:text="${shipment.createdAt != null ? #temporals.format(shipment.createdAt, 'dd MMM yyyy, hh:mm a') : '—'}">Date</p>
+                    </div>
+                </div>
+
+                <div class="form-card wide" style="margin:28px 0 0; max-width:none;">
+                    <h3>Edit Details</h3>
+                    <form th:action="@{/admin/shipments/{id}/edit(id=${shipment.id})}" method="post">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editSenderName">Sender Name</label>
+                                <input type="text" id="editSenderName" name="senderName" th:value="${shipment.senderName}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editSenderPhone">Sender Phone</label>
+                                <input type="text" id="editSenderPhone" name="senderPhone" th:value="${shipment.senderPhone}" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="editSenderAddress">Sender Address</label>
+                            <textarea id="editSenderAddress" name="senderAddress" rows="2" required th:text="${shipment.senderAddress}"></textarea>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editReceiverName">Receiver Name</label>
+                                <input type="text" id="editReceiverName" name="receiverName" th:value="${shipment.receiverName}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editReceiverPhone">Receiver Phone</label>
+                                <input type="text" id="editReceiverPhone" name="receiverPhone" th:value="${shipment.receiverPhone}" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="editReceiverAddress">Receiver Address</label>
+                            <textarea id="editReceiverAddress" name="receiverAddress" rows="2" required th:text="${shipment.receiverAddress}"></textarea>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editOriginCity">Origin City</label>
+                                <input type="text" id="editOriginCity" name="originCity" th:value="${shipment.originCity}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editDestinationCity">Destination City</label>
+                                <input type="text" id="editDestinationCity" name="destinationCity" th:value="${shipment.destinationCity}" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editWeightKg">Weight (kg)</label>
+                                <input type="number" step="0.1" min="0.1" id="editWeightKg" name="weightKg" th:value="${shipment.weightKg}" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="editServiceType">Service Type</label>
+                                <select id="editServiceType" name="serviceType" required>
+                                    <option value="DOMESTIC_STANDARD" th:selected="${shipment.serviceType == 'DOMESTIC_STANDARD'}">Domestic Standard</option>
+                                    <option value="DOMESTIC_EXPRESS" th:selected="${shipment.serviceType == 'DOMESTIC_EXPRESS'}">Domestic Express</option>
+                                    <option value="INTERNATIONAL" th:selected="${shipment.serviceType == 'INTERNATIONAL'}">International</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="editCodAmount">COD Amount (Rs.)</label>
+                                <input type="number" step="0.01" min="0" id="editCodAmount" name="codAmount" th:value="${shipment.codAmount}">
+                            </div>
+                            <div class="form-group">
+                                <label for="editExpectedDelivery">Expected Delivery</label>
+                                <input type="date" id="editExpectedDelivery" name="expectedDelivery"
+                                       th:value="${shipment.expectedDelivery}">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Details</button>
+                    </form>
+                </div>
+
+                <h3 style="margin-top:28px;">Tracking History</h3>
+                <div class="timeline">
+                    <div class="timeline-item" th:each="event, iterStat : ${shipment.events}"
+                         th:classappend="${iterStat.last} ? ' latest'">
+                        <div class="t-status" th:text="${#strings.replace(event.status,'_',' ')} + ' — ' + ${event.location}">Status — Location</div>
+                        <div class="t-meta" th:text="${#temporals.format(event.eventTime, 'dd MMM yyyy, hh:mm a')}">Date</div>
+                        <div th:if="${event.remarks}" th:text="${event.remarks}">Remarks</div>
+                        <div class="admin-filter-buttons" style="margin-top:10px;">
+                            <details>
+                                <summary class="btn btn-sm btn-dark" style="display:inline-block; list-style:none; cursor:pointer;">Edit</summary>
+                                <form th:action="@{/admin/shipments/{id}/events/{eventId}/edit(id=${shipment.id}, eventId=${event.id})}"
+                                      method="post" style="margin-top:10px;">
+                                    <div class="form-group">
+                                        <label>Status</label>
+                                        <input type="text" name="status" th:value="${event.status}" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Location</label>
+                                        <input type="text" name="location" th:value="${event.location}" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Remarks</label>
+                                        <textarea name="remarks" rows="2" th:text="${event.remarks}"></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-sm btn-primary">Save Event</button>
+                                </form>
+                            </details>
+                            <form th:action="@{/admin/shipments/{id}/events/{eventId}/delete(id=${shipment.id}, eventId=${event.id})}"
+                                  method="post"
+                                  onsubmit="return confirm('Delete this tracking event?');">
+                                <button type="submit" class="btn btn-sm btn-primary">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div th:if="${#lists.isEmpty(shipment.events)}">
+                        <p>No tracking events yet.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="form-card" style="margin:0 0 20px;">
+                    <h3>Add Tracking Update</h3>
+                    <p class="hint muted">Current status:
+                        <strong th:text="${#strings.replace(shipment.status,'_',' ')}">STATUS</strong>
+                    </p>
+                    <form th:action="@{/admin/shipments/{id}/update(id=${shipment.id})}" method="post"
+                          th:if="${allowedNext != null and !#lists.isEmpty(allowedNext)}">
+                        <div class="form-group">
+                            <label for="status">Next Status</label>
+                            <select id="status" name="status" required>
+                                <option th:each="st : ${allowedNext}"
+                                        th:value="${st}"
+                                        th:text="${#strings.replace(st,'_',' ')}">STATUS</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="location">Location</label>
+                            <input type="text" id="location" name="location" required placeholder="e.g. Ahmedabad Hub">
+                        </div>
+                        <div class="form-group">
+                            <label for="remarks">Remarks (optional)</label>
+                            <textarea id="remarks" name="remarks" rows="3" placeholder="Additional notes for the customer"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Add Update</button>
+                    </form>
+                    <div class="alert alert-info" th:if="${allowedNext == null or #lists.isEmpty(allowedNext)}">
+                        No further status transitions are allowed for this shipment.
+                    </div>
+                </div>
+
+                <div class="form-card" style="margin:0 0 20px;">
+                    <h3>Assign Resources</h3>
+                    <form th:action="@{/admin/shipments/{id}/assign(id=${shipment.id})}" method="post">
+                        <div class="form-group">
+                            <label for="assignBranchId">Branch</label>
+                            <select id="assignBranchId" name="assignedBranchId">
+                                <option value="">— Select branch —</option>
+                                <option th:each="b : ${branches}"
+                                        th:value="${b.id}"
+                                        th:selected="${shipment.assignedBranchId == b.id}"
+                                        th:text="${b.branchName + ' (' + b.city + ')'}">Branch</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="assignHub">Hub</label>
+                            <input type="text" id="assignHub" name="assignedHub" th:value="${shipment.assignedHub}">
+                        </div>
+                        <div class="form-group">
+                            <label for="assignCourierName">Courier Name</label>
+                            <input type="text" id="assignCourierName" name="courierName" th:value="${shipment.courierName}">
+                        </div>
+                        <div class="form-group">
+                            <label for="assignCourierPhone">Courier Phone</label>
+                            <input type="text" id="assignCourierPhone" name="courierPhone" th:value="${shipment.courierPhone}">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Save Assignment</button>
+                    </form>
+                </div>
+
+                <div class="form-card" style="margin:0;"
+                     th:if="${shipment.status != 'DELIVERED' and shipment.status != 'CANCELLED' and shipment.status != 'RTO'}">
+                    <h3>Cancel Shipment</h3>
+                    <p class="muted">Cancels the shipment if it is not already in a terminal status.</p>
+                    <form th:action="@{/admin/shipments/{id}/cancel(id=${shipment.id})}" method="post"
+                          onsubmit="return confirm('Cancel this shipment?');">
+                        <button type="submit" class="btn btn-primary btn-block">Cancel Shipment</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </section>
