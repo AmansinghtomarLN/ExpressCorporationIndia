@@ -21,7 +21,6 @@
 
         <div class="admin-toolbar">
             <a class="btn btn-primary" th:href="@{/admin/manifests/new}">New Manifest</a>
-            <a class="btn btn-primary" th:href="@{/admin/shipments/new}">New Shipment</a>
             <a class="btn btn-dark" th:href="@{/admin/shipments/export.csv}">Export CSV</a>
             <a class="btn btn-dark" th:href="@{/admin/shipments/bulk}">Bulk Update</a>
         </div>
@@ -31,7 +30,7 @@
                 <div class="form-group admin-search">
                     <label for="q">Search</label>
                     <input type="text" id="q" name="q" th:value="${q}"
-                           placeholder="Tracking ID, sender, receiver, or phone">
+                           placeholder="C.No, MF No, sender, receiver, or phone">
                 </div>
                 <div class="form-group">
                     <label for="status">Status</label>
@@ -76,7 +75,8 @@
             <table class="data-table">
                 <thead>
                 <tr>
-                    <th>Tracking ID</th>
+                    <th>C.No</th>
+                    <th>MF No</th>
                     <th>Sender</th>
                     <th>Receiver</th>
                     <th>Route</th>
@@ -90,7 +90,12 @@
                 </thead>
                 <tbody>
                 <tr th:each="s : ${shipments}">
-                    <td th:text="${s.trackingId}">ECI1000000001</td>
+                    <td th:text="${s.trackingId}">37191</td>
+                    <td>
+                        <a th:if="${s.manifestId != null}" th:href="@{/admin/manifests/{id}(id=${s.manifestId})}"
+                           th:text="${s.manifestNumber != null ? s.manifestNumber : s.manifestId}">11820</a>
+                        <span th:if="${s.manifestId == null}" class="muted">—</span>
+                    </td>
                     <td>
                         <div th:text="${s.senderName}">Sender</div>
                         <small class="muted" th:text="${s.senderPhone}">Phone</small>

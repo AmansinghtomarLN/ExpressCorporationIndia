@@ -14,31 +14,40 @@
         <span class="eyebrow">Track Shipment</span>
         <h1 style="color:#fff;">Track Your Courier</h1>
         <p style="color:rgba(255,255,255,0.85); max-width:640px;">
-            Enter your tracking / docket number below to see the latest status and complete journey of your parcel.
+            Enter the consignment / tracking number from your booking slip to see the latest status.
         </p>
     </div>
 </section>
 
 <section class="section">
     <div class="container">
-        <div class="form-card wide">
+        <div class="form-card wide track-hero-card">
             <form th:action="@{/track}" method="get" class="track-form">
                 <input type="text" name="trackingId" th:value="${trackingId}"
-                       placeholder="e.g. MH1000000001" required>
+                       placeholder="C.No / tracking number, e.g. 37191" required>
                 <button type="submit" class="btn btn-primary">Track Now</button>
             </form>
         </div>
 
-        <div th:if="${notFound}" class="alert alert-error" style="max-width:760px; margin:24px auto 0;">
-            No shipment found for tracking ID <strong th:text="${trackingId}"></strong>.
-            Please check the number and try again.
+        <div th:if="${notFound}" class="alert alert-error" style="max-width:860px; margin:24px auto 0;">
+            No shipment found for <strong th:text="${trackingId}"></strong>.
+            Check the C.No on the manifest slip and try again.
         </div>
 
-        <div th:if="${shipment}" class="form-card wide" style="margin-top:24px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div th:if="${shipment}" class="form-card wide track-hero-card" style="margin-top:24px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
                 <div>
-                    <h2 style="margin-bottom:4px;" th:text="${shipment.trackingId}">MH1000000001</h2>
-                    <p style="margin:0;">
+                    <span class="eyebrow">Consignment</span>
+                    <h2 style="margin-bottom:8px;" th:text="${shipment.trackingId}">37191</h2>
+                    <div>
+                        <span class="meta-chip" th:if="${shipment.manifestNumber}"
+                              th:text="'MF No ' + ${shipment.manifestNumber}">MF No 11820</span>
+                        <span class="meta-chip" th:if="${shipment.partyName}"
+                              th:text="'M/S ' + ${shipment.partyName}">M/S GWALIOR</span>
+                        <span class="meta-chip" th:if="${shipment.numberOfBoxes != null}"
+                              th:text="${shipment.numberOfBoxes} + ' box(es)'">3 boxes</span>
+                    </div>
+                    <p style="margin:12px 0 0;">
                         <span th:text="${shipment.originCity}">Origin</span> &rarr;
                         <span th:text="${shipment.destinationCity}">Destination</span>
                     </p>
@@ -47,9 +56,9 @@
                       th:text="${#strings.replace(shipment.status,'_',' ')}">STATUS</span>
             </div>
 
-            <div class="form-row" style="margin-top:20px;">
+            <div class="form-row" style="margin-top:22px;">
                 <div>
-                    <h4>Sender</h4>
+                    <h4>Sender / party</h4>
                     <p th:text="${shipment.senderName}">Sender Name</p>
                     <p th:text="${shipment.originCity}">Origin City</p>
                 </div>
@@ -61,15 +70,21 @@
             </div>
 
             <div class="form-row">
-                <div><h4>Service Type</h4><p th:text="${#strings.replace(shipment.serviceType,'_',' ')}">Service</p></div>
-                <div><h4>Expected Delivery</h4>
+                <div><h4>Service</h4><p th:text="${#strings.replace(shipment.serviceType,'_',' ')}">Service</p></div>
+                <div><h4>Expected delivery</h4>
                     <p th:text="${shipment.expectedDelivery != null ? shipment.expectedDelivery : 'To be updated'}">Date</p>
                 </div>
             </div>
+            <div class="form-row" th:if="${shipment.weightKg != null}">
+                <div><h4>Weight</h4><p th:text="${shipment.weightKg} + ' kg'">40 kg</p></div>
+                <div th:if="${shipment.manifestNumber}">
+                    <h4>Manifest</h4>
+                    <p th:text="${shipment.manifestNumber}">11820</p>
+                </div>
+            </div>
 
-            <h3 style="margin-top:24px;">Shipment Journey</h3>
+            <h3 style="margin-top:24px;">Shipment journey</h3>
             <div class="timeline">
-                <!-- events are returned oldest-first from the service, which reads naturally as a journey -->
                 <div class="timeline-item" th:each="event : ${shipment.events}">
                     <div class="t-status" th:text="${#strings.replace(event.status,'_',' ')} + ' — ' + ${event.location}">Status — Location</div>
                     <div class="t-meta" th:text="${#temporals.format(event.eventTime, 'dd MMM yyyy, hh:mm a')}">Date</div>

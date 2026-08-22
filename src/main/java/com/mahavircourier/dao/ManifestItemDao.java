@@ -125,4 +125,13 @@ public class ManifestItemDao {
     public void deleteById(Long id) {
         jdbcTemplate.update("DELETE FROM manifest_items WHERE id = ?", id);
     }
+
+    public List<String> findUsedConsignmentNosByParty(Long partyId) {
+        return jdbcTemplate.query(
+                "SELECT i.consignment_no FROM manifest_items i " +
+                        "JOIN manifests m ON m.id = i.manifest_id " +
+                        "WHERE m.party_id = ? ORDER BY CAST(i.consignment_no AS UNSIGNED)",
+                (rs, rowNum) -> rs.getString("consignment_no"),
+                partyId);
+    }
 }

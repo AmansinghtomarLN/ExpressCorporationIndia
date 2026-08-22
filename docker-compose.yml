@@ -43,7 +43,7 @@ services:
       # Keep retrying until MySQL accepts connections (first boot)
       SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT: "-1"
       # Schema + seed on startup (idempo
-      tent CREATE IF NOT EXISTS / guarded inserts)
+      tatutent CREATE IF NOT EXISTS / guarded inserts)
       SPRING_SQL_INIT_MODE: ${SQL_INIT_MODE:-always}
       SERVER_PORT: "8080"
       THYMELEAF_CACHE: "true"

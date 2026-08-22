@@ -123,7 +123,10 @@ public class ShipmentDao {
     public Optional<Shipment> findByTrackingId(String trackingId) {
         try {
             Shipment shipment = jdbcTemplate.queryForObject(
-                    "SELECT * FROM shipments WHERE tracking_id = ?",
+                    "SELECT s.*, p.party_name, m.manifest_number FROM shipments s " +
+                            "LEFT JOIN parties p ON p.id = s.party_id " +
+                            "LEFT JOIN manifests m ON m.id = s.manifest_id " +
+                            "WHERE s.tracking_id = ?",
                     SHIPMENT_ROW_MAPPER, trackingId);
             return Optional.ofNullable(shipment);
         } catch (EmptyResultDataAccessException e) {
@@ -154,7 +157,10 @@ public class ShipmentDao {
 
     public List<Shipment> findByBookedByUserId(Long userId) {
         return jdbcTemplate.query(
-                "SELECT * FROM shipments WHERE booked_by_user_id = ? ORDER BY created_at DESC",
+                "SELECT s.*, p.party_name, m.manifest_number FROM shipments s " +
+                        "LEFT JOIN parties p ON p.id = s.party_id " +
+                        "LEFT JOIN manifests m ON m.id = s.manifest_id " +
+                        "WHERE s.booked_by_user_id = ? ORDER BY s.created_at DESC",
                 SHIPMENT_ROW_MAPPER, userId);
     }
 
@@ -179,17 +185,21 @@ public class ShipmentDao {
      * and optional exact status filter, with LIMIT/OFFSET pagination.
      */
     public List<Shipment> search(String query, String status, int limit, int offset) {
-        StringBuilder sql = new StringBuilder("SELECT * FROM shipments WHERE 1=1");
+        StringBuilder sql = new StringBuilder(
+                "SELECT s.*, m.manifest_number, p.party_name FROM shipments s " +
+                        "LEFT JOIN manifests m ON m.id = s.manifest_id " +
+                        "LEFT JOIN parties p ON p.id = s.party_id WHERE 1=1");
         List<Object> params = new ArrayList<>();
         appendSearchFilters(sql, params, query, status);
-        sql.append(" ORDER BY updated_at DESC, created_at DESC LIMIT ? OFFSET ?");
+        sql.append(" ORDER BY s.updated_at DESC, s.created_at DESC LIMIT ? OFFSET ?");
         params.add(limit);
         params.add(offset);
         return jdbcTemplate.query(sql.toString(), SHIPMENT_ROW_MAPPER, params.toArray());
     }
 
     public long countSearch(String query, String status) {
-        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM shipments WHERE 1=1");
+        StringBuilder sql = new StringBuilder(
+                "SELECT COUNT(*) FROM shipments s LEFT JOIN manifests m ON m.id = s.manifest_id WHERE 1=1");
         List<Object> params = new ArrayList<>();
         appendSearchFilters(sql, params, query, status);
         Long count = jdbcTemplate.queryForObject(sql.toString(), Long.class, params.toArray());
@@ -218,8 +228,9 @@ public class ShipmentDao {
     private void appendSearchFilters(StringBuilder sql, List<Object> params, String query, String status) {
         if (query != null && !query.isBlank()) {
             String like = "%" + query.trim() + "%";
-            sql.append(" AND (tracking_id LIKE ? OR sender_name LIKE ? OR receiver_name LIKE ?")
-                    .append(" OR sender_phone LIKE ? OR receiver_phone LIKE ?)");
+            sql.append(" AND (s.tracking_id LIKE ? OR s.sender_name LIKE ? OR s.receiver_name LIKE ?")
+                    .append(" OR s.sender_phone LIKE ? OR s.receiver_phone LIKE ? OR m.manifest_number LIKE ?)");
+            params.add(like);
             params.add(like);
             params.add(like);
             params.add(like);
@@ -227,7 +238,7 @@ public class ShipmentDao {
             params.add(like);
         }
         if (status != null && !status.isBlank()) {
-            sql.append(" AND status = ?");
+            sql.append(" AND s.status = ?");
             params.add(status.trim());
         }
     }

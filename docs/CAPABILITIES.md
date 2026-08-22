@@ -96,10 +96,14 @@ Dashboard · Manifests · Parties · Shipments · Reports · Monitoring · Users
 ### 4.1b Manifests (`/admin/manifests`)
 - Search by MF No, party, through (driver/agent), or C.No; filter by party and date
 - Create a paper-style manifest: date, MF No, M/S party, through, origin, service, line items
+- Party C.No picker shows unused numbers (click to fill) and booked numbers (cannot reuse)
+- Live totals for lines, boxes, and weight; stored on the saved manifest
+- Add 10 / 25 / 50 extra rows (100+ consignments supported)
 - Line items: C.No, destination, boxes, weight, receiver name, optional receiver phone
 - C.No must be numeric, inside the party’s allocated range, and unused
 - **Saving a manifest automatically creates one shipment per C.No** with status `DISPATCHED`
-- Every such shipment stores `manifest_id` + `party_id` (shipment is not created without a manifest)
+- Standalone admin/customer booking is blocked — every new shipment must come from a manifest
+- Public + admin tracking show **MF No**
 - One consignment belongs to exactly one manifest
 - Edit header / existing lines (syncs shipment details); add more C.Nos (creates more shipments)
 - Print sheet matching the physical manifest (totals for boxes + weight)
@@ -336,7 +340,7 @@ Without these, the app still runs; notifications are logged as `FAILED`/`SKIPPED
 ### Core courier
 - [x] Public tracking (page + API + homepage widget)
 - [x] Customer signup/login/logout
-- [x] Customer booking + dashboard
+- [x] Customer dashboard + track (standalone booking disabled; shipments via manifest only)
 - [x] Sending parties CRUD + search
 - [x] Per-party consignment number ranges
 - [x] Manifest CRUD / search / print

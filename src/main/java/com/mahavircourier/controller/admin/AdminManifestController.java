@@ -23,7 +23,7 @@ import java.util.Map;
 @RequestMapping("/admin/manifests")
 public class AdminManifestController {
 
-    private static final int BLANK_ROWS = 12;
+    private static final int BLANK_ROWS = 20;
 
     private final ManifestService manifestService;
     private final PartyService partyService;
@@ -157,6 +157,16 @@ public class AdminManifestController {
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
             return "redirect:/admin/manifests/" + id;
+        }
+    }
+
+    @GetMapping(value = "/party-pool", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public Object partyPool(@RequestParam Long partyId) {
+        try {
+            return partyService.buildPool(partyId);
+        } catch (IllegalArgumentException ex) {
+            return Map.of("ok", false, "message", ex.getMessage());
         }
     }
 

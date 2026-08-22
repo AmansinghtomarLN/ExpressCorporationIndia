@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -24,7 +23,6 @@ import java.util.Optional;
 public class ShipmentService {
 
     private static final DateTimeFormatter CSV_DATE = DateTimeFormatter.ISO_LOCAL_DATE;
-    private static final SecureRandom RANDOM = new SecureRandom();
 
     private final ShipmentDao shipmentDao;
     private final TrackingEventDao trackingEventDao;
@@ -54,85 +52,14 @@ public class ShipmentService {
      */
     @Transactional
     public Shipment bookShipment(BookingForm form, Long userId) {
-        Shipment shipment = new Shipment();
-        shipment.setTrackingId(generateUniqueTrackingId());
-        shipment.setSenderName(form.getSenderName().trim());
-        shipment.setSenderPhone(form.getSenderPhone().trim());
-        shipment.setSenderAddress(form.getSenderAddress().trim());
-        shipment.setReceiverName(form.getReceiverName().trim());
-        shipment.setReceiverPhone(form.getReceiverPhone().trim());
-        shipment.setReceiverAddress(form.getReceiverAddress().trim());
-        shipment.setOriginCity(form.getOriginCity().trim());
-        shipment.setDestinationCity(form.getDestinationCity().trim());
-        shipment.setWeightKg(form.getWeightKg());
-        shipment.setServiceType(form.getServiceType());
-        shipment.setStatus("BOOKED");
-        shipment.setBookedByUserId(userId);
-        shipment.setExpectedDelivery(estimateDelivery(form.getServiceType()));
-
-        BigDecimal freight = rateCardService.calculateFreight(form.getServiceType(), form.getWeightKg());
-        shipment.setFreightCharge(freight);
-        BigDecimal cod = form.getCodAmount() != null ? form.getCodAmount() : BigDecimal.ZERO;
-        if (cod.compareTo(BigDecimal.ZERO) < 0) {
-            cod = BigDecimal.ZERO;
-        }
-        shipment.setCodAmount(cod);
-
-        Long id = shipmentDao.save(shipment);
-        shipment.setId(id);
-
-        TrackingEvent event = new TrackingEvent();
-        event.setShipmentId(id);
-        event.setStatus("BOOKED");
-        event.setLocation(form.getOriginCity().trim());
-        event.setRemarks("Shipment booked online. Awaiting pickup.");
-        trackingEventDao.save(event);
-
-        invoiceService.createForShipment(shipment);
-        return shipment;
+        throw new IllegalArgumentException(
+                "Shipments can only be created from a manifest. Use Admin → Manifests.");
     }
 
     @Transactional
     public Shipment adminCreateShipment(AdminShipmentForm form, Long bookedByUserId) {
-        Shipment shipment = new Shipment();
-        shipment.setTrackingId(generateUniqueTrackingId());
-        shipment.setSenderName(form.getSenderName().trim());
-        shipment.setSenderPhone(form.getSenderPhone().trim());
-        shipment.setSenderAddress(form.getSenderAddress().trim());
-        shipment.setReceiverName(form.getReceiverName().trim());
-        shipment.setReceiverPhone(form.getReceiverPhone().trim());
-        shipment.setReceiverAddress(form.getReceiverAddress().trim());
-        shipment.setOriginCity(form.getOriginCity().trim());
-        shipment.setDestinationCity(form.getDestinationCity().trim());
-        shipment.setWeightKg(form.getWeightKg());
-        shipment.setServiceType(form.getServiceType());
-        shipment.setStatus("BOOKED");
-        shipment.setBookedByUserId(bookedByUserId);
-        shipment.setExpectedDelivery(form.getExpectedDelivery() != null
-                ? form.getExpectedDelivery()
-                : estimateDelivery(form.getServiceType()));
-        shipment.setAssignedBranchId(form.getAssignedBranchId());
-        shipment.setAssignedHub(trimToNull(form.getAssignedHub()));
-        shipment.setCourierName(trimToNull(form.getCourierName()));
-        shipment.setCourierPhone(trimToNull(form.getCourierPhone()));
-
-        BigDecimal freight = rateCardService.calculateFreight(form.getServiceType(), form.getWeightKg());
-        shipment.setFreightCharge(freight);
-        BigDecimal cod = form.getCodAmount() != null ? form.getCodAmount() : BigDecimal.ZERO;
-        shipment.setCodAmount(cod.max(BigDecimal.ZERO));
-
-        Long id = shipmentDao.save(shipment);
-        shipment.setId(id);
-
-        TrackingEvent event = new TrackingEvent();
-        event.setShipmentId(id);
-        event.setStatus("BOOKED");
-        event.setLocation(form.getOriginCity().trim());
-        event.setRemarks("Shipment created by admin.");
-        trackingEventDao.save(event);
-
-        invoiceService.createForShipment(shipment);
-        return shipment;
+        throw new IllegalArgumentException(
+                "Shipments can only be created from a manifest. Open New Manifest and add C.Nos.");
     }
 
     /**
@@ -212,7 +139,11 @@ public class ShipmentService {
      * event history, most recent last, for display on the tracking page.
      */
     public Optional<Shipment> trackByTrackingId(String trackingId) {
-        Optional<Shipment> shipmentOpt = shipmentDao.findByTrackingId(trackingId.trim().toUpperCase());
+        String raw = trackingId.trim();
+        Optional<Shipment> shipmentOpt = shipmentDao.findByTrackingId(raw);
+        if (shipmentOpt.isEmpty() && !raw.equals(raw.toUpperCase())) {
+            shipmentOpt = shipmentDao.findByTrackingId(raw.toUpperCase());
+        }
         shipmentOpt.ifPresent(s -> s.setEvents(trackingEventDao.findByShipmentId(s.getId())));
         return shipmentOpt;
     }
@@ -501,14 +432,6 @@ public class ShipmentService {
         } catch (DateTimeParseException e) {
             throw new IllegalArgumentException("Invalid date: " + value);
         }
-    }
-
-    private String generateUniqueTrackingId() {
-        String trackingId;
-        do {
-            trackingId = "MH" + String.format("%010d", Math.abs(RANDOM.nextInt(999_999_999)));
-        } while (shipmentDao.existsByTrackingId(trackingId));
-        return trackingId;
     }
 
     private LocalDate estimateDelivery(String serviceType) {

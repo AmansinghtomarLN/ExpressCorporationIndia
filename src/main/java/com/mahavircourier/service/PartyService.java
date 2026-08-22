@@ -2,15 +2,20 @@ package com.mahavircourier.service;
 
 import com.mahavircourier.dao.ConsignmentRangeDao;
 import com.mahavircourier.dao.ManifestDao;
+import com.mahavircourier.dao.ManifestItemDao;
 import com.mahavircourier.dao.PartyDao;
+import com.mahavircourier.dto.ConsignmentPool;
 import com.mahavircourier.model.ConsignmentRange;
 import com.mahavircourier.model.Party;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class PartyService {
@@ -18,13 +23,16 @@ public class PartyService {
     private final PartyDao partyDao;
     private final ConsignmentRangeDao consignmentRangeDao;
     private final ManifestDao manifestDao;
+    private final ManifestItemDao manifestItemDao;
 
     public PartyService(PartyDao partyDao,
                         ConsignmentRangeDao consignmentRangeDao,
-                        ManifestDao manifestDao) {
+                        ManifestDao manifestDao,
+                        ManifestItemDao manifestItemDao) {
         this.partyDao = partyDao;
         this.consignmentRangeDao = consignmentRangeDao;
         this.manifestDao = manifestDao;
+        this.manifestItemDao = manifestItemDao;
     }
 
     public List<Party> search(String query) {
@@ -102,6 +110,59 @@ public class PartyService {
             throw new IllegalArgumentException("Cannot delete a range that already has used consignment numbers");
         }
         consignmentRangeDao.deleteById(rangeId);
+    }
+
+    public ConsignmentPool buildPool(Long partyId) {
+        Party party = partyDao.findById(partyId)
+                .orElseThrow(() -> new IllegalArgumentException("Party not found"));
+        List<ConsignmentRange> ranges = consignmentRangeDao.findByPartyId(partyId);
+        Set<Long> used = new HashSet<>();
+        List<String> usedDisplay = new ArrayList<>();
+        for (String cno : manifestItemDao.findUsedConsignmentNosByParty(partyId)) {
+            Long parsed = parseConsignment(cno);
+            if (parsed != null) {
+                used.add(parsed);
+            }
+            usedDisplay.add(cno);
+        }
+
+        ConsignmentPool pool = new ConsignmentPool();
+        pool.setPartyId(party.getId());
+        pool.setPartyName(party.getPartyName());
+        pool.setUsedNumbers(usedDisplay.size() > 40
+                ? usedDisplay.subList(usedDisplay.size() - 40, usedDisplay.size())
+                : usedDisplay);
+
+        List<String> available = new ArrayList<>();
+        long allocated = 0;
+        long usedInRanges = 0;
+        for (ConsignmentRange range : ranges) {
+            long size = range.getAllocatedCount();
+            allocated += size;
+            long rangeUsed = 0;
+            for (long n = range.getRangeStart(); n <= range.getRangeEnd(); n++) {
+                if (used.contains(n)) {
+                    rangeUsed++;
+                } else if (available.size() < 120) {
+                    available.add(String.valueOf(n));
+                }
+            }
+            usedInRanges += rangeUsed;
+            ConsignmentPool.RangeSummary summary = new ConsignmentPool.RangeSummary();
+            summary.setStart(range.getRangeStart());
+            summary.setEnd(range.getRangeEnd());
+            summary.setUsed(rangeUsed);
+            summary.setRemaining(Math.max(0, size - rangeUsed));
+            pool.getRanges().add(summary);
+        }
+        pool.setAllocated(allocated);
+        pool.setUsed(usedInRanges);
+        pool.setRemaining(Math.max(0, allocated - usedInRanges));
+        pool.setAvailable(available);
+        if (!available.isEmpty()) {
+            pool.setNextNumber(available.get(0));
+        }
+        return pool;
     }
 
     public boolean ownsConsignment(Long partyId, String consignmentNo) {

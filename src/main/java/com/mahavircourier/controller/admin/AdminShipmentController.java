@@ -1,6 +1,5 @@
 package com.mahavircourier.controller.admin;
 
-import com.mahavircourier.dto.AdminShipmentForm;
 import com.mahavircourier.dto.PageResult;
 import com.mahavircourier.model.Shipment;
 import com.mahavircourier.service.AuditService;
@@ -11,12 +10,10 @@ import com.mahavircourier.service.StatusTransitions;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -65,29 +62,17 @@ public class AdminShipmentController {
     }
 
     @GetMapping("/new")
-    public String newForm(Model model) {
-        model.addAttribute("form", new AdminShipmentForm());
-        model.addAttribute("branches", branchService.findAll());
-        return "admin/shipment-form";
+    public String newForm(RedirectAttributes redirectAttributes) {
+        redirectAttributes.addFlashAttribute("errorMessage",
+                "Shipments are created only from a manifest. Add C.Nos on a new manifest.");
+        return "redirect:/admin/manifests/new";
     }
 
     @PostMapping
-    public String create(@Valid @ModelAttribute("form") AdminShipmentForm form,
-                         BindingResult bindingResult,
-                         Model model,
-                         RedirectAttributes redirectAttributes) {
-        if (bindingResult.hasErrors()) {
-            model.addAttribute("branches", branchService.findAll());
-            return "admin/shipment-form";
-        }
-        CustomUserDetails principal = AdminAuth.requirePrincipal();
-        Shipment created = shipmentService.adminCreateShipment(form, principal.getUser().getId());
-        auditService.log(principal.getUser().getId(), principal.getUsername(),
-                "SHIPMENT_CREATE", "SHIPMENT", String.valueOf(created.getId()),
-                "Created " + created.getTrackingId());
-        redirectAttributes.addFlashAttribute("successMessage",
-                "Shipment " + created.getTrackingId() + " created.");
-        return "redirect:/admin/shipments/" + created.getId();
+    public String create(RedirectAttributes redirectAttributes) {
+        redirectAttributes.addFlashAttribute("errorMessage",
+                "Shipments are created only from a manifest.");
+        return "redirect:/admin/manifests/new";
     }
 
     @GetMapping("/export.csv")

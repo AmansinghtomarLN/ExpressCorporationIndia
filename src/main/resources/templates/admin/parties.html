@@ -12,9 +12,14 @@
 
 <section class="section">
     <div class="container">
-        <span class="eyebrow">Admin Console</span>
-        <h1>Sending Parties</h1>
-        <p>Parties are the consignors (M/S) who book and send courier consignments. Each party needs an allocated C.No range before you can create a manifest.</p>
+        <span class="eyebrow">Operations</span>
+        <div class="admin-toolbar" style="align-items:flex-start;">
+            <div>
+                <h1>Sending Parties</h1>
+                <p>Consignors (M/S). Assign a C.No range, then create manifests from unused numbers only.</p>
+            </div>
+            <a class="btn btn-primary" th:href="@{/admin/manifests/new}">New Manifest</a>
+        </div>
 
         <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
@@ -112,6 +117,24 @@
                     <a class="btn btn-dark" th:if="${editParty != null}" th:href="@{/admin/parties}">Cancel Edit</a>
                 </div>
             </form>
+        </div>
+
+        <div class="party-card-grid" th:if="${parties != null and !#lists.isEmpty(parties)}">
+            <article class="party-card" th:each="p : ${parties}">
+                <h3 th:text="${p.partyName}">GWALIOR</h3>
+                <p class="muted" th:text="${p.city + (p.phone != null ? ' · ' + p.phone : '')}">City</p>
+                <p style="margin:10px 0;">
+                    <span class="meta-chip" th:text="${p.rangeCount} + ' range(s)'">1 range</span>
+                    <span class="meta-chip" th:text="${p.manifestCount} + ' manifest(s)'">0 manifests</span>
+                </p>
+                <span class="status-badge"
+                      th:classappend="${p.enabled} ? ' status-DELIVERED' : ' status-CANCELLED'"
+                      th:text="${p.enabled} ? 'ACTIVE' : 'DISABLED'">ACTIVE</span>
+                <div class="admin-filter-buttons" style="margin-top:12px;">
+                    <a class="btn btn-sm btn-primary" th:href="@{/admin/parties/{id}(id=${p.id})}">Open</a>
+                    <a class="btn btn-sm btn-dark" th:href="@{/admin/manifests/new(partyId=${p.id})}">Manifest</a>
+                </div>
+            </article>
         </div>
 
         <div style="overflow-x:auto;">

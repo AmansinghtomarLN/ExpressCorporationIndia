@@ -17,20 +17,21 @@
                 <h1>Welcome, <span th:text="${user.fullName}">Customer</span></h1>
                 <p th:text="${user.email}">customer@example.com</p>
             </div>
-            <a href="/book" class="btn btn-primary">+ Book a New Shipment</a>
+            <a href="/track" class="btn btn-primary">Track a consignment</a>
         </div>
 
         <h3 style="margin-top:30px;">Your Shipments</h3>
 
         <div th:if="${#lists.isEmpty(shipments)}" class="alert alert-info">
-            You haven't booked any shipments yet. <a href="/book" style="font-weight:600;">Book your first one now.</a>
+            No shipments on this account yet. Consignments are created from party manifests. <a href="/track" style="font-weight:600;">Track a C.No</a>.
         </div>
 
         <div th:if="${!#lists.isEmpty(shipments)}" style="overflow-x:auto;">
             <table class="data-table">
                 <thead>
                 <tr>
-                    <th>Tracking ID</th>
+                    <th>C.No</th>
+                    <th>MF No</th>
                     <th>Route</th>
                     <th>Service</th>
                     <th>Status</th>
@@ -40,7 +41,8 @@
                 </thead>
                 <tbody>
                 <tr th:each="s : ${shipments}">
-                    <td th:text="${s.trackingId}">MH1000000001</td>
+                    <td th:text="${s.trackingId}">37191</td>
+                    <td th:text="${s.manifestNumber != null ? s.manifestNumber : '—'}">11820</td>
                     <td th:text="${s.originCity} + ' → ' + ${s.destinationCity}">Origin → Destination</td>
                     <td th:text="${#strings.replace(s.serviceType,'_',' ')}">Service</td>
                     <td>

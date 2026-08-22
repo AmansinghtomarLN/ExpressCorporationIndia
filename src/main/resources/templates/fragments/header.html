@@ -38,7 +38,8 @@
             <li><a href="/track">Track Shipment</a></li>
             <li><a href="/contact">Contact Us</a></li>
             <li sec:authorize="hasAnyRole('ADMIN','STAFF')"><a href="/admin">Admin</a></li>
-            <li sec:authorize="isAuthenticated()"><a href="/book" class="btn-nav">Book a Shipment</a></li>
+            <li sec:authorize="hasAnyRole('ADMIN','STAFF')"><a href="/admin/manifests/new" class="btn-nav">New Manifest</a></li>
+            <li sec:authorize="isAuthenticated() and !hasAnyRole('ADMIN','STAFF')"><a href="/track" class="btn-nav">Track Shipment</a></li>
             <li sec:authorize="!isAuthenticated()"><a href="/signup" class="btn-nav">Get Started</a></li>
         </ul>
     </nav>

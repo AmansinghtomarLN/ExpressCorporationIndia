@@ -25,8 +25,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 var events = (s.events || []).slice().reverse();
                 var html = '<div class="track-result">';
                 html += '<p><strong>' + escapeHtml(s.trackingId) + '</strong> &middot; ' +
-                        escapeHtml(s.originCity) + ' &rarr; ' + escapeHtml(s.destinationCity) +
-                        ' &nbsp; <span class="status-badge status-' + s.status + '">' +
+                        escapeHtml(s.originCity) + ' &rarr; ' + escapeHtml(s.destinationCity);
+                if (s.manifestNumber) {
+                    html += ' &nbsp; <span class="meta-chip">MF No ' + escapeHtml(s.manifestNumber) + '</span>';
+                }
+                html += ' &nbsp; <span class="status-badge status-' + s.status + '">' +
                         formatStatus(s.status) + '</span></p>';
                 if (events.length) {
                     html += '<div class="timeline">';
