@@ -10,7 +10,7 @@ import java.util.Set;
 public final class StatusTransitions {
 
     public static final List<String> ALL_STATUSES = List.of(
-            "BOOKED", "PICKED_UP", "IN_TRANSIT", "AT_HUB",
+            "BOOKED", "DISPATCHED", "PICKED_UP", "IN_TRANSIT", "AT_HUB",
             "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED", "RTO"
     );
 

@@ -74,3 +74,28 @@ WHERE NOT EXISTS (SELECT 1 FROM rate_cards WHERE service_type = 'DOMESTIC_EXPRES
 INSERT INTO rate_cards (service_type, min_weight_kg, max_weight_kg, base_rate, per_kg_rate, active)
 SELECT 'INTERNATIONAL', 0, 999, 450.00, 80.00, 1
 WHERE NOT EXISTS (SELECT 1 FROM rate_cards WHERE service_type = 'INTERNATIONAL');
+
+-- Demo sending party + consignment ranges (paper-style numeric C.No)
+INSERT INTO parties (party_name, contact_person, phone, email, gstin, address, city, state, pincode, notes)
+SELECT 'GWALIOR', 'Gwalior Desk', '9826011820', NULL, NULL,
+       'Gwalior booking counter', 'Gwalior', 'Madhya Pradesh', '474001',
+       'Seeded sending party for manifest operations'
+WHERE NOT EXISTS (SELECT 1 FROM parties WHERE party_name = 'GWALIOR');
+
+INSERT INTO consignment_ranges (party_id, range_start, range_end, notes)
+SELECT p.id, 31000, 37999, 'Primary C.No series'
+FROM parties p
+WHERE p.party_name = 'GWALIOR'
+  AND NOT EXISTS (
+      SELECT 1 FROM consignment_ranges r
+      WHERE r.party_id = p.id AND r.range_start = 31000 AND r.range_end = 37999
+  );
+
+INSERT INTO consignment_ranges (party_id, range_start, range_end, notes)
+SELECT p.id, 119000, 119999, 'Secondary C.No series'
+FROM parties p
+WHERE p.party_name = 'GWALIOR'
+  AND NOT EXISTS (
+      SELECT 1 FROM consignment_ranges r
+      WHERE r.party_id = p.id AND r.range_start = 119000 AND r.range_end = 119999
+  );

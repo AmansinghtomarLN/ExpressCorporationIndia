@@ -124,6 +124,71 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     KEY idx_audit_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS parties (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    party_name      VARCHAR(150) NOT NULL,
+    contact_person  VARCHAR(120),
+    phone           VARCHAR(20)  NOT NULL,
+    email           VARCHAR(150),
+    gstin           VARCHAR(20),
+    address         VARCHAR(255),
+    city            VARCHAR(80)  NOT NULL,
+    state           VARCHAR(80),
+    pincode         VARCHAR(10),
+    notes           VARCHAR(500),
+    enabled         TINYINT(1)   NOT NULL DEFAULT 1,
+    created_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_parties_name (party_name),
+    KEY idx_parties_city (city)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS consignment_ranges (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    party_id        BIGINT       NOT NULL,
+    range_start     BIGINT       NOT NULL,
+    range_end       BIGINT       NOT NULL,
+    notes           VARCHAR(255),
+    created_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_range_party FOREIGN KEY (party_id) REFERENCES parties(id) ON DELETE CASCADE,
+    KEY idx_range_party (party_id),
+    KEY idx_range_span (range_start, range_end)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS manifests (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    manifest_number VARCHAR(30)  NOT NULL UNIQUE,
+    party_id        BIGINT       NOT NULL,
+    manifest_date   DATE         NOT NULL,
+    through_name    VARCHAR(120),
+    origin_city     VARCHAR(80),
+    service_type    VARCHAR(30)  NOT NULL DEFAULT 'DOMESTIC_STANDARD',
+    remarks         VARCHAR(500),
+    total_boxes     INT          NOT NULL DEFAULT 0,
+    total_weight    DECIMAL(10,2) NOT NULL DEFAULT 0,
+    created_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_manifest_party FOREIGN KEY (party_id) REFERENCES parties(id),
+    KEY idx_manifests_date (manifest_date),
+    KEY idx_manifests_party (party_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS manifest_items (
+    id               BIGINT AUTO_INCREMENT PRIMARY KEY,
+    manifest_id      BIGINT       NOT NULL,
+    serial_no        INT          NOT NULL,
+    consignment_no   VARCHAR(20)  NOT NULL,
+    destination_city VARCHAR(80)  NOT NULL,
+    number_of_boxes  INT          NOT NULL DEFAULT 1,
+    weight_kg        DECIMAL(8,2) NOT NULL,
+    receiver_name    VARCHAR(150) NOT NULL,
+    receiver_phone   VARCHAR(20),
+    shipment_id      BIGINT,
+    CONSTRAINT fk_item_manifest FOREIGN KEY (manifest_id) REFERENCES manifests(id) ON DELETE CASCADE,
+    CONSTRAINT fk_item_shipment FOREIGN KEY (shipment_id) REFERENCES shipments(id) ON DELETE SET NULL,
+    UNIQUE KEY uk_consignment_no (consignment_no),
+    KEY idx_item_manifest (manifest_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Upgrade existing databases (no-op when column already exists)
 SET @db := DATABASE();
 
@@ -187,5 +252,32 @@ SET @sql := (
     'SELECT 1')
   FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'contact_messages' AND COLUMN_NAME = 'status'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE shipments ADD COLUMN party_id BIGINT NULL',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'shipments' AND COLUMN_NAME = 'party_id'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE shipments ADD COLUMN manifest_id BIGINT NULL',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'shipments' AND COLUMN_NAME = 'manifest_id'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE shipments ADD COLUMN number_of_boxes INT NULL',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'shipments' AND COLUMN_NAME = 'number_of_boxes'
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Manifest ' + ${manifest.manifestNumber}">Manifest</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container">
+        <div class="admin-filter-buttons no-print" style="margin-bottom:16px;">
+            <a class="btn btn-dark" th:href="@{/admin/manifests/{id}(id=${manifest.id})}">Back</a>
+            <button type="button" class="btn btn-primary" onclick="window.print()">Print</button>
+        </div>
+
+        <div class="manifest-sheet">
+            <div class="manifest-sheet-head">
+                <strong>EXPRESS CORPORATION OF INDIA</strong>
+                <div class="muted">Dewas Naka Indore · Ph. 07313590608</div>
+                <h2>MANIFEST</h2>
+            </div>
+            <div class="manifest-meta">
+                <div><strong>Date:</strong> <span th:text="${#temporals.format(manifest.manifestDate, 'dd/MM/yy')}">19/08/26</span></div>
+                <div><strong>MF No:</strong> <span th:text="${manifest.manifestNumber}">11820</span></div>
+                <div><strong>M/S:</strong> <span th:text="${manifest.partyName}">GWALIOR</span></div>
+                <div><strong>Through:</strong> <span th:text="${manifest.throughName != null ? manifest.throughName : '—'}">KALU</span></div>
+                <div><strong>Origin:</strong> <span th:text="${manifest.originCity != null ? manifest.originCity : '—'}">Indore</span></div>
+                <div><strong>Lines:</strong> <span th:text="${#lists.size(manifest.items)}">17</span></div>
+            </div>
+            <table class="manifest-print">
+                <thead>
+                <tr>
+                    <th>S.No</th>
+                    <th>C.No</th>
+                    <th>Destination</th>
+                    <th>N. of box</th>
+                    <th>Weight</th>
+                    <th>Details</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="item : ${manifest.items}">
+                    <td th:text="${item.serialNo}">1</td>
+                    <td th:text="${item.consignmentNo}">37191</td>
+                    <td th:text="${item.destinationCity}">GWALIOR</td>
+                    <td th:text="${item.numberOfBoxes}">3</td>
+                    <td th:text="${item.weightKg}">40</td>
+                    <td th:text="${item.receiverName}">REAL DIAGNOSTIC</td>
+                </tr>
+                <tr>
+                    <td colspan="3"><strong>Total</strong></td>
+                    <td><strong th:text="${manifest.totalBoxes}">55</strong></td>
+                    <td><strong th:text="${manifest.totalWeight}">325</strong></td>
+                    <td></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

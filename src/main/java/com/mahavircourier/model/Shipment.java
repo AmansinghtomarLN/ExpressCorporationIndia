@@ -29,11 +29,16 @@ public class Shipment {
     private String courierPhone;
     private BigDecimal freightCharge;
     private BigDecimal codAmount;
+    private Long partyId;
+    private Long manifestId;
+    private Integer numberOfBoxes;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     /** Transient display name for assigned branch (not persisted). */
     private String assignedBranchName;
+    private String partyName;
+    private String manifestNumber;
 
     private List<TrackingEvent> events = new ArrayList<>();
 
@@ -205,6 +210,30 @@ public class Shipment {
         this.codAmount = codAmount;
     }
 
+    public Long getPartyId() {
+        return partyId;
+    }
+
+    public void setPartyId(Long partyId) {
+        this.partyId = partyId;
+    }
+
+    public Long getManifestId() {
+        return manifestId;
+    }
+
+    public void setManifestId(Long manifestId) {
+        this.manifestId = manifestId;
+    }
+
+    public Integer getNumberOfBoxes() {
+        return numberOfBoxes;
+    }
+
+    public void setNumberOfBoxes(Integer numberOfBoxes) {
+        this.numberOfBoxes = numberOfBoxes;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -227,6 +256,22 @@ public class Shipment {
 
     public void setAssignedBranchName(String assignedBranchName) {
         this.assignedBranchName = assignedBranchName;
+    }
+
+    public String getPartyName() {
+        return partyName;
+    }
+
+    public void setPartyName(String partyName) {
+        this.partyName = partyName;
+    }
+
+    public String getManifestNumber() {
+        return manifestNumber;
+    }
+
+    public void setManifestNumber(String manifestNumber) {
+        this.manifestNumber = manifestNumber;
     }
 
     public List<TrackingEvent> getEvents() {

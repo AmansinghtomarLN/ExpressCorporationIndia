@@ -91,6 +91,24 @@ public class ShipmentDao {
         if (hasColumn(rs, "assigned_branch_name")) {
             s.setAssignedBranchName(rs.getString("assigned_branch_name"));
         }
+        if (hasColumn(rs, "party_id")) {
+            long partyId = rs.getLong("party_id");
+            s.setPartyId(rs.wasNull() ? null : partyId);
+        }
+        if (hasColumn(rs, "manifest_id")) {
+            long manifestId = rs.getLong("manifest_id");
+            s.setManifestId(rs.wasNull() ? null : manifestId);
+        }
+        if (hasColumn(rs, "number_of_boxes")) {
+            int boxes = rs.getInt("number_of_boxes");
+            s.setNumberOfBoxes(rs.wasNull() ? null : boxes);
+        }
+        if (hasColumn(rs, "party_name")) {
+            s.setPartyName(rs.getString("party_name"));
+        }
+        if (hasColumn(rs, "manifest_number")) {
+            s.setManifestNumber(rs.getString("manifest_number"));
+        }
     }
 
     private static boolean hasColumn(ResultSet rs, String columnLabel) {
@@ -116,8 +134,11 @@ public class ShipmentDao {
     public Optional<Shipment> findById(Long id) {
         try {
             Shipment shipment = jdbcTemplate.queryForObject(
-                    "SELECT s.*, b.branch_name AS assigned_branch_name FROM shipments s " +
-                            "LEFT JOIN branches b ON b.id = s.assigned_branch_id WHERE s.id = ?",
+                    "SELECT s.*, b.branch_name AS assigned_branch_name, " +
+                            "p.party_name, m.manifest_number FROM shipments s " +
+                            "LEFT JOIN branches b ON b.id = s.assigned_branch_id " +
+                            "LEFT JOIN parties p ON p.id = s.party_id " +
+                            "LEFT JOIN manifests m ON m.id = s.manifest_id WHERE s.id = ?",
                     SHIPMENT_ROW_MAPPER, id);
             return Optional.ofNullable(shipment);
         } catch (EmptyResultDataAccessException e) {
@@ -218,8 +239,9 @@ public class ShipmentDao {
                     "INSERT INTO shipments (tracking_id, sender_name, sender_phone, sender_address, " +
                             "receiver_name, receiver_phone, receiver_address, origin_city, destination_city, " +
                             "weight_kg, service_type, status, booked_by_user_id, expected_delivery, " +
-                            "assigned_branch_id, assigned_hub, courier_name, courier_phone, freight_charge, cod_amount) " +
-                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            "assigned_branch_id, assigned_hub, courier_name, courier_phone, freight_charge, cod_amount, " +
+                            "party_id, manifest_id, number_of_boxes) " +
+                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, s.getTrackingId());
             ps.setString(2, s.getSenderName());
@@ -253,6 +275,21 @@ public class ShipmentDao {
             ps.setString(18, s.getCourierPhone());
             ps.setBigDecimal(19, s.getFreightCharge() != null ? s.getFreightCharge() : BigDecimal.ZERO);
             ps.setBigDecimal(20, s.getCodAmount() != null ? s.getCodAmount() : BigDecimal.ZERO);
+            if (s.getPartyId() != null) {
+                ps.setLong(21, s.getPartyId());
+            } else {
+                ps.setNull(21, Types.BIGINT);
+            }
+            if (s.getManifestId() != null) {
+                ps.setLong(22, s.getManifestId());
+            } else {
+                ps.setNull(22, Types.BIGINT);
+            }
+            if (s.getNumberOfBoxes() != null) {
+                ps.setInt(23, s.getNumberOfBoxes());
+            } else {
+                ps.setNull(23, Types.INTEGER);
+            }
             return ps;
         }, keyHolder);
         Number key = keyHolder.getKey();
@@ -265,7 +302,8 @@ public class ShipmentDao {
                         "receiver_name = ?, receiver_phone = ?, receiver_address = ?, " +
                         "origin_city = ?, destination_city = ?, weight_kg = ?, service_type = ?, " +
                         "status = ?, expected_delivery = ?, assigned_branch_id = ?, assigned_hub = ?, " +
-                        "courier_name = ?, courier_phone = ?, freight_charge = ?, cod_amount = ? WHERE id = ?",
+                        "courier_name = ?, courier_phone = ?, freight_charge = ?, cod_amount = ?, " +
+                        "party_id = ?, manifest_id = ?, number_of_boxes = ? WHERE id = ?",
                 s.getSenderName(),
                 s.getSenderPhone(),
                 s.getSenderAddress(),
@@ -284,6 +322,9 @@ public class ShipmentDao {
                 s.getCourierPhone(),
                 s.getFreightCharge() != null ? s.getFreightCharge() : BigDecimal.ZERO,
                 s.getCodAmount() != null ? s.getCodAmount() : BigDecimal.ZERO,
+                s.getPartyId(),
+                s.getManifestId(),
+                s.getNumberOfBoxes(),
                 s.getId());
     }
 

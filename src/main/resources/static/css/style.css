@@ -211,6 +211,7 @@ p { margin: 0 0 12px; color: var(--gray-700); }
     background: var(--gray-500);
 }
 .status-BOOKED { background: #6c757d; }
+.status-DISPATCHED { background: #0a58ca; }
 .status-PICKED_UP { background: #0d6efd; }
 .status-IN_TRANSIT { background: #f4a300; color: var(--dark); }
 .status-AT_HUB { background: #6610f2; }
@@ -246,6 +247,7 @@ p { margin: 0 0 12px; color: var(--gray-700); }
     margin: 0 auto;
 }
 .form-card.wide { max-width: 760px; }
+.form-card.full { max-width: none; }
 .form-group { margin-bottom: 18px; }
 .form-group label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.9rem; }
 .form-group input, .form-group select, .form-group textarea {
@@ -437,4 +439,40 @@ table.data-table th { background: var(--gray-100); font-weight: 700; }
     .hero h1 { font-size: 1.9rem; }
     .admin-filters-row { grid-template-columns: 1fr; }
     .kpi-grid { grid-template-columns: 1fr; }
+}
+
+.manifest-lines input, .manifest-lines select {
+    padding: 8px 10px;
+    font-size: 0.88rem;
+}
+.manifest-sheet {
+    background: var(--white);
+    border: 2px solid var(--dark);
+    padding: 22px 24px;
+}
+.manifest-sheet-head {
+    text-align: center;
+    margin-bottom: 12px;
+}
+.manifest-sheet-head h2 { margin: 4px 0; letter-spacing: 2px; }
+.manifest-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px 18px;
+    margin: 12px 0 16px;
+    font-size: 0.95rem;
+}
+table.manifest-print {
+    width: 100%;
+    border-collapse: collapse;
+}
+table.manifest-print th, table.manifest-print td {
+    border: 1px solid var(--dark);
+    padding: 6px 8px;
+    font-size: 0.86rem;
+}
+@media print {
+    .site-header, .admin-nav, .site-footer, .no-print { display: none !important; }
+    .section { padding: 0; }
+    .manifest-sheet { border: none; padding: 0; }
 }

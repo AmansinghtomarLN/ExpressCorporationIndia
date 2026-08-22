@@ -78,6 +78,23 @@
                         <p th:text="${shipment.codAmount != null ? 'Rs. ' + #numbers.formatDecimal(shipment.codAmount, 1, 2) : '—'}">Rs. 0.00</p>
                     </div>
                 </div>
+                <div class="form-row" th:if="${shipment.manifestId != null or shipment.partyId != null}">
+                    <div>
+                        <h4>Manifest</h4>
+                        <p th:if="${shipment.manifestId != null}">
+                            <a th:href="@{/admin/manifests/{id}(id=${shipment.manifestId})}"
+                               th:text="${shipment.manifestNumber != null ? shipment.manifestNumber : shipment.manifestId}">MF</a>
+                        </p>
+                        <p th:if="${shipment.numberOfBoxes != null}" th:text="${shipment.numberOfBoxes} + ' box(es)'">3 boxes</p>
+                    </div>
+                    <div>
+                        <h4>Sending party</h4>
+                        <p th:if="${shipment.partyId != null}">
+                            <a th:href="@{/admin/parties/{id}(id=${shipment.partyId})}"
+                               th:text="${shipment.partyName != null ? shipment.partyName : 'Party'}">Party</a>
+                        </p>
+                    </div>
+                </div>
                 <div class="form-row">
                     <div>
                         <h4>Assigned Branch</h4>

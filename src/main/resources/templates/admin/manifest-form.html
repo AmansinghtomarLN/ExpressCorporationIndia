@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Manifest | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container">
+        <p><a th:href="@{/admin/manifests}" class="muted">&larr; Back to manifests</a></p>
+        <span class="eyebrow">Admin Console</span>
+        <h1 th:text="${editing} ? 'Edit Manifest' : 'Create Manifest'">Create Manifest</h1>
+        <p>Enter consignments as on the paper manifest. On save, each C.No becomes a shipment with status DISPATCHED. C.No must belong to the selected party's range and cannot be reused.</p>
+
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <form class="form-card full" style="margin:24px 0;"
+              th:object="${form}" method="post"
+              th:action="${editing} ? @{/admin/manifests/{id}(id=${form.id})} : @{/admin/manifests}">
+            <input type="hidden" th:field="*{id}">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>MF No</label>
+                    <input type="text" th:field="*{manifestNumber}"
+                           th:readonly="${editing}"
+                           placeholder="Auto if left blank">
+                </div>
+                <div class="form-group">
+                    <label>Date *</label>
+                    <input type="date" th:field="*{manifestDate}" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>M/S Party *</label>
+                    <select th:field="*{partyId}" required th:disabled="${editing}">
+                        <option value="">— Select sending party —</option>
+                        <option th:each="p : ${parties}"
+                                th:value="${p.id}"
+                                th:text="${p.partyName + ' — ' + p.city}">Party</option>
+                    </select>
+                    <input type="hidden" th:if="${editing}" th:field="*{partyId}">
+                </div>
+                <div class="form-group">
+                    <label>Through (driver / agent)</label>
+                    <input type="text" th:field="*{throughName}" placeholder="e.g. KALU">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Origin city</label>
+                    <input type="text" th:field="*{originCity}" placeholder="Defaults to party city">
+                </div>
+                <div class="form-group">
+                    <label>Service</label>
+                    <select th:field="*{serviceType}">
+                        <option value="DOMESTIC_STANDARD">Domestic Standard</option>
+                        <option value="DOMESTIC_EXPRESS">Domestic Express</option>
+                        <option value="INTERNATIONAL">International</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Remarks</label>
+                <input type="text" th:field="*{remarks}">
+            </div>
+
+            <h3>Consignments</h3>
+            <div style="overflow-x:auto;">
+                <table class="data-table manifest-lines" id="manifest-lines">
+                    <thead>
+                    <tr>
+                        <th>S.No</th>
+                        <th>C.No *</th>
+                        <th>Destination *</th>
+                        <th>N. of box *</th>
+                        <th>Weight *</th>
+                        <th>Receiver / details *</th>
+                        <th>Receiver phone</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="item, iter : *{items}">
+                        <td th:text="${iter.count}">1</td>
+                        <td>
+                            <input type="hidden" th:field="*{items[__${iter.index}__].id}">
+                            <input type="text" th:field="*{items[__${iter.index}__].consignmentNo}"
+                                   th:readonly="${item.id != null}"
+                                   placeholder="37191" inputmode="numeric">
+                        </td>
+                        <td><input type="text" th:field="*{items[__${iter.index}__].destinationCity}" placeholder="MORENA"></td>
+                        <td><input type="number" min="1" th:field="*{items[__${iter.index}__].numberOfBoxes}" placeholder="3"></td>
+                        <td><input type="number" min="0.01" step="0.01" th:field="*{items[__${iter.index}__].weightKg}" placeholder="40"></td>
+                        <td><input type="text" th:field="*{items[__${iter.index}__].receiverName}" placeholder="REAL DIAGNOSTIC"></td>
+                        <td><input type="text" th:field="*{items[__${iter.index}__].receiverPhone}" placeholder="optional"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="muted" style="margin-top:8px;">Leave unused rows blank. Empty rows are ignored.</p>
+            <div class="admin-filter-buttons" style="margin-top:18px;">
+                <button type="submit" class="btn btn-primary"
+                        th:text="${editing} ? 'Save manifest changes' : 'Save manifest &amp; create shipments'">
+                    Save manifest
+                </button>
+                <a class="btn btn-dark" th:href="@{/admin/manifests}">Cancel</a>
+            </div>
+        </form>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Manifests | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container">
+        <span class="eyebrow">Admin Console</span>
+        <div class="admin-toolbar" style="align-items:flex-start;">
+            <div>
+                <h1>Manifests</h1>
+                <p>The operational source of courier. Saving a manifest creates one DISPATCHED shipment per C.No.</p>
+            </div>
+            <a class="btn btn-primary" th:href="@{/admin/manifests/new}">New Manifest</a>
+        </div>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <form class="admin-filters" method="get" th:action="@{/admin/manifests}">
+            <div class="admin-filters-row" style="grid-template-columns: 1.6fr 1fr 0.9fr 0.9fr auto;">
+                <div class="form-group">
+                    <label for="q">Search</label>
+                    <input type="text" id="q" name="q" th:value="${q}"
+                           placeholder="MF No, party, through, or C.No">
+                </div>
+                <div class="form-group">
+                    <label for="partyId">Party</label>
+                    <select id="partyId" name="partyId">
+                        <option value="">All parties</option>
+                        <option th:each="p : ${parties}"
+                                th:value="${p.id}"
+                                th:selected="${partyId != null and partyId == p.id}"
+                                th:text="${p.partyName}">Party</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="from">From</label>
+                    <input type="date" id="from" name="from" th:value="${from}">
+                </div>
+                <div class="form-group">
+                    <label for="to">To</label>
+                    <input type="date" id="to" name="to" th:value="${to}">
+                </div>
+                <div class="admin-filter-buttons">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                    <a class="btn btn-dark" th:href="@{/admin/manifests}">Clear</a>
+                </div>
+            </div>
+        </form>
+
+        <div style="overflow-x:auto;">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>MF No</th>
+                    <th>Date</th>
+                    <th>M/S (Party)</th>
+                    <th>Through</th>
+                    <th>Origin</th>
+                    <th>Boxes</th>
+                    <th>Weight</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="m : ${manifests}">
+                    <td><strong th:text="${m.manifestNumber}">11820</strong></td>
+                    <td th:text="${#temporals.format(m.manifestDate, 'dd/MM/yy')}">19/08/26</td>
+                    <td th:text="${m.partyName}">GWALIOR</td>
+                    <td th:text="${m.throughName != null ? m.throughName : '—'}">KALU</td>
+                    <td th:text="${m.originCity != null ? m.originCity : '—'}">Indore</td>
+                    <td th:text="${m.totalBoxes}">55</td>
+                    <td th:text="${m.totalWeight}">325</td>
+                    <td>
+                        <div class="admin-filter-buttons">
+                            <a class="btn btn-sm btn-dark" th:href="@{/admin/manifests/{id}(id=${m.id})}">Open</a>
+                            <a class="btn btn-sm btn-dark" th:href="@{/admin/manifests/{id}/print(id=${m.id})}">Print</a>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div th:if="${manifests == null or #lists.isEmpty(manifests)}" class="alert alert-info" style="margin-top:16px;">
+            No manifests found.
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

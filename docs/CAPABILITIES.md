@@ -1,6 +1,6 @@
 # Express Corporation of India — Application Capabilities
 
-Last updated: 10 Aug 2026
+Last updated: 22 Aug 2026
 
 Use this document as the source of truth for what the app can do today, who can do it, and how the admin suite is organized.
 
@@ -72,7 +72,7 @@ Web app for courier **booking**, **public tracking**, **customer account**, and 
 
 Admin UI lives under `/admin` with a shared admin nav:
 
-Dashboard · Shipments · Reports · Monitoring · Users · Branches · Contacts · Rates · Invoices · Notifications · Audit
+Dashboard · Manifests · Parties · Shipments · Reports · Monitoring · Users · Branches · Contacts · Rates · Invoices · Notifications · Audit
 
 ### 4.1 Dashboard (`/admin`)
 - KPI cards:
@@ -82,6 +82,28 @@ Dashboard · Shipments · Reports · Monitoring · Users · Branches · Contacts
   - Unread contact messages
   - Unpaid invoices
 - Recent shipments table with Manage links
+
+### 4.1a Parties (`/admin/parties`)
+- Search by name, city, phone, GSTIN, contact, email
+- Create / edit / disable sending parties (M/S consignors)
+- Required: party name, phone, city
+- Optional: contact person, email, address, state, pincode, GSTIN, notes
+- Assign **consignment number ranges** per party (numeric C.No = tracking number)
+- Ranges cannot overlap another party
+- Cannot delete a party that already has manifests
+- Cannot delete a range that already has used C.Nos
+
+### 4.1b Manifests (`/admin/manifests`)
+- Search by MF No, party, through (driver/agent), or C.No; filter by party and date
+- Create a paper-style manifest: date, MF No, M/S party, through, origin, service, line items
+- Line items: C.No, destination, boxes, weight, receiver name, optional receiver phone
+- C.No must be numeric, inside the party’s allocated range, and unused
+- **Saving a manifest automatically creates one shipment per C.No** with status `DISPATCHED`
+- Every such shipment stores `manifest_id` + `party_id` (shipment is not created without a manifest)
+- One consignment belongs to exactly one manifest
+- Edit header / existing lines (syncs shipment details); add more C.Nos (creates more shipments)
+- Print sheet matching the physical manifest (totals for boxes + weight)
+- Billing snapshot: total boxes, total weight, estimated freight from rate cards (each line also gets an invoice)
 
 ### 4.2 Shipments (`/admin/shipments`)
 **List**
@@ -116,7 +138,7 @@ Dashboard · Shipments · Reports · Monitoring · Users · Branches · Contacts
 
 Admin can set any known status when adding a tracking update:
 
-`BOOKED` · `PICKED_UP` · `IN_TRANSIT` · `AT_HUB` · `OUT_FOR_DELIVERY` · `DELIVERED` · `CANCELLED` · `RTO`
+`BOOKED` · `DISPATCHED` · `PICKED_UP` · `IN_TRANSIT` · `AT_HUB` · `OUT_FOR_DELIVERY` · `DELIVERED` · `CANCELLED` · `RTO`
 
 On each successful status update:
 - Tracking event is appended
@@ -210,9 +232,13 @@ On each successful status update:
 | `invoices` | Billing / COD collection state |
 | `notifications` | Real email/SMS delivery log (SENT/FAILED/SKIPPED) |
 | `audit_logs` | Admin action + login/logout audit trail |
+| `parties` | Sending parties (M/S consignors) |
+| `consignment_ranges` | Numeric C.No ranges owned by a party |
+| `manifests` | Dispatch manifests (source of operational shipments) |
+| `manifest_items` | Consignment lines on a manifest |
 
 **Extra shipment fields (ops):**
-`assigned_branch_id`, `assigned_hub`, `courier_name`, `courier_phone`, `freight_charge`, `cod_amount`
+`assigned_branch_id`, `assigned_hub`, `courier_name`, `courier_phone`, `freight_charge`, `cod_amount`, `party_id`, `manifest_id`, `number_of_boxes`
 
 ---
 
@@ -226,6 +252,8 @@ On each successful status update:
 | `/book` | Customer | Book shipment |
 | `/dashboard` | Customer | My shipments |
 | `/admin` | Admin/Staff | Ops dashboard |
+| `/admin/parties` | Admin/Staff | Sending parties + C.No ranges |
+| `/admin/manifests` | Admin/Staff | Manifest management (creates shipments) |
 | `/admin/shipments` | Admin/Staff | Shipment console |
 | `/admin/reports` | Admin/Staff | Daily/weekly/monthly reports + email |
 | `/admin/monitoring` | Admin/Staff | Health, alerts, channel readiness |
@@ -309,6 +337,10 @@ Without these, the app still runs; notifications are logged as `FAILED`/`SKIPPED
 - [x] Public tracking (page + API + homepage widget)
 - [x] Customer signup/login/logout
 - [x] Customer booking + dashboard
+- [x] Sending parties CRUD + search
+- [x] Per-party consignment number ranges
+- [x] Manifest CRUD / search / print
+- [x] Manifest save creates DISPATCHED shipments (one C.No = one tracking ID, one manifest)
 - [x] Admin shipment list/search/filter/pagination
 - [x] Admin tracking updates
 - [x] Expected delivery visible in admin

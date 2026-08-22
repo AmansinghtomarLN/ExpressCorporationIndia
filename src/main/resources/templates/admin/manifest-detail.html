@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Manifest ' + ${manifest.manifestNumber} + ' | ECI'">Manifest</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container">
+        <p><a th:href="@{/admin/manifests}" class="muted">&larr; Back to manifests</a></p>
+        <div class="admin-toolbar" style="align-items:flex-start;">
+            <div>
+                <span class="eyebrow">Manifest</span>
+                <h1 th:text="'MF No ' + ${manifest.manifestNumber}">MF No 11820</h1>
+                <p th:text="${#temporals.format(manifest.manifestDate, 'dd MMM yyyy')} + ' · M/S ' + ${manifest.partyName}">Date · Party</p>
+            </div>
+            <div class="admin-filter-buttons">
+                <a class="btn btn-primary" th:href="@{/admin/manifests/{id}/print(id=${manifest.id})}">Print</a>
+                <a class="btn btn-dark" th:href="@{/admin/manifests/{id}/edit(id=${manifest.id})}">Edit</a>
+            </div>
+        </div>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <div class="form-row" style="margin-top:20px;">
+            <div>
+                <h4>M/S Party</h4>
+                <p><a th:href="@{/admin/parties/{id}(id=${manifest.partyId})}" th:text="${manifest.partyName}">GWALIOR</a></p>
+                <p th:text="${manifest.partyPhone}">Phone</p>
+                <p th:text="${manifest.partyAddress != null ? manifest.partyAddress : manifest.partyCity}">Address</p>
+                <p th:if="${manifest.partyGstin}" th:text="'GSTIN ' + ${manifest.partyGstin}">GSTIN</p>
+            </div>
+            <div>
+                <h4>Dispatch</h4>
+                <p th:text="'Through: ' + ${manifest.throughName != null ? manifest.throughName : '—'}">Through</p>
+                <p th:text="'Origin: ' + ${manifest.originCity != null ? manifest.originCity : '—'}">Origin</p>
+                <p th:text="'Service: ' + ${#strings.replace(manifest.serviceType,'_',' ')}">Service</p>
+                <p th:if="${manifest.remarks}" th:text="${manifest.remarks}">Remarks</p>
+            </div>
+        </div>
+
+        <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="kpi-card">
+                <span class="muted">Total boxes</span>
+                <strong th:text="${manifest.totalBoxes}">55</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="muted">Total weight</span>
+                <strong th:text="${manifest.totalWeight} + ' kg'">325 kg</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="muted">Estimated freight</span>
+                <strong th:text="'Rs. ' + ${#numbers.formatDecimal(manifest.totalFreight, 1, 2)}">Rs. 0.00</strong>
+            </div>
+        </div>
+
+        <h3>Consignments</h3>
+        <div style="overflow-x:auto;">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>S.No</th>
+                    <th>C.No</th>
+                    <th>Destination</th>
+                    <th>Boxes</th>
+                    <th>Weight</th>
+                    <th>Receiver</th>
+                    <th>Freight</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="item : ${manifest.items}">
+                    <td th:text="${item.serialNo}">1</td>
+                    <td th:text="${item.consignmentNo}">37191</td>
+                    <td th:text="${item.destinationCity}">GWALIOR</td>
+                    <td th:text="${item.numberOfBoxes}">3</td>
+                    <td th:text="${item.weightKg}">40</td>
+                    <td>
+                        <span th:text="${item.receiverName}">REAL DIAGNOSTIC</span>
+                        <span class="muted" th:if="${item.receiverPhone}" th:text="' · ' + ${item.receiverPhone}"></span>
+                    </td>
+                    <td th:text="${item.freightCharge != null ? 'Rs. ' + #numbers.formatDecimal(item.freightCharge, 1, 2) : '—'}">—</td>
+                    <td>
+                        <span class="status-badge" th:if="${item.shipmentStatus}"
+                              th:classappend="'status-' + ${item.shipmentStatus}"
+                              th:text="${#strings.replace(item.shipmentStatus,'_',' ')}">DISPATCHED</span>
+                    </td>
+                    <td>
+                        <a class="btn btn-sm btn-dark" th:if="${item.shipmentId != null}"
+                           th:href="@{/admin/shipments/{id}(id=${item.shipmentId})}">Shipment</a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <p class="muted" style="margin-top:16px;">Each line is billed as its own shipment invoice. Use this sheet as the source for party billing (boxes, weight, and freight).</p>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

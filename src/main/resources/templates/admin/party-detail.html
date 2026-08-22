@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Party | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container">
+        <p><a th:href="@{/admin/parties}" class="muted">&larr; Back to parties</a></p>
+        <span class="eyebrow">Sending Party</span>
+        <div class="admin-toolbar" style="align-items:flex-start;">
+            <div>
+                <h1 th:text="${party.partyName}">Party</h1>
+                <p class="muted" th:text="${party.city + (party.state != null ? ', ' + party.state : '')}">City</p>
+            </div>
+            <div class="admin-filter-buttons">
+                <a class="btn btn-primary" th:href="@{/admin/manifests/new(partyId=${party.id})}">New Manifest</a>
+            </div>
+        </div>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <div class="form-card wide" style="margin:24px 0;">
+            <h3>Party details</h3>
+            <form method="post" th:action="@{/admin/parties/{id}/edit(id=${party.id})}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Party name *</label>
+                        <input type="text" name="partyName" required th:value="${party.partyName}">
+                    </div>
+                    <div class="form-group">
+                        <label>Contact person</label>
+                        <input type="text" name="contactPerson" th:value="${party.contactPerson}">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Phone *</label>
+                        <input type="text" name="phone" required th:value="${party.phone}">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email" th:value="${party.email}">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>City *</label>
+                        <input type="text" name="city" required th:value="${party.city}">
+                    </div>
+                    <div class="form-group">
+                        <label>State</label>
+                        <input type="text" name="state" th:value="${party.state}">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Pincode</label>
+                        <input type="text" name="pincode" th:value="${party.pincode}">
+                    </div>
+                    <div class="form-group">
+                        <label>GSTIN</label>
+                        <input type="text" name="gstin" th:value="${party.gstin}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Address</label>
+                    <input type="text" name="address" th:value="${party.address}">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <input type="text" name="notes" th:value="${party.notes}">
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select name="enabled">
+                            <option value="true" th:selected="${party.enabled}">Active</option>
+                            <option value="false" th:selected="${!party.enabled}">Disabled</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="admin-filter-buttons">
+                    <button type="submit" class="btn btn-primary">Save details</button>
+                    <button type="submit" class="btn btn-dark"
+                            formaction="#"
+                            formmethod="post"
+                            th:formaction="@{/admin/parties/{id}/delete(id=${party.id})}"
+                            onclick="return confirm('Delete this party? Only allowed if it has no manifests.');">Delete party</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="form-card wide" style="margin:24px 0;">
+            <h3>Consignment number ranges</h3>
+            <p class="muted">C.No on a manifest must fall inside one of these ranges. Ranges cannot overlap another party.</p>
+            <form method="post" th:action="@{/admin/parties/{id}/ranges(id=${party.id})}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="rangeStart">From C.No *</label>
+                        <input type="number" id="rangeStart" name="rangeStart" required min="1" placeholder="31000">
+                    </div>
+                    <div class="form-group">
+                        <label for="rangeEnd">To C.No *</label>
+                        <input type="number" id="rangeEnd" name="rangeEnd" required min="1" placeholder="37999">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="rangeNotes">Notes</label>
+                    <input type="text" id="rangeNotes" name="notes" placeholder="e.g. Primary series">
+                </div>
+                <button type="submit" class="btn btn-primary">Assign range</button>
+            </form>
+
+            <div style="overflow-x:auto; margin-top:20px;">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Allocated</th>
+                        <th>Notes</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="r : ${party.ranges}">
+                        <td th:text="${r.rangeStart}">0</td>
+                        <td th:text="${r.rangeEnd}">0</td>
+                        <td th:text="${r.allocatedCount}">0</td>
+                        <td th:text="${r.notes != null ? r.notes : '—'}">Notes</td>
+                        <td>
+                            <form th:action="@{/admin/parties/{id}/ranges/{rangeId}/delete(id=${party.id}, rangeId=${r.id})}"
+                                  method="post"
+                                  onsubmit="return confirm('Remove this range?');">
+                                <button type="submit" class="btn btn-sm btn-primary">Remove</button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+                <div th:if="${#lists.isEmpty(party.ranges)}" class="alert alert-info" style="margin-top:12px;">
+                    No ranges yet. Assign at least one before creating a manifest for this party.
+                </div>
+            </div>
+        </div>
+
+        <h3>Manifests from this party</h3>
+        <div style="overflow-x:auto;">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>MF No</th>
+                    <th>Date</th>
+                    <th>Through</th>
+                    <th>Boxes</th>
+                    <th>Weight</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="m : ${manifests}">
+                    <td th:text="${m.manifestNumber}">11820</td>
+                    <td th:text="${#temporals.format(m.manifestDate, 'dd/MM/yy')}">19/08/26</td>
+                    <td th:text="${m.throughName != null ? m.throughName : '—'}">KALU</td>
+                    <td th:text="${m.totalBoxes}">55</td>
+                    <td th:text="${m.totalWeight}">325</td>
+                    <td><a class="btn btn-sm btn-dark" th:href="@{/admin/manifests/{id}(id=${m.id})}">Open</a></td>
+                </tr>
+                </tbody>
+            </table>
+            <div th:if="${#lists.isEmpty(manifests)}" class="alert alert-info" style="margin-top:12px;">
+                No manifests yet.
+            </div>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

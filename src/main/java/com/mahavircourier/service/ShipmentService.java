@@ -136,6 +136,78 @@ public class ShipmentService {
     }
 
     /**
+     * Creates a shipment from a saved manifest line. Manifest + consignment
+     * number are required — operational shipments are not created without them.
+     */
+    @Transactional
+    public Shipment createFromManifest(Shipment shipment, String eventLocation, String remarks) {
+        if (shipment.getManifestId() == null) {
+            throw new IllegalArgumentException("Shipment cannot be created without a manifest number");
+        }
+        if (shipment.getPartyId() == null) {
+            throw new IllegalArgumentException("Shipment must belong to a sending party");
+        }
+        if (!StringUtils.hasText(shipment.getTrackingId())) {
+            throw new IllegalArgumentException("Consignment / tracking number is required");
+        }
+        String trackingId = shipment.getTrackingId().trim();
+        if (shipmentDao.existsByTrackingId(trackingId)) {
+            throw new IllegalArgumentException("Consignment number already used as a shipment: " + trackingId);
+        }
+        shipment.setTrackingId(trackingId);
+        if (!StringUtils.hasText(shipment.getStatus())) {
+            shipment.setStatus("DISPATCHED");
+        }
+        if (!StringUtils.hasText(shipment.getServiceType())) {
+            shipment.setServiceType("DOMESTIC_STANDARD");
+        }
+        if (shipment.getExpectedDelivery() == null) {
+            shipment.setExpectedDelivery(estimateDelivery(shipment.getServiceType()));
+        }
+        if (shipment.getFreightCharge() == null) {
+            shipment.setFreightCharge(rateCardService.calculateFreight(
+                    shipment.getServiceType(), shipment.getWeightKg()));
+        }
+        if (shipment.getCodAmount() == null) {
+            shipment.setCodAmount(BigDecimal.ZERO);
+        }
+
+        Long id = shipmentDao.save(shipment);
+        shipment.setId(id);
+
+        TrackingEvent event = new TrackingEvent();
+        event.setShipmentId(id);
+        event.setStatus(shipment.getStatus());
+        event.setLocation(StringUtils.hasText(eventLocation) ? eventLocation.trim() : shipment.getOriginCity());
+        event.setRemarks(remarks);
+        trackingEventDao.save(event);
+
+        invoiceService.createForShipment(shipment);
+        return shipment;
+    }
+
+    @Transactional
+    public void syncFromManifestItem(Long shipmentId, String receiverName, String receiverPhone,
+                                     String destinationCity, BigDecimal weightKg, Integer boxes,
+                                     String serviceType) {
+        Shipment existing = shipmentDao.findById(shipmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Shipment not found"));
+        existing.setReceiverName(receiverName);
+        if (StringUtils.hasText(receiverPhone)) {
+            existing.setReceiverPhone(receiverPhone.trim());
+        }
+        existing.setDestinationCity(destinationCity);
+        existing.setReceiverAddress(destinationCity);
+        existing.setWeightKg(weightKg);
+        existing.setNumberOfBoxes(boxes);
+        if (StringUtils.hasText(serviceType)) {
+            existing.setServiceType(serviceType.trim());
+            existing.setFreightCharge(rateCardService.calculateFreight(serviceType.trim(), weightKg));
+        }
+        shipmentDao.update(existing);
+    }
+
+    /**
      * Looks up a shipment by its public tracking ID and attaches the full
      * event history, most recent last, for display on the tracking page.
      */

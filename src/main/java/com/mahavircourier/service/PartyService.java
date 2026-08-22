@@ -1,0 +1,156 @@
+package com.mahavircourier.service;
+
+import com.mahavircourier.dao.ConsignmentRangeDao;
+import com.mahavircourier.dao.ManifestDao;
+import com.mahavircourier.dao.PartyDao;
+import com.mahavircourier.model.ConsignmentRange;
+import com.mahavircourier.model.Party;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class PartyService {
+
+    private final PartyDao partyDao;
+    private final ConsignmentRangeDao consignmentRangeDao;
+    private final ManifestDao manifestDao;
+
+    public PartyService(PartyDao partyDao,
+                        ConsignmentRangeDao consignmentRangeDao,
+                        ManifestDao manifestDao) {
+        this.partyDao = partyDao;
+        this.consignmentRangeDao = consignmentRangeDao;
+        this.manifestDao = manifestDao;
+    }
+
+    public List<Party> search(String query) {
+        return partyDao.search(query);
+    }
+
+    public List<Party> findEnabled() {
+        return partyDao.findEnabled();
+    }
+
+    public Optional<Party> findById(Long id) {
+        Optional<Party> party = partyDao.findById(id);
+        party.ifPresent(p -> p.setRanges(consignmentRangeDao.findByPartyId(p.getId())));
+        return party;
+    }
+
+    @Transactional
+    public Party create(Party party) {
+        normalize(party);
+        validate(party);
+        Long id = partyDao.save(party);
+        party.setId(id);
+        return party;
+    }
+
+    @Transactional
+    public void update(Party party) {
+        if (party.getId() == null || partyDao.findById(party.getId()).isEmpty()) {
+            throw new IllegalArgumentException("Party not found");
+        }
+        normalize(party);
+        validate(party);
+        partyDao.update(party);
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        if (manifestDao.countByPartyId(id) > 0) {
+            throw new IllegalArgumentException("Cannot delete a party that already has manifests");
+        }
+        partyDao.deleteById(id);
+    }
+
+    @Transactional
+    public ConsignmentRange addRange(Long partyId, long start, long end, String notes) {
+        partyDao.findById(partyId).orElseThrow(() -> new IllegalArgumentException("Party not found"));
+        if (start <= 0 || end <= 0) {
+            throw new IllegalArgumentException("Consignment range must be positive numbers");
+        }
+        if (end < start) {
+            throw new IllegalArgumentException("Range end must be greater than or equal to range start");
+        }
+        if (consignmentRangeDao.overlaps(start, end, null)) {
+            throw new IllegalArgumentException(
+                    "This consignment range overlaps another party's allocated numbers");
+        }
+        ConsignmentRange range = new ConsignmentRange();
+        range.setPartyId(partyId);
+        range.setRangeStart(start);
+        range.setRangeEnd(end);
+        range.setNotes(StringUtils.hasText(notes) ? notes.trim() : null);
+        Long id = consignmentRangeDao.save(range);
+        range.setId(id);
+        return range;
+    }
+
+    @Transactional
+    public void deleteRange(Long partyId, Long rangeId) {
+        ConsignmentRange range = consignmentRangeDao.findById(rangeId)
+                .orElseThrow(() -> new IllegalArgumentException("Range not found"));
+        if (!range.getPartyId().equals(partyId)) {
+            throw new IllegalArgumentException("Range does not belong to this party");
+        }
+        if (consignmentRangeDao.countUsedInRange(range.getRangeStart(), range.getRangeEnd()) > 0) {
+            throw new IllegalArgumentException("Cannot delete a range that already has used consignment numbers");
+        }
+        consignmentRangeDao.deleteById(rangeId);
+    }
+
+    public boolean ownsConsignment(Long partyId, String consignmentNo) {
+        Long number = parseConsignment(consignmentNo);
+        return number != null && consignmentRangeDao.covers(partyId, number);
+    }
+
+    public static Long parseConsignment(String consignmentNo) {
+        if (!StringUtils.hasText(consignmentNo)) {
+            return null;
+        }
+        String digits = consignmentNo.trim();
+        if (!digits.matches("\\d+")) {
+            return null;
+        }
+        try {
+            return Long.parseLong(digits);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private void normalize(Party party) {
+        party.setPartyName(trimRequired(party.getPartyName(), "Party name"));
+        party.setPhone(trimRequired(party.getPhone(), "Phone"));
+        party.setCity(trimRequired(party.getCity(), "City"));
+        party.setContactPerson(trimToNull(party.getContactPerson()));
+        party.setEmail(trimToNull(party.getEmail()));
+        party.setGstin(trimToNull(party.getGstin()));
+        party.setAddress(trimToNull(party.getAddress()));
+        party.setState(trimToNull(party.getState()));
+        party.setPincode(trimToNull(party.getPincode()));
+        party.setNotes(trimToNull(party.getNotes()));
+    }
+
+    private void validate(Party party) {
+        if (party.getPartyName().length() < 2) {
+            throw new IllegalArgumentException("Party name is too short");
+        }
+    }
+
+    private String trimRequired(String value, String label) {
+        if (!StringUtils.hasText(value)) {
+            throw new IllegalArgumentException(label + " is required");
+        }
+        return value.trim();
+    }
+
+    private String trimToNull(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
+    }
+}
