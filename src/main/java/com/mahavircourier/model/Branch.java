@@ -1,5 +1,7 @@
 package com.mahavircourier.model;
 
+import java.math.BigDecimal;
+
 public class Branch {
 
     private Long id;
@@ -9,6 +11,9 @@ public class Branch {
     private String pincode;
     private String phone;
     private String address;
+    private String branchCategory = "DOMESTIC";
+    private BigDecimal perKgRate = BigDecimal.ZERO;
+    private BigDecimal perBoxRate = BigDecimal.ZERO;
 
     public Long getId() {
         return id;
@@ -64,5 +69,29 @@ public class Branch {
 
     public void setAddress(String address) {
         this.address = address;
+    }
+
+    public String getBranchCategory() {
+        return branchCategory;
+    }
+
+    public void setBranchCategory(String branchCategory) {
+        this.branchCategory = branchCategory;
+    }
+
+    public BigDecimal getPerKgRate() {
+        return perKgRate;
+    }
+
+    public void setPerKgRate(BigDecimal perKgRate) {
+        this.perKgRate = perKgRate;
+    }
+
+    public BigDecimal getPerBoxRate() {
+        return perBoxRate;
+    }
+
+    public void setPerBoxRate(BigDecimal perBoxRate) {
+        this.perBoxRate = perBoxRate;
     }
 }

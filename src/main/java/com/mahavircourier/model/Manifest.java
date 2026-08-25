@@ -15,6 +15,7 @@ public class Manifest {
     private String throughName;
     private String originCity;
     private String serviceType;
+    private String billingLane = "AUTO";
     private String remarks;
     private int totalBoxes;
     private BigDecimal totalWeight = BigDecimal.ZERO;
@@ -84,6 +85,14 @@ public class Manifest {
 
     public void setServiceType(String serviceType) {
         this.serviceType = serviceType;
+    }
+
+    public String getBillingLane() {
+        return billingLane;
+    }
+
+    public void setBillingLane(String billingLane) {
+        this.billingLane = billingLane;
     }
 
     public String getRemarks() {

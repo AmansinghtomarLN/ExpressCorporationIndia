@@ -72,7 +72,7 @@ Web app for courier **booking**, **public tracking**, **customer account**, and 
 
 Admin UI lives under `/admin` with a shared admin nav:
 
-Dashboard · Manifests · Parties · Shipments · Reports · Monitoring · Users · Branches · Contacts · Rates · Invoices · Notifications · Audit
+Dashboard · Manifests · Parties · C.No Ranges · Shipments · Reports · Monitoring · Users · Branches · Contacts · Billing · Rates · Invoices · Notifications · Audit
 
 ### 4.1 Dashboard (`/admin`)
 - KPI cards:
@@ -107,7 +107,7 @@ Dashboard · Manifests · Parties · Shipments · Reports · Monitoring · Users
 - One consignment belongs to exactly one manifest
 - Edit header / existing lines (syncs shipment details); add more C.Nos (creates more shipments)
 - Print sheet matching the physical manifest (totals for boxes + weight)
-- Billing snapshot: total boxes, total weight, estimated freight from rate cards (each line also gets an invoice)
+- Billing snapshot: total boxes, total weight, estimated freight (each C.No gets one invoice from the destination branch rates)
 
 ### 4.2 Shipments (`/admin/shipments`)
 **List**
@@ -119,8 +119,8 @@ Dashboard · Manifests · Parties · Shipments · Reports · Monitoring · Users
 **Create**
 - Admin can create a shipment (`/admin/shipments/new`)
 - Can set branch/hub/courier/COD at create time
-- Freight calculated from rate cards when possible
-- Invoice auto-created
+- Freight calculated from destination-branch per kg + per box
+- Invoice auto-created (one per C.No)
 
 **Detail / manage (`/admin/shipments/{id}`)**
 - View full party details, route, service, expected delivery, freight, COD
@@ -168,18 +168,39 @@ On each successful status update:
 - Mark as read
 - Delete
 
+### 4.6a Billing (`/admin/billing`)
+- **One invoice per consignment number**, created automatically when the manifest is saved
+- Billing is **branch-wise**: destination city on the line maps to that branch’s rates
+- **No service-type charge** — Domestic Standard / Express / International are operational labels only
+- Formula: `weight × perKg + boxes × perBox` (no minimum, no base rate)
+- Category defaults:
+  - **Domestic** — Madhya Pradesh branches
+  - **National** — Chhattisgarh branches
+- Saving a category default applies per-kg and per-box to every branch in that category
+- Each branch can then be edited individually
+- Preview calculator by branch
+- Manifest billing lane: Auto (destination city → that branch), or Domestic/National fallback when the city has no branch
+- Editing a manifest line recalculates freight and refreshes that C.No’s invoice
+
+### 4.6b C.No ranges (`/admin/cno-ranges`)
+- Configure series start/end and **bucket size**
+- Preview next vacant bucket
+- Allocate 1+ buckets to a party (optional size override)
+- Party-wise allocated / filled / vacant
+- Full allocation history; unused ranges can be removed
+
 ### 4.7 Rates (`/admin/rates`)
-- Rate cards by service type
-- Fields: min/max weight, base rate, per-kg rate, active flag
-- Used to calculate freight on booking / admin create
-- Seeded defaults:
+- Legacy service-type rate cards (kept for history)
+- **Not used for invoices** — freight is branch per-kg + per-box only
+- Seeded defaults remain for the unused calculator:
   - Domestic Standard: base 80 + 15/kg
   - Domestic Express: base 120 + 25/kg
   - International: base 450 + 80/kg
 
 ### 4.8 Invoices (`/admin/invoices`)
-- Auto-created when a shipment is booked/created
-- Amounts from freight + COD
+- One invoice per C.No, auto-created when the manifest is saved
+- Columns: invoice #, C.No, billed branch, weight, boxes, freight, COD, total
+- Amount = destination-branch `weight × perKg + boxes × perBox` (+ COD if any)
 - Status actions: **PAID**, **UNPAID**, **COD_COLLECTED**
 
 ### 4.9 Notifications (`/admin/notifications`)
@@ -257,6 +278,8 @@ On each successful status update:
 | `/dashboard` | Customer | My shipments |
 | `/admin` | Admin/Staff | Ops dashboard |
 | `/admin/parties` | Admin/Staff | Sending parties + C.No ranges |
+| `/admin/cno-ranges` | Admin/Staff | Bucket allocation + vacant/filled inventory |
+| `/admin/billing` | Admin/Staff | Domestic / National courier prices |
 | `/admin/manifests` | Admin/Staff | Manifest management (creates shipments) |
 | `/admin/shipments` | Admin/Staff | Shipment console |
 | `/admin/reports` | Admin/Staff | Daily/weekly/monthly reports + email |

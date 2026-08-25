@@ -14,7 +14,9 @@
     <div class="container">
         <span class="eyebrow">Admin Console</span>
         <h1>Invoices</h1>
-        <p>Track freight and COD collections for Express Corporation of India.</p>
+        <p>One invoice is created for every consignment number when the manifest is saved.
+            Amount is <strong>weight × per kg + boxes × per box</strong> for the destination branch.
+            Manage rates under <a th:href="@{/admin/billing}">Billing</a>.</p>
 
         <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
@@ -24,7 +26,10 @@
                 <thead>
                 <tr>
                     <th>Invoice #</th>
-                    <th>Tracking ID</th>
+                    <th>C.No</th>
+                    <th>Branch</th>
+                    <th>Weight</th>
+                    <th>Boxes</th>
                     <th>Freight</th>
                     <th>COD</th>
                     <th>Total</th>
@@ -39,9 +44,12 @@
                     <td>
                         <a th:if="${inv.shipmentId != null}"
                            th:href="@{/admin/shipments/{id}(id=${inv.shipmentId})}"
-                           th:text="${inv.trackingId != null ? inv.trackingId : ('#' + inv.shipmentId)}">Tracking</a>
+                           th:text="${inv.trackingId != null ? inv.trackingId : ('#' + inv.shipmentId)}">C.No</a>
                         <span th:if="${inv.shipmentId == null}">—</span>
                     </td>
+                    <td th:text="${inv.billedBranchName != null ? inv.billedBranchName : (inv.billedBranchCity != null ? inv.billedBranchCity : '—')}">Branch</td>
+                    <td th:text="${inv.weightKg != null ? inv.weightKg + ' kg' : '—'}">40 kg</td>
+                    <td th:text="${inv.numberOfBoxes != null ? inv.numberOfBoxes : '—'}">3</td>
                     <td th:text="${'Rs. ' + #numbers.formatDecimal(inv.freightAmount, 1, 2)}">Rs. 0.00</td>
                     <td th:text="${'Rs. ' + #numbers.formatDecimal(inv.codAmount, 1, 2)}">Rs. 0.00</td>
                     <td th:text="${'Rs. ' + #numbers.formatDecimal(inv.totalAmount, 1, 2)}">Rs. 0.00</td>

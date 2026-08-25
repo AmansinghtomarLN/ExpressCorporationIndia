@@ -59,6 +59,30 @@
                                th:value="${editBranch != null ? editBranch.address : ''}">
                     </div>
                 </div>
+                <div class="form-group">
+                    <label for="branchCategory">Billing category</label>
+                    <select id="branchCategory" name="branchCategory">
+                        <option value="DOMESTIC"
+                                th:selected="${editBranch == null or editBranch.branchCategory == 'DOMESTIC'}">Domestic (Madhya Pradesh)</option>
+                        <option value="NATIONAL"
+                                th:selected="${editBranch != null and editBranch.branchCategory == 'NATIONAL'}">National (Chhattisgarh)</option>
+                    </select>
+                    <p class="muted">Used only as a default group. Actual invoice rates are set per branch.</p>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="perKgRate">Per kg (Rs.)</label>
+                        <input type="number" step="0.01" min="0" id="perKgRate" name="perKgRate"
+                               th:value="${editBranch != null ? editBranch.perKgRate : ''}"
+                               placeholder="Leave blank to use category default">
+                    </div>
+                    <div class="form-group">
+                        <label for="perBoxRate">Per box (Rs.)</label>
+                        <input type="number" step="0.01" min="0" id="perBoxRate" name="perBoxRate"
+                               th:value="${editBranch != null ? editBranch.perBoxRate : ''}"
+                               placeholder="Leave blank to use category default">
+                    </div>
+                </div>
                 <div class="admin-filter-buttons">
                     <button type="submit" class="btn btn-primary"
                             th:text="${editBranch != null} ? 'Update Branch' : 'Create Branch'">Create Branch</button>
@@ -74,6 +98,9 @@
                     <th>Name</th>
                     <th>City</th>
                     <th>State</th>
+                    <th>Category</th>
+                    <th>Per kg</th>
+                    <th>Per box</th>
                     <th>Pincode</th>
                     <th>Phone</th>
                     <th>Address</th>
@@ -85,6 +112,9 @@
                     <td th:text="${b.branchName}">Branch</td>
                     <td th:text="${b.city}">City</td>
                     <td th:text="${b.state}">State</td>
+                    <td th:text="${b.branchCategory == 'NATIONAL' ? 'National' : 'Domestic'}">Domestic</td>
+                    <td th:text="${b.perKgRate != null ? 'Rs. ' + #numbers.formatDecimal(b.perKgRate, 1, 2) : '—'}">Rs. 8.00</td>
+                    <td th:text="${b.perBoxRate != null ? 'Rs. ' + #numbers.formatDecimal(b.perBoxRate, 1, 2) : '—'}">Rs. 10.00</td>
                     <td th:text="${b.pincode}">000000</td>
                     <td th:text="${b.phone != null ? b.phone : '—'}">Phone</td>
                     <td th:text="${b.address != null ? b.address : '—'}">Address</td>

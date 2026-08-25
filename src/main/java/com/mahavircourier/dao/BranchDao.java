@@ -8,6 +8,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.util.List;
@@ -31,6 +32,18 @@ public class BranchDao {
         b.setPincode(rs.getString("pincode"));
         b.setPhone(rs.getString("phone"));
         b.setAddress(rs.getString("address"));
+        try {
+            b.setBranchCategory(rs.getString("branch_category"));
+        } catch (Exception ignored) {
+            b.setBranchCategory("DOMESTIC");
+        }
+        try {
+            b.setPerKgRate(rs.getBigDecimal("per_kg_rate"));
+            b.setPerBoxRate(rs.getBigDecimal("per_box_rate"));
+        } catch (Exception ignored) {
+            b.setPerKgRate(BigDecimal.ZERO);
+            b.setPerBoxRate(BigDecimal.ZERO);
+        }
         return b;
     };
 
@@ -52,7 +65,8 @@ public class BranchDao {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(
-                    "INSERT INTO branches (branch_name, city, state, pincode, phone, address) VALUES (?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO branches (branch_name, city, state, pincode, phone, address, branch_category, " +
+                            "per_kg_rate, per_box_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, branch.getBranchName());
             ps.setString(2, branch.getCity());
@@ -60,6 +74,9 @@ public class BranchDao {
             ps.setString(4, branch.getPincode());
             ps.setString(5, branch.getPhone());
             ps.setString(6, branch.getAddress());
+            ps.setString(7, branch.getBranchCategory() != null ? branch.getBranchCategory() : "DOMESTIC");
+            ps.setBigDecimal(8, branch.getPerKgRate() != null ? branch.getPerKgRate() : BigDecimal.ZERO);
+            ps.setBigDecimal(9, branch.getPerBoxRate() != null ? branch.getPerBoxRate() : BigDecimal.ZERO);
             return ps;
         }, keyHolder);
         Number key = keyHolder.getKey();
@@ -68,17 +85,50 @@ public class BranchDao {
 
     public void update(Branch branch) {
         jdbcTemplate.update(
-                "UPDATE branches SET branch_name = ?, city = ?, state = ?, pincode = ?, phone = ?, address = ? WHERE id = ?",
+                "UPDATE branches SET branch_name = ?, city = ?, state = ?, pincode = ?, phone = ?, address = ?, " +
+                        "branch_category = ?, per_kg_rate = ?, per_box_rate = ? WHERE id = ?",
                 branch.getBranchName(),
                 branch.getCity(),
                 branch.getState(),
                 branch.getPincode(),
                 branch.getPhone(),
                 branch.getAddress(),
+                branch.getBranchCategory() != null ? branch.getBranchCategory() : "DOMESTIC",
+                branch.getPerKgRate() != null ? branch.getPerKgRate() : BigDecimal.ZERO,
+                branch.getPerBoxRate() != null ? branch.getPerBoxRate() : BigDecimal.ZERO,
                 branch.getId());
+    }
+
+    public void applyRatesByCategory(String category, BigDecimal perKgRate, BigDecimal perBoxRate) {
+        jdbcTemplate.update(
+                "UPDATE branches SET per_kg_rate = ?, per_box_rate = ? WHERE branch_category = ?",
+                perKgRate != null ? perKgRate : BigDecimal.ZERO,
+                perBoxRate != null ? perBoxRate : BigDecimal.ZERO,
+                category);
+    }
+
+    public void updateRates(Long id, BigDecimal perKgRate, BigDecimal perBoxRate) {
+        jdbcTemplate.update(
+                "UPDATE branches SET per_kg_rate = ?, per_box_rate = ? WHERE id = ?",
+                perKgRate != null ? perKgRate : BigDecimal.ZERO,
+                perBoxRate != null ? perBoxRate : BigDecimal.ZERO,
+                id);
     }
 
     public void deleteById(Long id) {
         jdbcTemplate.update("DELETE FROM branches WHERE id = ?", id);
+    }
+
+    public Optional<Branch> findByCityIgnoreCase(String city) {
+        if (city == null || city.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.ofNullable(jdbcTemplate.queryForObject(
+                    "SELECT * FROM branches WHERE LOWER(city) = LOWER(?) LIMIT 1",
+                    BRANCH_ROW_MAPPER, city.trim()));
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
+        }
     }
 }

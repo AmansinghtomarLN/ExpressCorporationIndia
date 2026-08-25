@@ -32,6 +32,7 @@ public class Shipment {
     private Long partyId;
     private Long manifestId;
     private Integer numberOfBoxes;
+    private String billingLane;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -232,6 +233,14 @@ public class Shipment {
 
     public void setNumberOfBoxes(Integer numberOfBoxes) {
         this.numberOfBoxes = numberOfBoxes;
+    }
+
+    public String getBillingLane() {
+        return billingLane;
+    }
+
+    public void setBillingLane(String billingLane) {
+        this.billingLane = billingLane;
     }
 
     public LocalDateTime getCreatedAt() {

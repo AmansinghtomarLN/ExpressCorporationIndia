@@ -41,6 +41,7 @@
                 <p th:text="'Through: ' + ${manifest.throughName != null ? manifest.throughName : '—'}">Through</p>
                 <p th:text="'Origin: ' + ${manifest.originCity != null ? manifest.originCity : '—'}">Origin</p>
                 <p th:text="'Service: ' + ${#strings.replace(manifest.serviceType,'_',' ')}">Service</p>
+                <p th:text="'Billing: ' + (${manifest.billingLane == 'NATIONAL'} ? 'National (CG)' : (${manifest.billingLane == 'DOMESTIC'} ? 'Domestic (MP)' : 'Auto by destination'))">Billing</p>
                 <p th:if="${manifest.remarks}" th:text="${manifest.remarks}">Remarks</p>
             </div>
         </div>
@@ -71,7 +72,9 @@
                     <th>Boxes</th>
                     <th>Weight</th>
                     <th>Receiver</th>
+                    <th>Branch</th>
                     <th>Freight</th>
+                    <th>Invoice</th>
                     <th>Status</th>
                     <th></th>
                 </tr>
@@ -87,7 +90,14 @@
                         <span th:text="${item.receiverName}">REAL DIAGNOSTIC</span>
                         <span class="muted" th:if="${item.receiverPhone}" th:text="' · ' + ${item.receiverPhone}"></span>
                     </td>
+                    <td th:text="${item.billedBranchName != null ? item.billedBranchName : '—'}">—</td>
                     <td th:text="${item.freightCharge != null ? 'Rs. ' + #numbers.formatDecimal(item.freightCharge, 1, 2) : '—'}">—</td>
+                    <td>
+                        <a th:if="${item.invoiceNumber != null}"
+                           th:href="@{/admin/invoices}"
+                           th:text="${item.invoiceNumber}">INV-…</a>
+                        <span th:if="${item.invoiceNumber == null}">—</span>
+                    </td>
                     <td>
                         <span class="status-badge" th:if="${item.shipmentStatus}"
                               th:classappend="'status-' + ${item.shipmentStatus}"
@@ -102,7 +112,7 @@
             </table>
         </div>
 
-        <p class="muted" style="margin-top:16px;">Each line is billed as its own shipment invoice. Use this sheet as the source for party billing (boxes, weight, and freight).</p>
+        <p class="muted" style="margin-top:16px;">Each C.No has exactly one invoice. Freight is destination-branch per kg + per box. Service type is not charged.</p>
     </div>
 </section>
 

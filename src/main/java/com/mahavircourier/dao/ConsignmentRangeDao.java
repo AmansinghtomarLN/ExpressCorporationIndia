@@ -42,6 +42,13 @@ public class ConsignmentRangeDao {
         return r;
     };
 
+    public List<ConsignmentRange> findAllWithParty() {
+        return jdbcTemplate.query(
+                "SELECT r.*, p.party_name FROM consignment_ranges r " +
+                        "JOIN parties p ON p.id = r.party_id ORDER BY r.range_start ASC",
+                ROW_MAPPER);
+    }
+
     public List<ConsignmentRange> findByPartyId(Long partyId) {
         return jdbcTemplate.query(
                 "SELECT * FROM consignment_ranges WHERE party_id = ? ORDER BY range_start ASC",

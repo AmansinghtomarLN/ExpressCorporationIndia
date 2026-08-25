@@ -16,8 +16,17 @@ public class Invoice {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    /** Transient display field (not persisted). */
+    private Long billedBranchId;
+    private BigDecimal weightKg;
+    private Integer numberOfBoxes;
+    private BigDecimal perKgRate;
+    private BigDecimal perBoxRate;
+
+    /** Transient display fields (not always persisted). */
     private String trackingId;
+    private String billedBranchName;
+    private String billedBranchCity;
+    private String destinationCity;
 
     public Long getId() {
         return id;
@@ -105,5 +114,69 @@ public class Invoice {
 
     public void setTrackingId(String trackingId) {
         this.trackingId = trackingId;
+    }
+
+    public Long getBilledBranchId() {
+        return billedBranchId;
+    }
+
+    public void setBilledBranchId(Long billedBranchId) {
+        this.billedBranchId = billedBranchId;
+    }
+
+    public BigDecimal getWeightKg() {
+        return weightKg;
+    }
+
+    public void setWeightKg(BigDecimal weightKg) {
+        this.weightKg = weightKg;
+    }
+
+    public Integer getNumberOfBoxes() {
+        return numberOfBoxes;
+    }
+
+    public void setNumberOfBoxes(Integer numberOfBoxes) {
+        this.numberOfBoxes = numberOfBoxes;
+    }
+
+    public BigDecimal getPerKgRate() {
+        return perKgRate;
+    }
+
+    public void setPerKgRate(BigDecimal perKgRate) {
+        this.perKgRate = perKgRate;
+    }
+
+    public BigDecimal getPerBoxRate() {
+        return perBoxRate;
+    }
+
+    public void setPerBoxRate(BigDecimal perBoxRate) {
+        this.perBoxRate = perBoxRate;
+    }
+
+    public String getBilledBranchName() {
+        return billedBranchName;
+    }
+
+    public void setBilledBranchName(String billedBranchName) {
+        this.billedBranchName = billedBranchName;
+    }
+
+    public String getBilledBranchCity() {
+        return billedBranchCity;
+    }
+
+    public void setBilledBranchCity(String billedBranchCity) {
+        this.billedBranchCity = billedBranchCity;
+    }
+
+    public String getDestinationCity() {
+        return destinationCity;
+    }
+
+    public void setDestinationCity(String destinationCity) {
+        this.destinationCity = destinationCity;
     }
 }

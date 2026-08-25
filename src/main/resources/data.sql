@@ -99,3 +99,53 @@ WHERE p.party_name = 'GWALIOR'
       SELECT 1 FROM consignment_ranges r
       WHERE r.party_id = p.id AND r.range_start = 119000 AND r.range_end = 119999
   );
+
+INSERT INTO billing_tariffs (lane_type, min_charge, base_rate, per_kg_rate, per_box_rate, active, notes)
+SELECT 'DOMESTIC', 0.00, 0.00, 8.00, 10.00, 1, 'MP branch default: weight × per kg + boxes × per box'
+WHERE NOT EXISTS (SELECT 1 FROM billing_tariffs WHERE lane_type = 'DOMESTIC');
+
+INSERT INTO billing_tariffs (lane_type, min_charge, base_rate, per_kg_rate, per_box_rate, active, notes)
+SELECT 'NATIONAL', 0.00, 0.00, 12.00, 15.00, 1, 'CG branch default: weight × per kg + boxes × per box'
+WHERE NOT EXISTS (SELECT 1 FROM billing_tariffs WHERE lane_type = 'NATIONAL');
+
+INSERT INTO cno_settings (id, series_start, series_end, bucket_size)
+SELECT 1, 30000, 199999, 100
+WHERE NOT EXISTS (SELECT 1 FROM cno_settings WHERE id = 1);
+
+INSERT INTO branches (branch_name, city, state, pincode, phone, address, branch_category)
+SELECT 'ECI - Indore', 'Indore', 'Madhya Pradesh', '452001', '07313590608', 'Dewas Naka, Indore', 'DOMESTIC'
+WHERE NOT EXISTS (SELECT 1 FROM branches WHERE city = 'Indore');
+
+INSERT INTO branches (branch_name, city, state, pincode, phone, address, branch_category)
+SELECT 'ECI - Gwalior', 'Gwalior', 'Madhya Pradesh', '474001', '0751-4001000', 'Gwalior booking counter', 'DOMESTIC'
+WHERE NOT EXISTS (SELECT 1 FROM branches WHERE city = 'Gwalior');
+
+INSERT INTO branches (branch_name, city, state, pincode, phone, address, branch_category)
+SELECT 'ECI - Bhopal', 'Bhopal', 'Madhya Pradesh', '462001', '0755-4001000', 'Bhopal', 'DOMESTIC'
+WHERE NOT EXISTS (SELECT 1 FROM branches WHERE city = 'Bhopal');
+
+INSERT INTO branches (branch_name, city, state, pincode, phone, address, branch_category)
+SELECT 'ECI - Morena', 'Morena', 'Madhya Pradesh', '476001', '07532-400100', 'Morena', 'DOMESTIC'
+WHERE NOT EXISTS (SELECT 1 FROM branches WHERE city = 'Morena');
+
+INSERT INTO branches (branch_name, city, state, pincode, phone, address, branch_category)
+SELECT 'ECI - Bhind', 'Bhind', 'Madhya Pradesh', '477001', '07534-400100', 'Bhind', 'DOMESTIC'
+WHERE NOT EXISTS (SELECT 1 FROM branches WHERE city = 'Bhind');
+
+INSERT INTO branches (branch_name, city, state, pincode, phone, address, branch_category)
+SELECT 'ECI - Raipur', 'Raipur', 'Chhattisgarh', '492001', '0771-4001000', 'Raipur', 'NATIONAL'
+WHERE NOT EXISTS (SELECT 1 FROM branches WHERE city = 'Raipur');
+
+INSERT INTO branches (branch_name, city, state, pincode, phone, address, branch_category)
+SELECT 'ECI - Bilaspur', 'Bilaspur', 'Chhattisgarh', '495001', '07752-400100', 'Bilaspur', 'NATIONAL'
+WHERE NOT EXISTS (SELECT 1 FROM branches WHERE city = 'Bilaspur');
+
+UPDATE branches SET branch_category = 'NATIONAL'
+WHERE state LIKE '%Chhatt%' OR state LIKE '%Chattis%' OR state = 'CG';
+UPDATE branches SET branch_category = 'DOMESTIC'
+WHERE state LIKE '%Madhya%' OR state = 'MP';
+
+UPDATE branches SET per_kg_rate = 8.00, per_box_rate = 10.00
+WHERE branch_category = 'DOMESTIC' AND per_kg_rate = 8.00 AND per_box_rate = 10.00;
+UPDATE branches SET per_kg_rate = 12.00, per_box_rate = 15.00
+WHERE branch_category = 'NATIONAL' AND per_kg_rate = 8.00 AND per_box_rate = 10.00;

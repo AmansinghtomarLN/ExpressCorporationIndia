@@ -16,6 +16,9 @@ public class ManifestItem {
     private Long shipmentId;
     private BigDecimal freightCharge;
     private String shipmentStatus;
+    private Long invoiceId;
+    private String invoiceNumber;
+    private String billedBranchName;
 
     public Long getId() {
         return id;
@@ -111,5 +114,29 @@ public class ManifestItem {
 
     public void setShipmentStatus(String shipmentStatus) {
         this.shipmentStatus = shipmentStatus;
+    }
+
+    public Long getInvoiceId() {
+        return invoiceId;
+    }
+
+    public void setInvoiceId(Long invoiceId) {
+        this.invoiceId = invoiceId;
+    }
+
+    public String getInvoiceNumber() {
+        return invoiceNumber;
+    }
+
+    public void setInvoiceNumber(String invoiceNumber) {
+        this.invoiceNumber = invoiceNumber;
+    }
+
+    public String getBilledBranchName() {
+        return billedBranchName;
+    }
+
+    public void setBilledBranchName(String billedBranchName) {
+        this.billedBranchName = billedBranchName;
     }
 }

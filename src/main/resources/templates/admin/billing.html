@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Billing | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container wide-page">
+        <span class="eyebrow">Billing</span>
+        <h1>Branch-wise courier rates</h1>
+        <p>Each consignment number gets one invoice when the manifest is saved. Charge is only
+            <strong>weight × per kg + boxes × per box</strong> for the destination branch.
+            Service type (Domestic Standard / Express / International) is not billed.</p>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <div class="ops-split" style="grid-template-columns: 1fr 1fr;">
+            <form class="form-card" method="post" th:action="@{/admin/billing/DOMESTIC}">
+                <span class="meta-chip">Category default</span>
+                <h3>Domestic (Madhya Pradesh)</h3>
+                <p class="muted">Saving this applies the two rates to every Domestic branch. You can still edit a branch afterwards.</p>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Per kg (Rs.)</label>
+                        <input type="number" step="0.01" min="0" name="perKgRate" required th:value="${domestic.perKgRate}">
+                    </div>
+                    <div class="form-group">
+                        <label>Per box (Rs.)</label>
+                        <input type="number" step="0.01" min="0" name="perBoxRate" required th:value="${domestic.perBoxRate}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <input type="text" name="notes" th:value="${domestic.notes}">
+                </div>
+                <input type="hidden" name="active" value="true">
+                <button type="submit" class="btn btn-primary">Apply to all MP branches</button>
+            </form>
+
+            <form class="form-card" method="post" th:action="@{/admin/billing/NATIONAL}">
+                <span class="meta-chip">Category default</span>
+                <h3>National (Chhattisgarh)</h3>
+                <p class="muted">Saving this applies the two rates to every National branch. You can still edit a branch afterwards.</p>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Per kg (Rs.)</label>
+                        <input type="number" step="0.01" min="0" name="perKgRate" required th:value="${national.perKgRate}">
+                    </div>
+                    <div class="form-group">
+                        <label>Per box (Rs.)</label>
+                        <input type="number" step="0.01" min="0" name="perBoxRate" required th:value="${national.perBoxRate}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <input type="text" name="notes" th:value="${national.notes}">
+                </div>
+                <input type="hidden" name="active" value="true">
+                <button type="submit" class="btn btn-primary">Apply to all CG branches</button>
+            </form>
+        </div>
+
+        <div class="form-card wide" style="margin-top:24px;">
+            <h3>Rates by branch</h3>
+            <p class="muted">Destination city on the manifest line is matched to the branch city. That branch’s rates create the invoice.</p>
+            <div style="overflow-x:auto;">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>Branch</th>
+                        <th>City</th>
+                        <th>Category</th>
+                        <th>Per kg (Rs.)</th>
+                        <th>Per box (Rs.)</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="b : ${branches}">
+                        <td th:text="${b.branchName}">Branch</td>
+                        <td th:text="${b.city}">City</td>
+                        <td th:text="${b.branchCategory == 'NATIONAL' ? 'National' : 'Domestic'}">Domestic</td>
+                        <td colspan="3">
+                            <form method="post" th:action="@{/admin/billing/branches/{id}(id=${b.id})}"
+                                  class="admin-filter-buttons" style="align-items:center;">
+                                <input type="number" step="0.01" min="0" name="perKgRate" required
+                                       th:value="${b.perKgRate}" style="width:110px;">
+                                <input type="number" step="0.01" min="0" name="perBoxRate" required
+                                       th:value="${b.perBoxRate}" style="width:110px;">
+                                <button type="submit" class="btn btn-sm btn-dark">Save</button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div th:if="${branches == null or #lists.isEmpty(branches)}" class="alert alert-info" style="margin-top:16px;">
+                No branches found. Add them under <a th:href="@{/admin/branches}">Branches</a>.
+            </div>
+        </div>
+
+        <div class="form-card wide" style="margin-top:24px;">
+            <h3>Preview a charge</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Branch</label>
+                    <select id="preview-branch">
+                        <option value="">Category default</option>
+                        <option th:each="b : ${branches}" th:value="${b.id}"
+                                th:text="${b.city + ' — ' + b.branchName}">City</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Fallback lane</label>
+                    <select id="preview-lane">
+                        <option value="DOMESTIC">Domestic (MP)</option>
+                        <option value="NATIONAL">National (CG)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Weight (kg)</label>
+                    <input type="number" id="preview-weight" step="0.01" value="40">
+                </div>
+                <div class="form-group">
+                    <label>Boxes</label>
+                    <input type="number" id="preview-boxes" value="3">
+                </div>
+            </div>
+            <p><strong id="preview-result">—</strong></p>
+            <button type="button" class="btn btn-dark" id="preview-btn">Calculate</button>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script>
+document.getElementById("preview-btn").addEventListener("click", function () {
+    var branchId = document.getElementById("preview-branch").value;
+    var lane = document.getElementById("preview-lane").value;
+    var weight = document.getElementById("preview-weight").value;
+    var boxes = document.getElementById("preview-boxes").value;
+    var url = "/admin/billing/preview?weight=" + encodeURIComponent(weight)
+        + "&boxes=" + encodeURIComponent(boxes)
+        + "&lane=" + encodeURIComponent(lane);
+    if (branchId) {
+        url += "&branchId=" + encodeURIComponent(branchId);
+    }
+    fetch(url)
+        .then(function (r) { return r.text(); })
+        .then(function (t) { document.getElementById("preview-result").textContent = "Rs. " + t; });
+});
+</script>
+</body>
+</html>

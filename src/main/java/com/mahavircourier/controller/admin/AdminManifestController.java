@@ -193,6 +193,7 @@ public class AdminManifestController {
         form.setThroughName(manifest.getThroughName());
         form.setOriginCity(manifest.getOriginCity());
         form.setServiceType(manifest.getServiceType());
+        form.setBillingLane(manifest.getBillingLane());
         form.setRemarks(manifest.getRemarks());
         for (ManifestItem item : manifest.getItems()) {
             ManifestItemForm line = new ManifestItemForm();

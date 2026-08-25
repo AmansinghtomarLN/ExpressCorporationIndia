@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS branches (
     state           VARCHAR(80)  NOT NULL,
     pincode         VARCHAR(10)  NOT NULL,
     phone           VARCHAR(20),
-    address         VARCHAR(255)
+    address         VARCHAR(255),
+    branch_category VARCHAR(20)  NOT NULL DEFAULT 'DOMESTIC'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS shipments (
@@ -279,5 +280,115 @@ SET @sql := (
     'SELECT 1')
   FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'shipments' AND COLUMN_NAME = 'number_of_boxes'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE branches ADD COLUMN branch_category VARCHAR(20) NOT NULL DEFAULT ''DOMESTIC''',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'branches' AND COLUMN_NAME = 'branch_category'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE manifests ADD COLUMN billing_lane VARCHAR(20) NOT NULL DEFAULT ''AUTO''',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'manifests' AND COLUMN_NAME = 'billing_lane'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE shipments ADD COLUMN billing_lane VARCHAR(20) NULL',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'shipments' AND COLUMN_NAME = 'billing_lane'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+CREATE TABLE IF NOT EXISTS billing_tariffs (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    lane_type       VARCHAR(20)   NOT NULL UNIQUE,
+    min_charge      DECIMAL(10,2) NOT NULL DEFAULT 0,
+    base_rate       DECIMAL(10,2) NOT NULL DEFAULT 0,
+    per_kg_rate     DECIMAL(10,2) NOT NULL DEFAULT 0,
+    per_box_rate    DECIMAL(10,2) NOT NULL DEFAULT 0,
+    active          TINYINT(1)    NOT NULL DEFAULT 1,
+    notes           VARCHAR(255),
+    updated_at      TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS cno_settings (
+    id              BIGINT PRIMARY KEY,
+    series_start    BIGINT NOT NULL DEFAULT 30000,
+    series_end      BIGINT NOT NULL DEFAULT 199999,
+    bucket_size     INT    NOT NULL DEFAULT 100,
+    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE branches ADD COLUMN per_kg_rate DECIMAL(10,2) NOT NULL DEFAULT 8.00',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'branches' AND COLUMN_NAME = 'per_kg_rate'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE branches ADD COLUMN per_box_rate DECIMAL(10,2) NOT NULL DEFAULT 10.00',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'branches' AND COLUMN_NAME = 'per_box_rate'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE invoices ADD COLUMN billed_branch_id BIGINT NULL',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'invoices' AND COLUMN_NAME = 'billed_branch_id'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE invoices ADD COLUMN weight_kg DECIMAL(8,2) NULL',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'invoices' AND COLUMN_NAME = 'weight_kg'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE invoices ADD COLUMN number_of_boxes INT NULL',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'invoices' AND COLUMN_NAME = 'number_of_boxes'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE invoices ADD COLUMN per_kg_rate DECIMAL(10,2) NULL',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'invoices' AND COLUMN_NAME = 'per_kg_rate'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE invoices ADD COLUMN per_box_rate DECIMAL(10,2) NULL',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'invoices' AND COLUMN_NAME = 'per_box_rate'
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;

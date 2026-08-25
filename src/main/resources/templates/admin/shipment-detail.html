@@ -93,6 +93,8 @@
                             <a th:href="@{/admin/parties/{id}(id=${shipment.partyId})}"
                                th:text="${shipment.partyName != null ? shipment.partyName : 'Party'}">Party</a>
                         </p>
+                        <p th:if="${shipment.billingLane}"
+                           th:text="'Lane: ' + (${shipment.billingLane == 'NATIONAL'} ? 'National (CG)' : 'Domestic (MP)')">Lane</p>
                     </div>
                 </div>
                 <div class="form-row">

@@ -92,8 +92,18 @@ public class ShipmentService {
             shipment.setExpectedDelivery(estimateDelivery(shipment.getServiceType()));
         }
         if (shipment.getFreightCharge() == null) {
-            shipment.setFreightCharge(rateCardService.calculateFreight(
-                    shipment.getServiceType(), shipment.getWeightKg()));
+            var quote = rateCardService.quote(
+                    shipment.getDestinationCity(),
+                    shipment.getBillingLane(),
+                    shipment.getWeightKg(),
+                    shipment.getNumberOfBoxes());
+            shipment.setFreightCharge(quote.getAmount());
+            if (shipment.getAssignedBranchId() == null) {
+                shipment.setAssignedBranchId(quote.getBranchId());
+            }
+            if (!StringUtils.hasText(shipment.getBillingLane())) {
+                shipment.setBillingLane(quote.getLane());
+            }
         }
         if (shipment.getCodAmount() == null) {
             shipment.setCodAmount(BigDecimal.ZERO);
@@ -116,7 +126,7 @@ public class ShipmentService {
     @Transactional
     public void syncFromManifestItem(Long shipmentId, String receiverName, String receiverPhone,
                                      String destinationCity, BigDecimal weightKg, Integer boxes,
-                                     String serviceType) {
+                                     String serviceType, String manifestLane) {
         Shipment existing = shipmentDao.findById(shipmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Shipment not found"));
         existing.setReceiverName(receiverName);
@@ -129,9 +139,13 @@ public class ShipmentService {
         existing.setNumberOfBoxes(boxes);
         if (StringUtils.hasText(serviceType)) {
             existing.setServiceType(serviceType.trim());
-            existing.setFreightCharge(rateCardService.calculateFreight(serviceType.trim(), weightKg));
         }
+        var quote = rateCardService.quote(destinationCity, manifestLane, weightKg, boxes);
+        existing.setBillingLane(quote.getLane());
+        existing.setAssignedBranchId(quote.getBranchId());
+        existing.setFreightCharge(quote.getAmount());
         shipmentDao.update(existing);
+        invoiceService.syncFromShipment(existing);
     }
 
     /**

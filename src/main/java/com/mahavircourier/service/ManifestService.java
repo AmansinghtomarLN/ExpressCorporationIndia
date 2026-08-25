@@ -172,7 +172,8 @@ public class ManifestService {
                             item.getDestinationCity(),
                             item.getWeightKg(),
                             item.getNumberOfBoxes(),
-                            existing.getServiceType());
+                            existing.getServiceType(),
+                            existing.getBillingLane());
                 }
                 seenIds.add(item.getId());
             } else {
@@ -230,6 +231,7 @@ public class ManifestService {
         String service = StringUtils.hasText(form.getServiceType())
                 ? form.getServiceType().trim() : "DOMESTIC_STANDARD";
         manifest.setServiceType(service);
+        manifest.setBillingLane(BranchCategory.normalizeLane(form.getBillingLane()));
         manifest.setRemarks(trimToNull(form.getRemarks()));
         manifest.setPartyName(party.getPartyName());
     }
@@ -342,7 +344,12 @@ public class ManifestService {
         shipment.setPartyId(party.getId());
         shipment.setManifestId(manifest.getId());
         shipment.setNumberOfBoxes(item.getNumberOfBoxes());
-        shipment.setFreightCharge(rateCardService.calculateFreight(manifest.getServiceType(), item.getWeightKg()));
+        var quote = rateCardService.quote(
+                item.getDestinationCity(), manifest.getBillingLane(),
+                item.getWeightKg(), item.getNumberOfBoxes());
+        shipment.setBillingLane(quote.getLane());
+        shipment.setAssignedBranchId(quote.getBranchId());
+        shipment.setFreightCharge(quote.getAmount());
         shipment.setCodAmount(BigDecimal.ZERO);
         return shipment;
     }

@@ -43,13 +43,27 @@ public class ManifestItemDao {
         } catch (Exception ignored) {
             // optional join
         }
+        try {
+            long invoiceId = rs.getLong("invoice_id");
+            item.setInvoiceId(rs.wasNull() ? null : invoiceId);
+            item.setInvoiceNumber(rs.getString("invoice_number"));
+            item.setBilledBranchName(rs.getString("billed_branch_name"));
+        } catch (Exception ignored) {
+            // optional invoice join
+        }
         return item;
     };
 
     public List<ManifestItem> findByManifestId(Long manifestId) {
         return jdbcTemplate.query(
-                "SELECT i.*, s.freight_charge, s.status AS shipment_status " +
-                        "FROM manifest_items i LEFT JOIN shipments s ON s.id = i.shipment_id " +
+                "SELECT i.*, s.freight_charge, s.status AS shipment_status, " +
+                        "inv.id AS invoice_id, inv.invoice_number, " +
+                        "COALESCE(b.branch_name, inv_b.branch_name) AS billed_branch_name " +
+                        "FROM manifest_items i " +
+                        "LEFT JOIN shipments s ON s.id = i.shipment_id " +
+                        "LEFT JOIN invoices inv ON inv.shipment_id = s.id " +
+                        "LEFT JOIN branches b ON b.id = s.assigned_branch_id " +
+                        "LEFT JOIN branches inv_b ON inv_b.id = inv.billed_branch_id " +
                         "WHERE i.manifest_id = ? ORDER BY i.serial_no ASC",
                 ROW_MAPPER, manifestId);
     }

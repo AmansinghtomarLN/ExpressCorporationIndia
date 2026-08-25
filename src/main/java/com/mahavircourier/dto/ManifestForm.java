@@ -16,6 +16,7 @@ public class ManifestForm {
     private String throughName;
     private String originCity;
     private String serviceType = "DOMESTIC_STANDARD";
+    private String billingLane = "AUTO";
     private String remarks;
     private List<ManifestItemForm> items = new ArrayList<>();
 
@@ -23,6 +24,7 @@ public class ManifestForm {
         ManifestForm form = new ManifestForm();
         form.setManifestDate(LocalDate.now());
         form.setServiceType("DOMESTIC_STANDARD");
+        form.setBillingLane("AUTO");
         for (int i = 0; i < rows; i++) {
             form.getItems().add(new ManifestItemForm());
         }
@@ -89,6 +91,14 @@ public class ManifestForm {
 
     public void setServiceType(String serviceType) {
         this.serviceType = serviceType;
+    }
+
+    public String getBillingLane() {
+        return billingLane;
+    }
+
+    public void setBillingLane(String billingLane) {
+        this.billingLane = billingLane;
     }
 
     public String getRemarks() {

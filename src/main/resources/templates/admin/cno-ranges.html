@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | C.No Ranges | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container wide-page">
+        <span class="eyebrow">Inventory</span>
+        <h1>Consignment number ranges</h1>
+        <p>Allocate unused C.Nos to parties in buckets. Used numbers are booked on a manifest and cannot be reused. Vacant = allocated minus booked.</p>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+            <div class="kpi-card">
+                <span class="muted">Series</span>
+                <strong th:text="${settings.seriesStart + '–' + settings.seriesEnd}">30000–199999</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="muted">Bucket size</span>
+                <strong th:text="${settings.bucketSize}">100</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="muted">Next bucket</span>
+                <strong th:if="${nextStart != null}" th:text="${nextStart + '–' + nextEnd}">38000–38099</strong>
+                <strong th:if="${nextStart == null}">—</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="muted">Parties with ranges</span>
+                <strong th:text="${#lists.size(summaries)}">1</strong>
+            </div>
+        </div>
+        <p class="muted" th:if="${nextError}" th:text="${nextError}"></p>
+
+        <div class="ops-split" style="grid-template-columns: 1fr 1fr; margin-top:8px;">
+            <form class="form-card" method="post" th:action="@{/admin/cno-ranges/settings}">
+                <h3>Bucket settings</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Series start</label>
+                        <input type="number" name="seriesStart" required min="1" th:value="${settings.seriesStart}">
+                    </div>
+                    <div class="form-group">
+                        <label>Series end</label>
+                        <input type="number" name="seriesEnd" required min="1" th:value="${settings.seriesEnd}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Default bucket size</label>
+                    <input type="number" name="bucketSize" required min="1" th:value="${settings.bucketSize}">
+                </div>
+                <button type="submit" class="btn btn-primary">Save settings</button>
+            </form>
+
+            <form class="form-card" method="post" th:action="@{/admin/cno-ranges/allocate}">
+                <h3>Allocate next bucket</h3>
+                <p class="muted">Takes the next vacant block from the series and assigns it to a party.</p>
+                <div class="form-group">
+                    <label>Party *</label>
+                    <select name="partyId" required>
+                        <option value="">— Select party —</option>
+                        <option th:each="p : ${parties}" th:value="${p.id}" th:text="${p.partyName}">Party</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Number of buckets</label>
+                        <input type="number" name="bucketCount" required min="1" value="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Override size (optional)</label>
+                        <input type="number" name="bucketSize" min="1" placeholder="uses default">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <input type="text" name="notes" placeholder="e.g. April allotment">
+                </div>
+                <button type="submit" class="btn btn-primary">Allocate bucket</button>
+            </form>
+        </div>
+
+        <h3 style="margin-top:28px;">Party-wise allocation</h3>
+        <div class="party-card-grid">
+            <article class="party-card" th:each="s : ${summaries}">
+                <h3 th:text="${s.partyName}">GWALIOR</h3>
+                <p>
+                    <span class="meta-chip" th:text="${s.rangeCount} + ' range(s)'">2</span>
+                    <span class="meta-chip" th:text="${s.allocated} + ' allocated'">7000</span>
+                </p>
+                <p style="margin-top:8px;"><strong th:text="${s.used}">12</strong> filled
+                    · <strong th:text="${s.vacant}">6988</strong> vacant</p>
+                <a class="btn btn-sm btn-dark" th:href="@{/admin/parties/{id}(id=${s.partyId})}">Open party</a>
+            </article>
+        </div>
+        <div th:if="${#lists.isEmpty(summaries)}" class="alert alert-info">No ranges allocated yet.</div>
+
+        <h3>All allocated ranges</h3>
+        <div style="overflow-x:auto;">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Party</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Allocated</th>
+                    <th>Filled</th>
+                    <th>Vacant</th>
+                    <th>Notes</th>
+                    <th>When</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="r : ${allocations}">
+                    <td th:text="${r.partyName}">GWALIOR</td>
+                    <td th:text="${r.rangeStart}">31000</td>
+                    <td th:text="${r.rangeEnd}">37999</td>
+                    <td th:text="${r.allocatedCount}">7000</td>
+                    <td th:text="${r.usedCount}">12</td>
+                    <td th:text="${r.vacantCount}">6988</td>
+                    <td th:text="${r.notes != null ? r.notes : '—'}">Notes</td>
+                    <td th:text="${r.createdAt != null ? #temporals.format(r.createdAt, 'dd MMM yyyy') : '—'}">Date</td>
+                    <td>
+                        <form th:action="@{/admin/cno-ranges/{partyId}/ranges/{rangeId}/delete(partyId=${r.partyId}, rangeId=${r.id})}"
+                              method="post"
+                              onsubmit="return confirm('Remove this range? Only unused ranges can be deleted.');">
+                            <button type="submit" class="btn btn-sm btn-primary">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

@@ -11,6 +11,8 @@ public class ConsignmentRange {
     private String notes;
     private LocalDateTime createdAt;
     private String partyName;
+    private long usedCount;
+    private long vacantCount;
 
     public Long getId() {
         return id;
@@ -70,5 +72,21 @@ public class ConsignmentRange {
 
     public long getAllocatedCount() {
         return rangeEnd >= rangeStart ? (rangeEnd - rangeStart + 1) : 0;
+    }
+
+    public long getUsedCount() {
+        return usedCount;
+    }
+
+    public void setUsedCount(long usedCount) {
+        this.usedCount = usedCount;
+    }
+
+    public long getVacantCount() {
+        return vacantCount;
+    }
+
+    public void setVacantCount(long vacantCount) {
+        this.vacantCount = vacantCount;
     }
 }

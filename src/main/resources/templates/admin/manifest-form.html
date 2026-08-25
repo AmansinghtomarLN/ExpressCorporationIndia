@@ -58,6 +58,17 @@
                         <input type="text" th:field="*{originCity}" placeholder="Defaults to party city">
                     </div>
                     <div class="form-group">
+                        <label>Billing lane</label>
+                        <select th:field="*{billingLane}">
+                            <option value="AUTO">Auto (destination city → that branch’s rates)</option>
+                            <option value="DOMESTIC">Domestic fallback if city has no branch</option>
+                            <option value="NATIONAL">National fallback if city has no branch</option>
+                        </select>
+                        <p class="muted">Invoice = weight × branch per kg + boxes × branch per box. Service type is not billed.</p>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
                         <label>Service</label>
                         <select th:field="*{serviceType}">
                             <option value="DOMESTIC_STANDARD">Domestic Standard</option>
@@ -65,10 +76,10 @@
                             <option value="INTERNATIONAL">International</option>
                         </select>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label>Remarks</label>
-                    <input type="text" th:field="*{remarks}">
+                    <div class="form-group">
+                        <label>Remarks</label>
+                        <input type="text" th:field="*{remarks}">
+                    </div>
                 </div>
 
                 <div class="totals-bar" id="totals-bar">

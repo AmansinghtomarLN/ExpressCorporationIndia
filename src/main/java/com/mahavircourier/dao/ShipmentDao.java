@@ -103,6 +103,9 @@ public class ShipmentDao {
             int boxes = rs.getInt("number_of_boxes");
             s.setNumberOfBoxes(rs.wasNull() ? null : boxes);
         }
+        if (hasColumn(rs, "billing_lane")) {
+            s.setBillingLane(rs.getString("billing_lane"));
+        }
         if (hasColumn(rs, "party_name")) {
             s.setPartyName(rs.getString("party_name"));
         }
@@ -251,8 +254,8 @@ public class ShipmentDao {
                             "receiver_name, receiver_phone, receiver_address, origin_city, destination_city, " +
                             "weight_kg, service_type, status, booked_by_user_id, expected_delivery, " +
                             "assigned_branch_id, assigned_hub, courier_name, courier_phone, freight_charge, cod_amount, " +
-                            "party_id, manifest_id, number_of_boxes) " +
-                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            "party_id, manifest_id, number_of_boxes, billing_lane) " +
+                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, s.getTrackingId());
             ps.setString(2, s.getSenderName());
@@ -301,6 +304,7 @@ public class ShipmentDao {
             } else {
                 ps.setNull(23, Types.INTEGER);
             }
+            ps.setString(24, s.getBillingLane());
             return ps;
         }, keyHolder);
         Number key = keyHolder.getKey();
@@ -314,7 +318,7 @@ public class ShipmentDao {
                         "origin_city = ?, destination_city = ?, weight_kg = ?, service_type = ?, " +
                         "status = ?, expected_delivery = ?, assigned_branch_id = ?, assigned_hub = ?, " +
                         "courier_name = ?, courier_phone = ?, freight_charge = ?, cod_amount = ?, " +
-                        "party_id = ?, manifest_id = ?, number_of_boxes = ? WHERE id = ?",
+                        "party_id = ?, manifest_id = ?, number_of_boxes = ?, billing_lane = ? WHERE id = ?",
                 s.getSenderName(),
                 s.getSenderPhone(),
                 s.getSenderAddress(),
@@ -336,6 +340,7 @@ public class ShipmentDao {
                 s.getPartyId(),
                 s.getManifestId(),
                 s.getNumberOfBoxes(),
+                s.getBillingLane(),
                 s.getId());
     }
 

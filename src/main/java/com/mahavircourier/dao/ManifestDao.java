@@ -44,6 +44,11 @@ public class ManifestDao {
         m.setThroughName(rs.getString("through_name"));
         m.setOriginCity(rs.getString("origin_city"));
         m.setServiceType(rs.getString("service_type"));
+        try {
+            m.setBillingLane(rs.getString("billing_lane"));
+        } catch (Exception ignored) {
+            m.setBillingLane("AUTO");
+        }
         m.setRemarks(rs.getString("remarks"));
         m.setTotalBoxes(rs.getInt("total_boxes"));
         BigDecimal weight = rs.getBigDecimal("total_weight");
@@ -133,8 +138,8 @@ public class ManifestDao {
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(
                     "INSERT INTO manifests (manifest_number, party_id, manifest_date, through_name, " +
-                            "origin_city, service_type, remarks, total_boxes, total_weight) " +
-                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            "origin_city, service_type, billing_lane, remarks, total_boxes, total_weight) " +
+                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, manifest.getManifestNumber());
             ps.setLong(2, manifest.getPartyId());
@@ -142,9 +147,10 @@ public class ManifestDao {
             ps.setString(4, manifest.getThroughName());
             ps.setString(5, manifest.getOriginCity());
             ps.setString(6, manifest.getServiceType());
-            ps.setString(7, manifest.getRemarks());
-            ps.setInt(8, manifest.getTotalBoxes());
-            ps.setBigDecimal(9, manifest.getTotalWeight() != null ? manifest.getTotalWeight() : BigDecimal.ZERO);
+            ps.setString(7, manifest.getBillingLane() != null ? manifest.getBillingLane() : "AUTO");
+            ps.setString(8, manifest.getRemarks());
+            ps.setInt(9, manifest.getTotalBoxes());
+            ps.setBigDecimal(10, manifest.getTotalWeight() != null ? manifest.getTotalWeight() : BigDecimal.ZERO);
             return ps;
         }, keyHolder);
         Number key = keyHolder.getKey();
@@ -154,12 +160,13 @@ public class ManifestDao {
     public void update(Manifest manifest) {
         jdbcTemplate.update(
                 "UPDATE manifests SET party_id = ?, manifest_date = ?, through_name = ?, origin_city = ?, " +
-                        "service_type = ?, remarks = ?, total_boxes = ?, total_weight = ? WHERE id = ?",
+                        "service_type = ?, billing_lane = ?, remarks = ?, total_boxes = ?, total_weight = ? WHERE id = ?",
                 manifest.getPartyId(),
                 Date.valueOf(manifest.getManifestDate()),
                 manifest.getThroughName(),
                 manifest.getOriginCity(),
                 manifest.getServiceType(),
+                manifest.getBillingLane() != null ? manifest.getBillingLane() : "AUTO",
                 manifest.getRemarks(),
                 manifest.getTotalBoxes(),
                 manifest.getTotalWeight() != null ? manifest.getTotalWeight() : BigDecimal.ZERO,
