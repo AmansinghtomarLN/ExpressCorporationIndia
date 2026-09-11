@@ -10,145 +10,154 @@
 <div th:replace="~{fragments/header :: header}"></div>
 <div th:replace="~{fragments/admin-nav :: adminNav}"></div>
 
-<section class="section">
-    <div class="container wide-page">
+<section class="section ops-page">
+    <div class="container full-page">
         <p><a th:href="@{/admin/manifests}" class="muted">&larr; Back to manifests</a></p>
         <span class="eyebrow">Operations</span>
         <h1 th:text="${editing} ? 'Edit Manifest' : 'Create Manifest'">Create Manifest</h1>
-        <p>Select a party to see unused C.Nos. Click a number to add it. Used numbers stay locked. Totals update as you type.</p>
+        <p>Select a party, click unused C.Nos to fill rows, then enter destination, boxes, weight, and receiver on the same screen.</p>
 
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
-        <div class="ops-split">
-            <form class="form-card full ops-main" id="manifest-form"
-                  th:object="${form}" method="post"
-                  th:action="${editing} ? @{/admin/manifests/{id}(id=${form.id})} : @{/admin/manifests}">
-                <input type="hidden" th:field="*{id}">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>MF No</label>
-                        <input type="text" th:field="*{manifestNumber}"
-                               th:readonly="${editing}"
-                               placeholder="Auto if left blank">
-                    </div>
-                    <div class="form-group">
-                        <label>Date *</label>
-                        <input type="date" th:field="*{manifestDate}" required>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>M/S Party *</label>
-                        <select id="partyId" th:field="*{partyId}" required th:disabled="${editing}">
-                            <option value="">— Select sending party —</option>
-                            <option th:each="p : ${parties}"
-                                    th:value="${p.id}"
-                                    th:text="${p.partyName + ' — ' + p.city}">Party</option>
-                        </select>
-                        <input type="hidden" th:if="${editing}" th:field="*{partyId}">
-                    </div>
-                    <div class="form-group">
-                        <label>Through (driver / agent)</label>
-                        <input type="text" th:field="*{throughName}" placeholder="e.g. KALU">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Origin city</label>
-                        <input type="text" th:field="*{originCity}" placeholder="Defaults to party city">
-                    </div>
-                    <div class="form-group">
-                        <label>Billing lane</label>
-                        <select th:field="*{billingLane}">
-                            <option value="AUTO">Auto (destination city → that branch’s rates)</option>
-                            <option value="DOMESTIC">Domestic fallback if city has no branch</option>
-                            <option value="NATIONAL">National fallback if city has no branch</option>
-                        </select>
-                        <p class="muted">Invoice = weight × branch per kg + boxes × branch per box. Service type is not billed.</p>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Service</label>
-                        <select th:field="*{serviceType}">
-                            <option value="DOMESTIC_STANDARD">Domestic Standard</option>
-                            <option value="DOMESTIC_EXPRESS">Domestic Express</option>
-                            <option value="INTERNATIONAL">International</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Remarks</label>
-                        <input type="text" th:field="*{remarks}">
-                    </div>
-                </div>
+        <form class="form-card full ops-main manifest-page" id="manifest-form"
+              th:object="${form}" method="post"
+              th:action="${editing} ? @{/admin/manifests/{id}(id=${form.id})} : @{/admin/manifests}">
+            <input type="hidden" th:field="*{id}">
 
-                <div class="totals-bar" id="totals-bar">
-                    <div><span class="muted">Lines</span><strong id="total-lines">0</strong></div>
-                    <div><span class="muted">Total boxes</span><strong id="total-boxes">0</strong></div>
-                    <div><span class="muted">Total weight</span><strong id="total-weight">0</strong></div>
+            <div class="manifest-head">
+                <div class="form-group">
+                    <label>MF No</label>
+                    <input type="text" th:field="*{manifestNumber}"
+                           th:readonly="${editing}"
+                           placeholder="Auto if left blank">
                 </div>
+                <div class="form-group">
+                    <label>Date *</label>
+                    <input type="date" th:field="*{manifestDate}" required>
+                </div>
+                <div class="form-group">
+                    <label>M/S Party *</label>
+                    <select id="partyId" th:field="*{partyId}" required th:disabled="${editing}">
+                        <option value="">— Select sending party —</option>
+                        <option th:each="p : ${parties}"
+                                th:value="${p.id}"
+                                th:text="${p.partyName + ' — ' + p.city}">Party</option>
+                    </select>
+                    <input type="hidden" th:if="${editing}" th:field="*{partyId}">
+                </div>
+                <div class="form-group">
+                    <label>Through (driver / agent)</label>
+                    <input type="text" th:field="*{throughName}" placeholder="e.g. KALU">
+                </div>
+                <div class="form-group">
+                    <label>Origin city</label>
+                    <input type="text" th:field="*{originCity}" placeholder="Defaults to party city">
+                </div>
+                <div class="form-group">
+                    <label>Billing</label>
+                    <select th:field="*{billingLane}">
+                        <option value="AUTO">Auto (destination city → branch rates)</option>
+                        <option value="DOMESTIC">Domestic fallback if city has no branch</option>
+                        <option value="NATIONAL">National fallback if city has no branch</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Service</label>
+                    <select th:field="*{serviceType}">
+                        <option value="DOMESTIC_STANDARD">Domestic Standard</option>
+                        <option value="DOMESTIC_EXPRESS">Domestic Express</option>
+                        <option value="INTERNATIONAL">International</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Remarks</label>
+                    <input type="text" th:field="*{remarks}">
+                </div>
+            </div>
+            <p class="muted">Invoice = weight × branch per kg + boxes × branch per box. Service type is not billed.</p>
 
-                <div class="admin-toolbar">
-                    <h3 style="margin:0;">Consignments</h3>
-                    <div class="admin-filter-buttons">
-                        <button type="button" class="btn btn-sm btn-dark" data-add-rows="10">+ 10 rows</button>
-                        <button type="button" class="btn btn-sm btn-dark" data-add-rows="25">+ 25 rows</button>
-                        <button type="button" class="btn btn-sm btn-primary" data-add-rows="50">+ 50 rows</button>
+            <div class="totals-bar" id="totals-bar">
+                <div><span class="muted">Lines</span><strong id="total-lines">0</strong></div>
+                <div><span class="muted">Total boxes</span><strong id="total-boxes">0</strong></div>
+                <div><span class="muted">Total weight</span><strong id="total-weight">0</strong></div>
+            </div>
+
+            <aside class="cno-panel cno-panel-inline form-card">
+                <div class="cno-panel-top">
+                    <div>
+                        <h3>Party C.Nos</h3>
+                        <p class="muted" id="pool-hint">Select a party to load unused consignment numbers.</p>
                     </div>
+                    <div id="pool-stats" class="pool-stats" hidden></div>
                 </div>
-                <div style="overflow-x:auto;">
-                    <table class="data-table manifest-lines" id="manifest-lines">
-                        <thead>
-                        <tr>
-                            <th>S.No</th>
-                            <th>C.No *</th>
-                            <th>Destination *</th>
-                            <th>N. of box *</th>
-                            <th>Weight *</th>
-                            <th>Receiver / details *</th>
-                            <th>Phone</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr th:each="item, iter : *{items}">
-                            <td class="row-index" th:text="${iter.count}">1</td>
-                            <td>
-                                <input type="hidden" th:field="*{items[__${iter.index}__].id}">
-                                <input type="text" class="cno-input" th:field="*{items[__${iter.index}__].consignmentNo}"
-                                       th:readonly="${item.id != null}"
-                                       placeholder="37191" inputmode="numeric">
-                            </td>
-                            <td><input type="text" th:field="*{items[__${iter.index}__].destinationCity}" placeholder="MORENA"></td>
-                            <td><input type="number" min="1" class="boxes-input" th:field="*{items[__${iter.index}__].numberOfBoxes}" placeholder="3"></td>
-                            <td><input type="number" min="0.01" step="0.01" class="weight-input" th:field="*{items[__${iter.index}__].weightKg}" placeholder="40"></td>
-                            <td><input type="text" th:field="*{items[__${iter.index}__].receiverName}" placeholder="REAL DIAGNOSTIC"></td>
-                            <td><input type="text" th:field="*{items[__${iter.index}__].receiverPhone}" placeholder="optional"></td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <p class="muted" style="margin-top:8px;">Empty rows are ignored. Add rows if you need more than the starter list (100+ is fine).</p>
-                <div class="admin-filter-buttons" style="margin-top:18px;">
-                    <button type="submit" class="btn btn-primary"
-                            th:text="${editing} ? 'Save manifest changes' : 'Save manifest &amp; create shipments'">
-                        Save manifest
-                    </button>
-                    <a class="btn btn-dark" th:href="@{/admin/manifests}">Cancel</a>
-                </div>
-            </form>
-
-            <aside class="cno-panel form-card">
-                <h3>Party C.Nos</h3>
-                <p class="muted" id="pool-hint">Select a party to load unused consignment numbers.</p>
-                <div id="pool-stats" class="pool-stats" hidden></div>
                 <div id="pool-ranges" class="pool-ranges"></div>
-                <h4 style="margin-top:16px;">Available (click to use)</h4>
-                <div id="pool-available" class="cno-chip-wrap"></div>
-                <h4 style="margin-top:16px;">Already booked</h4>
-                <p class="muted">These cannot be reused.</p>
-                <div id="pool-used" class="cno-chip-wrap"></div>
+                <div class="cno-pool-grid">
+                    <div>
+                        <h4>Available — click to fill a row</h4>
+                        <div id="pool-available" class="cno-chip-wrap"></div>
+                    </div>
+                    <details class="booked-fold">
+                        <summary>Already booked (cannot reuse)</summary>
+                        <div id="pool-used" class="cno-chip-wrap"></div>
+                    </details>
+                </div>
             </aside>
-        </div>
+
+            <div class="admin-toolbar">
+                <h3 style="margin:0;">Consignments</h3>
+                <div class="admin-filter-buttons">
+                    <button type="button" class="btn btn-sm btn-dark" data-add-rows="10">+ 10 rows</button>
+                    <button type="button" class="btn btn-sm btn-dark" data-add-rows="25">+ 25 rows</button>
+                    <button type="button" class="btn btn-sm btn-primary" data-add-rows="50">+ 50 rows</button>
+                </div>
+            </div>
+            <table class="data-table manifest-lines" id="manifest-lines">
+                <colgroup>
+                    <col class="col-sno">
+                    <col class="col-cno">
+                    <col class="col-dest">
+                    <col class="col-boxes">
+                    <col class="col-weight">
+                    <col class="col-party">
+                </colgroup>
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>C.No *</th>
+                    <th>Destination *</th>
+                    <th>Boxes *</th>
+                    <th>Weight *</th>
+                    <th>Receiver / phone *</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="item, iter : *{items}">
+                    <td class="row-index" th:text="${iter.count}">1</td>
+                    <td>
+                        <input type="hidden" th:field="*{items[__${iter.index}__].id}">
+                        <input type="text" class="cno-input" th:field="*{items[__${iter.index}__].consignmentNo}"
+                               th:readonly="${item.id != null}"
+                               placeholder="37191" inputmode="numeric">
+                    </td>
+                    <td><input type="text" th:field="*{items[__${iter.index}__].destinationCity}" placeholder="MORENA"></td>
+                    <td><input type="number" min="1" class="boxes-input" th:field="*{items[__${iter.index}__].numberOfBoxes}" placeholder="3"></td>
+                    <td><input type="number" min="0.01" step="0.01" class="weight-input" th:field="*{items[__${iter.index}__].weightKg}" placeholder="40"></td>
+                    <td class="cell-stack">
+                        <input type="text" th:field="*{items[__${iter.index}__].receiverName}" placeholder="REAL DIAGNOSTIC">
+                        <input type="text" th:field="*{items[__${iter.index}__].receiverPhone}" placeholder="Phone (optional)">
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+            <p class="muted" style="margin-top:8px;">Empty rows are ignored. Add rows if you need more than the starter list.</p>
+            <div class="admin-filter-buttons" style="margin-top:18px;">
+                <button type="submit" class="btn btn-primary"
+                        th:text="${editing} ? 'Save manifest changes' : 'Save manifest &amp; create shipments'">
+                    Save manifest
+                </button>
+                <a class="btn btn-dark" th:href="@{/admin/manifests}">Cancel</a>
+            </div>
+        </form>
     </div>
 </section>
 

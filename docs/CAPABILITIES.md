@@ -99,7 +99,7 @@ Dashboard · Manifests · Parties · C.No Ranges · Shipments · Reports · Moni
 - Party C.No picker shows unused numbers (click to fill) and booked numbers (cannot reuse)
 - Live totals for lines, boxes, and weight; stored on the saved manifest
 - Add 10 / 25 / 50 extra rows (100+ consignments supported)
-- Line items: C.No, destination, boxes, weight, receiver name, optional receiver phone
+- Line items fit the page width (no sideways scroll): C.No, destination, boxes, weight, receiver + optional phone
 - C.No must be numeric, inside the party’s allocated range, and unused
 - **Saving a manifest automatically creates one shipment per C.No** with status `DISPATCHED`
 - Standalone admin/customer booking is blocked — every new shipment must come from a manifest
@@ -183,11 +183,11 @@ On each successful status update:
 - Editing a manifest line recalculates freight and refreshes that C.No’s invoice
 
 ### 4.6b C.No ranges (`/admin/cno-ranges`)
-- Configure series start/end and **bucket size**
-- Preview next vacant bucket
-- Allocate 1+ buckets to a party (optional size override)
-- Party-wise allocated / filled / vacant
-- Full allocation history; unused ranges can be removed
+- Compact inventory: series, bucket size, and next unused block
+- Allocate the next bucket to a party from a single bar
+- Series / bucket settings stay folded away until needed
+- Searchable party list (works with many parties)
+- Each party shows used / free and a usage bar; expand to see or remove ranges
 
 ### 4.7 Rates (`/admin/rates`)
 - Legacy service-type rate cards (kept for history)

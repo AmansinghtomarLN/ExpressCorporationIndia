@@ -19,8 +19,9 @@ document.addEventListener("DOMContentLoaded", function () {
             '<td><input type="text" name="items[' + index + '].destinationCity" placeholder="MORENA"></td>' +
             '<td><input type="number" min="1" class="boxes-input" name="items[' + index + '].numberOfBoxes" placeholder="3"></td>' +
             '<td><input type="number" min="0.01" step="0.01" class="weight-input" name="items[' + index + '].weightKg" placeholder="40"></td>' +
-            '<td><input type="text" name="items[' + index + '].receiverName" placeholder="REAL DIAGNOSTIC"></td>' +
-            '<td><input type="text" name="items[' + index + '].receiverPhone" placeholder="optional"></td>';
+            '<td class="cell-stack">' +
+            '<input type="text" name="items[' + index + '].receiverName" placeholder="REAL DIAGNOSTIC">' +
+            '<input type="text" name="items[' + index + '].receiverPhone" placeholder="Phone (optional)"></td>';
         return tr;
     }
 
