@@ -16,6 +16,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -181,6 +182,36 @@ public class ShipmentDao {
     public List<Shipment> findRecent(int limit) {
         return jdbcTemplate.query(
                 "SELECT * FROM shipments ORDER BY created_at DESC LIMIT ?", SHIPMENT_ROW_MAPPER, limit);
+    }
+
+    public List<Shipment> findRecentBetween(LocalDate from, LocalDate to, int limit) {
+        return jdbcTemplate.query(
+                "SELECT * FROM shipments WHERE DATE(created_at) >= ? AND DATE(created_at) <= ? " +
+                        "ORDER BY created_at DESC LIMIT ?",
+                SHIPMENT_ROW_MAPPER, Date.valueOf(from), Date.valueOf(to), limit);
+    }
+
+    public long countCreatedBetween(LocalDate from, LocalDate to) {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM shipments WHERE DATE(created_at) >= ? AND DATE(created_at) <= ?",
+                Long.class, Date.valueOf(from), Date.valueOf(to));
+        return count != null ? count : 0L;
+    }
+
+    public long countByStatusCreatedBetween(String status, LocalDate from, LocalDate to) {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM shipments WHERE status = ? AND DATE(created_at) >= ? AND DATE(created_at) <= ?",
+                Long.class, status, Date.valueOf(from), Date.valueOf(to));
+        return count != null ? count : 0L;
+    }
+
+    public long countDelayedCreatedBetween(LocalDate from, LocalDate to) {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM shipments WHERE expected_delivery < CURDATE() " +
+                        "AND status NOT IN ('DELIVERED','CANCELLED','RTO') " +
+                        "AND DATE(created_at) >= ? AND DATE(created_at) <= ?",
+                Long.class, Date.valueOf(from), Date.valueOf(to));
+        return count != null ? count : 0L;
     }
 
     /**

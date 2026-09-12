@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -56,6 +57,21 @@ public class PartyService {
         Long id = partyDao.save(party);
         party.setId(id);
         return party;
+    }
+
+    @Transactional
+    public void saveRates(Long id, BigDecimal perKgRate, BigDecimal perBoxRate) {
+        Party party = partyDao.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Party not found"));
+        if (perKgRate != null && perKgRate.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Per kg rate cannot be negative");
+        }
+        if (perBoxRate != null && perBoxRate.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Per box rate cannot be negative");
+        }
+        party.setPerKgRate(perKgRate);
+        party.setPerBoxRate(perBoxRate);
+        partyDao.update(party);
     }
 
     @Transactional
@@ -209,6 +225,12 @@ public class PartyService {
     private void validate(Party party) {
         if (party.getPartyName().length() < 2) {
             throw new IllegalArgumentException("Party name is too short");
+        }
+        if (party.getPerKgRate() != null && party.getPerKgRate().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Per kg rate cannot be negative");
+        }
+        if (party.getPerBoxRate() != null && party.getPerBoxRate().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Per box rate cannot be negative");
         }
     }
 

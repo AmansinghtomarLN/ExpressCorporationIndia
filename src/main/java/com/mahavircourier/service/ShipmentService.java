@@ -174,7 +174,6 @@ public class ShipmentService {
             throw new IllegalArgumentException("Shipment cannot be created without a manifest number");
         }
         shipment = persistNewShipment(shipment, eventLocation, remarks);
-        invoiceService.createForShipment(shipment);
         return shipment;
     }
 
@@ -192,7 +191,6 @@ public class ShipmentService {
             event.setRemarks(remarks);
             trackingEventDao.save(event);
         }
-        invoiceService.createForShipment(shipment);
     }
 
     @Transactional
@@ -444,6 +442,26 @@ public class ShipmentService {
         stats.setUnreadContacts(contactService.countUnread());
         stats.setUnpaidInvoices(invoiceService.countUnpaid());
         return stats;
+    }
+
+    public DashboardStats countStats(LocalDate from, LocalDate to) {
+        DashboardStats stats = new DashboardStats();
+        stats.setTotalShipments(shipmentDao.countCreatedBetween(from, to));
+        stats.setBooked(shipmentDao.countByStatusCreatedBetween("BOOKED", from, to));
+        stats.setInTransit(shipmentDao.countByStatusCreatedBetween("IN_TRANSIT", from, to)
+                + shipmentDao.countByStatusCreatedBetween("PICKED_UP", from, to)
+                + shipmentDao.countByStatusCreatedBetween("AT_HUB", from, to));
+        stats.setOutForDelivery(shipmentDao.countByStatusCreatedBetween("OUT_FOR_DELIVERY", from, to));
+        stats.setDelivered(shipmentDao.countByStatusCreatedBetween("DELIVERED", from, to));
+        stats.setCancelled(shipmentDao.countByStatusCreatedBetween("CANCELLED", from, to));
+        stats.setDelayed(shipmentDao.countDelayedCreatedBetween(from, to));
+        stats.setUnreadContacts(contactService.countUnreadBetween(from, to));
+        stats.setUnpaidInvoices(invoiceService.countUnpaid());
+        return stats;
+    }
+
+    public List<Shipment> findRecent(LocalDate from, LocalDate to, int limit) {
+        return shipmentDao.findRecentBetween(from, to, limit);
     }
 
     /**

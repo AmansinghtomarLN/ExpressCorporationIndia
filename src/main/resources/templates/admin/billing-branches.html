@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Branch Bills | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section ops-page">
+    <div class="container full-page">
+        <span class="eyebrow">Billing</span>
+        <div class="admin-toolbar" style="align-items:flex-start;">
+            <div>
+                <h1>Branch bills</h1>
+                <p>Pending bills first. Use <strong>History</strong> for received bills.
+                    Amount is <strong>weight × per kg + boxes × per box</strong>.</p>
+            </div>
+            <div class="admin-filter-buttons">
+                <a class="btn btn-dark" th:href="@{/admin/billing/parties}">Party bills</a>
+                <a class="btn btn-dark" th:href="@{/admin/billing}">Rate setup</a>
+            </div>
+        </div>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <div class="ops-tabs">
+            <a th:href="@{/admin/billing/branches(status='PENDING', partyId=${partyId}, branchId=${branchId}, from=${from}, to=${to})}"
+               th:classappend="${status == 'PENDING'} ? ' active'">
+                Pending <span th:text="${pendingCount}">0</span>
+            </a>
+            <a th:href="@{/admin/billing/branches(status='HISTORY', partyId=${partyId}, branchId=${branchId}, from=${from}, to=${to})}"
+               th:classappend="${status == 'HISTORY'} ? ' active'">
+                History <span th:text="${receivedCount}">0</span>
+            </a>
+            <a th:href="@{/admin/billing/branches(status='ALL', partyId=${partyId}, branchId=${branchId}, from=${from}, to=${to})}"
+               th:classappend="${status == 'ALL'} ? ' active'">
+                All
+            </a>
+        </div>
+
+        <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
+            <a class="kpi-card" th:href="@{/admin/billing/branches(status='PENDING')}">
+                <span class="muted">Pending bills</span>
+                <strong th:text="${pendingCount}">0</strong>
+            </a>
+            <a class="kpi-card" th:href="@{/admin/billing/branches(status='HISTORY')}">
+                <span class="muted">History (received)</span>
+                <strong th:text="${receivedCount}">0</strong>
+            </a>
+            <div class="kpi-card">
+                <span class="muted" th:text="${status == 'HISTORY'} ? 'Received amount' : 'Pending amount'">Pending amount</span>
+                <strong th:if="${status != 'HISTORY'}"
+                       th:text="'Rs. ' + ${#numbers.formatDecimal(pendingAmount, 1, 2)}">Rs. 0.00</strong>
+                <strong th:if="${status == 'HISTORY'}"
+                       th:text="'Rs. ' + ${#numbers.formatDecimal(receivedAmount, 1, 2)}">Rs. 0.00</strong>
+            </div>
+        </div>
+
+        <form class="admin-filters" method="get" th:action="@{/admin/billing/branches}">
+            <input type="hidden" name="status" th:value="${status}">
+            <div class="admin-filters-row" style="grid-template-columns: 1fr 1fr 0.8fr 0.8fr auto;">
+                <div class="form-group">
+                    <label for="branchId">Destination branch</label>
+                    <select id="branchId" name="branchId">
+                        <option value="">All branches</option>
+                        <option th:each="b : ${branches}"
+                                th:value="${b.id}"
+                                th:selected="${branchId != null and branchId == b.id}"
+                                th:text="${b.city + ' — ' + b.branchName}">Branch</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="partyId">Party</label>
+                    <select id="partyId" name="partyId">
+                        <option value="">All parties</option>
+                        <option th:each="p : ${parties}"
+                                th:value="${p.id}"
+                                th:selected="${partyId != null and partyId == p.id}"
+                                th:text="${p.partyName}">Party</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="from">From</label>
+                    <input type="date" id="from" name="from" th:value="${from}">
+                </div>
+                <div class="form-group">
+                    <label for="to">To</label>
+                    <input type="date" id="to" name="to" th:value="${to}">
+                </div>
+                <div class="admin-filter-buttons">
+                    <button type="submit" class="btn btn-primary">Filter</button>
+                    <a class="btn btn-dark" th:href="@{/admin/billing/branches}">Clear</a>
+                </div>
+            </div>
+        </form>
+
+        <div style="overflow-x:auto; margin-top:22px;">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Bill #</th>
+                    <th>Manifest</th>
+                    <th>Branch</th>
+                    <th>Party</th>
+                    <th>Weight</th>
+                    <th>Boxes</th>
+                    <th>Per kg</th>
+                    <th>Per box</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="bill : ${bills}">
+                    <td th:text="${bill.billNumber}">BRN-20260912-0001</td>
+                    <td>
+                        <a th:href="@{/admin/manifests/{id}(id=${bill.manifestId})}"
+                           th:text="${bill.manifestNumber}">MF</a>
+                    </td>
+                    <td th:text="${bill.branchDisplay}">Branch</td>
+                    <td th:text="${bill.partyDisplay}">Party</td>
+                    <td th:text="${bill.weightKg} + ' kg'">40 kg</td>
+                    <td th:text="${bill.numberOfBoxes}">3</td>
+                    <td th:text="${'Rs. ' + #numbers.formatDecimal(bill.perKgRate, 1, 2)}">Rs. 0.00</td>
+                    <td th:text="${'Rs. ' + #numbers.formatDecimal(bill.perBoxRate, 1, 2)}">Rs. 0.00</td>
+                    <td th:text="${'Rs. ' + #numbers.formatDecimal(bill.freightAmount, 1, 2)}">Rs. 0.00</td>
+                    <td>
+                        <span class="status-badge"
+                              th:classappend="${bill.pending} ? ' status-OUT_FOR_DELIVERY' : ' status-DELIVERED'"
+                              th:text="${bill.statusLabel}">Pending</span>
+                    </td>
+                    <td th:text="${bill.createdAt != null ? #temporals.format(bill.createdAt, 'dd MMM yyyy') : '—'}">Date</td>
+                    <td>
+                        <form th:if="${bill.pending}" method="post"
+                              th:action="@{/admin/billing/branches/{id}/received(id=${bill.id})}">
+                            <button type="submit" class="btn btn-sm btn-primary">Mark received</button>
+                        </form>
+                        <form th:unless="${bill.pending}" method="post"
+                              th:action="@{/admin/billing/branches/{id}/pending(id=${bill.id})}">
+                            <button type="submit" class="btn btn-sm btn-dark">Mark pending</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div th:if="${bills == null or #lists.isEmpty(bills)}" class="alert alert-info" style="margin-top:16px;">
+            <span th:if="${status == 'PENDING'}">No pending branch bills. Submitted manifests create them here.</span>
+            <span th:if="${status == 'HISTORY'}">No received branch bills in history yet.</span>
+            <span th:if="${status == 'ALL'}">No branch bills yet. Submit a manifest to create one.</span>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

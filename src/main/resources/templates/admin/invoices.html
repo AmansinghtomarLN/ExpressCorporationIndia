@@ -13,10 +13,16 @@
 <section class="section">
     <div class="container">
         <span class="eyebrow">Admin Console</span>
-        <h1>Invoices</h1>
-        <p>One invoice is created for every consignment number when the manifest is saved.
-            Amount is <strong>weight × per kg + boxes × per box</strong> for the destination branch.
-            Manage rates under <a th:href="@{/admin/billing}">Billing</a>.</p>
+        <h1>Old invoices</h1>
+        <div class="alert alert-info">
+            <strong>These are not used for new billing.</strong>
+            Before manifest bills, the app created one invoice per consignment (C.No) when a shipment was dispatched.
+            That list is kept so you can still look up, mark paid, or collect COD on those historical rows.
+            New money is billed when a manifest is submitted:
+            one <a th:href="@{/admin/billing/parties}">party bill</a> and one
+            <a th:href="@{/admin/billing/branches}">branch bill</a>.
+            Set rates under <a th:href="@{/admin/billing}">Rate setup</a>.
+        </div>
 
         <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>

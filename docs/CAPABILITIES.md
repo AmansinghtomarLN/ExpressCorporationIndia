@@ -1,6 +1,6 @@
 # Express Corporation of India — Application Capabilities
 
-Last updated: 22 Aug 2026
+Last updated: 12 Sep 2026
 
 Use this document as the source of truth for what the app can do today, who can do it, and how the admin suite is organized.
 
@@ -72,22 +72,27 @@ Web app for courier **booking**, **public tracking**, **customer account**, and 
 
 Admin UI lives under `/admin` with a shared admin nav:
 
-Dashboard · Manifests · Parties · C.No Ranges · Shipments · Reports · Monitoring · Users · Branches · Contacts · Billing · Rates · Invoices · Notifications · Audit
+Dashboard · Manifests · Parties · C.No Ranges · Shipments · Reports · Monitoring · Users · Branches · Contacts · Rates · Party bills · Branch bills · Old invoices · Notifications · Audit
 
 ### 4.1 Dashboard (`/admin`)
-- KPI cards:
-  - Total shipments
-  - Booked / In transit / Out for delivery / Delivered
+- Period tabs: **Today / Week / Month / Quarter / Half-year / Annual** (default Today)
+- KPI cards for that period (each card is a link):
+  - Total shipments / Booked / In transit / Out for delivery / Delivered
   - Delayed (past expected delivery, not terminal)
   - Unread contact messages
-  - Unpaid invoices
-- Recent shipments table with Manage links
+  - In-progress and submitted manifests
+  - Pending party bills (count + amount)
+  - Pending branch bills (count + amount)
+  - Received party / branch bill counts + amounts
+- Quick links to manifests, party bills, branch bills, rate setup, parties, and booking
+- Shipments created in the selected period
 
 ### 4.1a Parties (`/admin/parties`)
 - Search by name, city, phone, GSTIN, contact, email
 - Create / edit / disable sending parties (M/S consignors)
 - Required: party name, phone, city
 - Optional: contact person, email, address, state, pincode, GSTIN, notes
+- Optional **per kg** and **per box** rates (blank = use destination branch rates on the party bill)
 - Assign **consignment number ranges** per party (numeric C.No = tracking number)
 - Ranges cannot overlap another party
 - Cannot delete a party that already has manifests
@@ -104,14 +109,14 @@ Dashboard · Manifests · Parties · C.No Ranges · Shipments · Reports · Moni
 - **Individual shipments can be booked** to a destination branch
 - Booking auto-opens or updates that branch’s **In progress** manifest
 - Review an in-progress sheet: add shipment, update consignments, then **Submit**
-- In progress / Submitted / All tabs; filter by destination branch and date
-- **Submit** finalizes the sheet: shipments go `DISPATCHED` and invoices are generated
+- Opens on **In progress** by default; **Submitted** and **All** tabs still available; filter by destination branch and date
+- **Submit** finalizes the sheet: shipments go `DISPATCHED` and **two bills** are created (party + branch)
 - C.No must be numeric, inside the party’s allocated range, and unused
 - Public + admin tracking show **MF No**
 - One consignment belongs to exactly one manifest
 - Edit header / existing lines (syncs shipment details); add more C.Nos
 - Print sheet matching the physical manifest (totals for boxes + weight)
-- Billing snapshot after create: total boxes, total weight, freight (one invoice per C.No)
+- Submitted manifest shows the party bill(s) and branch bill with payment status
 
 ### 4.2 Shipments (`/admin/shipments`)
 **List**
@@ -173,19 +178,34 @@ On each successful status update:
 - Mark as read
 - Delete
 
-### 4.6a Billing (`/admin/billing`)
-- **One invoice per consignment number**, created automatically when the manifest is saved
-- Billing is **branch-wise**: destination city on the line maps to that branch’s rates
+### 4.6a Billing rates (`/admin/billing`)
+- Bills are created **only when a manifest is submitted**, not at booking
+- Every submitted manifest creates:
+  - **Party bill(s)** — one per distinct sending party on the sheet
+  - **Branch bill** — one for the destination branch
+- Formula: `totalWeight × perKg + totalBoxes × perBox` (no minimum, no base rate)
+- **Party rates** (optional per kg + per box). If unset, the destination branch rates are used
+- **Branch rates** (optional per kg + per box; category defaults fill them)
 - **No service-type charge** — Domestic Standard / Express / International are operational labels only
-- Formula: `weight × perKg + boxes × perBox` (no minimum, no base rate)
 - Category defaults:
   - **Domestic** — Madhya Pradesh branches
   - **National** — Chhattisgarh branches
 - Saving a category default applies per-kg and per-box to every branch in that category
-- Each branch can then be edited individually
+- Each party and each branch can then be edited individually
 - Preview calculator by branch
-- Manifest billing lane: Auto (destination city → that branch), or Domestic/National fallback when the city has no branch
-- Editing a manifest line recalculates freight and refreshes that C.No’s invoice
+
+### 4.6c Party bills (`/admin/billing/parties`)
+- Separate page for party bills
+- Opens on **Pending** by default; **History** shows received bills; **All** shows both
+- Filters: party, destination branch, date range
+- Payment status: **Pending** / **Received** (toggle either way)
+- Links back to the source manifest
+
+### 4.6d Branch bills (`/admin/billing/branches`)
+- Separate page for branch bills
+- Same Pending / History / All tabs as party bills
+- Filters: destination branch, party, date range
+- Payment status: **Pending** / **Received**
 
 ### 4.6b C.No ranges (`/admin/cno-ranges`)
 - Compact inventory: series, bucket size, and next unused block
@@ -202,11 +222,10 @@ On each successful status update:
   - Domestic Express: base 120 + 25/kg
   - International: base 450 + 80/kg
 
-### 4.8 Invoices (`/admin/invoices`)
-- One invoice per C.No, auto-created when the manifest is saved
-- Columns: invoice #, C.No, billed branch, weight, boxes, freight, COD, total
-- Amount = destination-branch `weight × perKg + boxes × perBox` (+ COD if any)
-- Status actions: **PAID**, **UNPAID**, **COD_COLLECTED**
+### 4.8 Old invoices (`/admin/invoices`)
+- Historical per-consignment invoices (no longer created on new submits)
+- New billing is the party + branch bills above
+- Status actions still work: **PAID**, **UNPAID**, **COD_COLLECTED**
 
 ### 4.9 Notifications (`/admin/notifications`)
 - Delivery log for EMAIL/SMS with status **SENT / FAILED / SKIPPED**
@@ -259,7 +278,8 @@ On each successful status update:
 | `tracking_events` | Timeline history |
 | `contact_messages` | Contact form inbox (+ read status) |
 | `rate_cards` | Pricing |
-| `invoices` | Billing / COD collection state |
+| `invoices` | Historical per-consignment invoices |
+| `manifest_bills` | Party and branch bills created on manifest submit |
 | `notifications` | Real email/SMS delivery log (SENT/FAILED/SKIPPED) |
 | `audit_logs` | Admin action + login/logout audit trail |
 | `parties` | Sending parties (M/S consignors) |
@@ -284,7 +304,9 @@ On each successful status update:
 | `/admin` | Admin/Staff | Ops dashboard |
 | `/admin/parties` | Admin/Staff | Sending parties + C.No ranges |
 | `/admin/cno-ranges` | Admin/Staff | Bucket allocation + vacant/filled inventory |
-| `/admin/billing` | Admin/Staff | Domestic / National courier prices |
+| `/admin/billing` | Admin/Staff | Party + branch rate setup |
+| `/admin/billing/parties` | Admin/Staff | Party bills + payment status |
+| `/admin/billing/branches` | Admin/Staff | Branch bills + payment status |
 | `/admin/manifests` | Admin/Staff | Manifest management (creates shipments) |
 | `/admin/shipments` | Admin/Staff | Shipment console |
 | `/admin/reports` | Admin/Staff | Daily/weekly/monthly reports + email |
@@ -293,7 +315,7 @@ On each successful status update:
 | `/admin/branches` | Admin/Staff | Branch CRUD |
 | `/admin/contacts` | Admin/Staff | Contact inbox |
 | `/admin/rates` | Admin/Staff | Rate cards |
-| `/admin/invoices` | Admin/Staff | Invoices |
+| `/admin/invoices` | Admin/Staff | Historical invoices |
 | `/admin/notifications` | Admin/Staff | Notify log |
 | `/admin/audit` | Admin/Staff | Audit log |
 | `/actuator/health` | Public | Liveness/readiness |
@@ -391,7 +413,10 @@ Without these, the app still runs; notifications are logged as `FAILED`/`SKIPPED
 - [x] Branch CRUD
 - [x] Contact inbox
 - [x] Rate cards + freight calculation
-- [x] Invoices + COD status
+- [x] Invoices + COD status (historical)
+- [x] Manifest-level party + branch bills on submit
+- [x] Optional party and branch per-kg / per-box rates
+- [x] Bill payment status Pending / Received
 - [x] Notification log (simulated)
 - [x] Audit log
 - [x] Admin/Staff auto-redirect after login

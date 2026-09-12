@@ -238,6 +238,13 @@ public class ManifestDao {
         return count != null ? count : 0L;
     }
 
+    public long countByStatusCreatedBetween(String status, LocalDate from, LocalDate to) {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM manifests WHERE status = ? AND DATE(created_at) >= ? AND DATE(created_at) <= ?",
+                Long.class, status, Date.valueOf(from), Date.valueOf(to));
+        return count != null ? count : 0L;
+    }
+
     public void updateTotals(Long id, int boxes, BigDecimal weight) {
         jdbcTemplate.update(
                 "UPDATE manifests SET total_boxes = ?, total_weight = ? WHERE id = ?",

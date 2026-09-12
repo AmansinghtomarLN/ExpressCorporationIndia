@@ -6,6 +6,7 @@ import com.mahavircourier.dao.RateCardDao;
 import com.mahavircourier.dto.FreightQuote;
 import com.mahavircourier.model.BillingTariff;
 import com.mahavircourier.model.Branch;
+import com.mahavircourier.model.Party;
 import com.mahavircourier.model.RateCard;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -165,6 +166,29 @@ public class RateCardService {
             quote.setPerKgRate(tariff != null ? nvl(tariff.getPerKgRate()) : BigDecimal.ZERO);
             quote.setPerBoxRate(tariff != null ? nvl(tariff.getPerBoxRate()) : BigDecimal.ZERO);
         }
+        quote.setAmount(computeFreight(weight, boxes, quote.getPerKgRate(), quote.getPerBoxRate()));
+        return quote;
+    }
+
+    /**
+     * Party bill rates: use the party's optional per-kg / per-box when either is set.
+     * Otherwise fall back to the destination branch, then category tariff.
+     */
+    public FreightQuote quoteForParty(Party party, Long destBranchId, String lane,
+                                      BigDecimal weight, Integer boxes) {
+        FreightQuote fallback = destBranchId != null
+                ? quoteBranch(destBranchId, weight, boxes)
+                : quote(null, lane, weight, boxes);
+        if (party == null || !party.hasCustomRates()) {
+            return fallback;
+        }
+        FreightQuote quote = new FreightQuote();
+        quote.setLane(fallback.getLane());
+        quote.setBranchId(fallback.getBranchId());
+        quote.setBranchName(fallback.getBranchName());
+        quote.setBranchCity(fallback.getBranchCity());
+        quote.setPerKgRate(nvl(party.getPerKgRate()));
+        quote.setPerBoxRate(nvl(party.getPerBoxRate()));
         quote.setAmount(computeFreight(weight, boxes, quote.getPerKgRate(), quote.getPerBoxRate()));
         return quote;
     }

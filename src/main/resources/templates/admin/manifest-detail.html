@@ -32,7 +32,7 @@
                 <a class="btn btn-dark" th:if="${manifest.inProgress}"
                    th:href="@{/admin/manifests/{id}/edit(id=${manifest.id})}">Update consignments</a>
                 <form th:if="${manifest.inProgress}" th:action="@{/admin/manifests/{id}/finalize(id=${manifest.id})}" method="post"
-                      onsubmit="return confirm('Submit this manifest? Shipments will be dispatched and invoiced.');">
+                      onsubmit="return confirm('Submit this manifest? Shipments will be dispatched and party + branch bills will be created.');">
                     <button type="submit" class="btn btn-primary">Submit manifest</button>
                 </form>
                 <a class="btn btn-dark" th:href="@{/admin/manifests/{id}/print(id=${manifest.id})}">Print</a>
@@ -91,7 +91,6 @@
                     <th>Receiver</th>
                     <th>Branch</th>
                     <th>Freight</th>
-                    <th>Invoice</th>
                     <th>Status</th>
                     <th></th>
                 </tr>
@@ -110,12 +109,6 @@
                     <td th:text="${item.billedBranchName != null ? item.billedBranchName : '—'}">—</td>
                     <td th:text="${item.freightCharge != null ? 'Rs. ' + #numbers.formatDecimal(item.freightCharge, 1, 2) : '—'}">—</td>
                     <td>
-                        <a th:if="${item.invoiceNumber != null}"
-                           th:href="@{/admin/invoices}"
-                           th:text="${item.invoiceNumber}">INV-…</a>
-                        <span th:if="${item.invoiceNumber == null}">—</span>
-                    </td>
-                    <td>
                         <span class="status-badge" th:if="${item.shipmentStatus}"
                               th:classappend="'status-' + ${item.shipmentStatus}"
                               th:text="${#strings.replace(item.shipmentStatus,'_',' ')}">DISPATCHED</span>
@@ -133,8 +126,52 @@
         <p class="muted" style="margin-top:16px;" th:if="${manifest.inProgress}">
             Review this in-progress sheet. Add or update shipments, then click <strong>Submit manifest</strong>.
         </p>
+        <div th:if="${!manifest.inProgress}" style="margin-top:28px;">
+            <h3>Bills from this manifest</h3>
+            <p class="muted">Created only after submit: one party bill (or one per sending party) and one branch bill.</p>
+            <div style="overflow-x:auto;">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>Bill #</th>
+                        <th>Type</th>
+                        <th>Party</th>
+                        <th>Branch</th>
+                        <th>Weight</th>
+                        <th>Boxes</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="bill : ${bills}">
+                        <td th:text="${bill.billNumber}">PTY-…</td>
+                        <td th:text="${bill.typeLabel}">Party</td>
+                        <td th:text="${bill.partyDisplay}">Party</td>
+                        <td th:text="${bill.branchDisplay}">Branch</td>
+                        <td th:text="${bill.weightKg} + ' kg'">40 kg</td>
+                        <td th:text="${bill.numberOfBoxes}">3</td>
+                        <td th:text="${'Rs. ' + #numbers.formatDecimal(bill.freightAmount, 1, 2)}">Rs. 0.00</td>
+                        <td>
+                            <span class="status-badge"
+                                  th:classappend="${bill.pending} ? ' status-OUT_FOR_DELIVERY' : ' status-DELIVERED'"
+                                  th:text="${bill.statusLabel}">Pending</span>
+                        </td>
+                        <td>
+                            <a class="btn btn-sm btn-dark"
+                               th:href="${bill.partyBill} ? @{/admin/billing/parties} : @{/admin/billing/branches}">Open</a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div th:if="${bills == null or #lists.isEmpty(bills)}" class="alert alert-info" style="margin-top:12px;">
+                No bills on this manifest yet.
+            </div>
+        </div>
         <p class="muted" style="margin-top:16px;" th:unless="${manifest.inProgress}">
-            Submitted. Each C.No has one invoice from destination-branch per kg + per box.
+            Submitted. Party and branch bills use weight × per kg + boxes × per box.
         </p>
     </div>
 </section>

@@ -419,3 +419,44 @@ SET @sql := (
     'SELECT 1')
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE parties ADD COLUMN per_kg_rate DECIMAL(10,2) NULL',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'parties' AND COLUMN_NAME = 'per_kg_rate'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE parties ADD COLUMN per_box_rate DECIMAL(10,2) NULL',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'parties' AND COLUMN_NAME = 'per_box_rate'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+CREATE TABLE IF NOT EXISTS manifest_bills (
+    id               BIGINT AUTO_INCREMENT PRIMARY KEY,
+    bill_number      VARCHAR(40)   NOT NULL UNIQUE,
+    bill_type        VARCHAR(20)   NOT NULL,
+    manifest_id      BIGINT        NOT NULL,
+    party_id         BIGINT        NULL,
+    branch_id        BIGINT        NULL,
+    weight_kg        DECIMAL(10,2) NOT NULL DEFAULT 0,
+    number_of_boxes  INT           NOT NULL DEFAULT 0,
+    per_kg_rate      DECIMAL(10,2) NOT NULL DEFAULT 0,
+    per_box_rate     DECIMAL(10,2) NOT NULL DEFAULT 0,
+    freight_amount   DECIMAL(10,2) NOT NULL DEFAULT 0,
+    status           VARCHAR(20)   NOT NULL DEFAULT 'PENDING',
+    notes            VARCHAR(255),
+    created_at       TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_bill_manifest FOREIGN KEY (manifest_id) REFERENCES manifests(id) ON DELETE CASCADE,
+    KEY idx_bills_type (bill_type),
+    KEY idx_bills_party (party_id),
+    KEY idx_bills_branch (branch_id),
+    KEY idx_bills_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

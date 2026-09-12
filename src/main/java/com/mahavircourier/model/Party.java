@@ -1,5 +1,6 @@
 package com.mahavircourier.model;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +18,8 @@ public class Party {
     private String state;
     private String pincode;
     private String notes;
+    private BigDecimal perKgRate;
+    private BigDecimal perBoxRate;
     private boolean enabled = true;
     private LocalDateTime createdAt;
 
@@ -110,6 +113,26 @@ public class Party {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public BigDecimal getPerKgRate() {
+        return perKgRate;
+    }
+
+    public void setPerKgRate(BigDecimal perKgRate) {
+        this.perKgRate = perKgRate;
+    }
+
+    public BigDecimal getPerBoxRate() {
+        return perBoxRate;
+    }
+
+    public void setPerBoxRate(BigDecimal perBoxRate) {
+        this.perBoxRate = perBoxRate;
+    }
+
+    public boolean hasCustomRates() {
+        return perKgRate != null || perBoxRate != null;
     }
 
     public boolean isEnabled() {

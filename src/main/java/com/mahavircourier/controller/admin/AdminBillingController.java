@@ -6,6 +6,7 @@ import com.mahavircourier.service.AuditService;
 import com.mahavircourier.service.BranchCategory;
 import com.mahavircourier.service.BranchService;
 import com.mahavircourier.service.CustomUserDetails;
+import com.mahavircourier.service.PartyService;
 import com.mahavircourier.service.RateCardService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -20,13 +21,16 @@ public class AdminBillingController {
 
     private final RateCardService rateCardService;
     private final BranchService branchService;
+    private final PartyService partyService;
     private final AuditService auditService;
 
     public AdminBillingController(RateCardService rateCardService,
                                   BranchService branchService,
+                                  PartyService partyService,
                                   AuditService auditService) {
         this.rateCardService = rateCardService;
         this.branchService = branchService;
+        this.partyService = partyService;
         this.auditService = auditService;
     }
 
@@ -38,7 +42,27 @@ public class AdminBillingController {
         model.addAttribute("national", rateCardService.findTariff(BranchCategory.NATIONAL)
                 .orElseGet(() -> blank(BranchCategory.NATIONAL)));
         model.addAttribute("branches", branchService.findAll());
+        model.addAttribute("parties", partyService.findEnabled());
         return "admin/billing";
+    }
+
+    @PostMapping("/party-rates/{id}")
+    public String savePartyRates(@PathVariable Long id,
+                                 @RequestParam(required = false) BigDecimal perKgRate,
+                                 @RequestParam(required = false) BigDecimal perBoxRate,
+                                 RedirectAttributes redirectAttributes) {
+        CustomUserDetails principal = AdminAuth.requirePrincipal();
+        try {
+            partyService.saveRates(id, perKgRate, perBoxRate);
+            auditService.log(principal.getUser().getId(), principal.getUsername(),
+                    "PARTY_RATES_UPDATE", "PARTY", String.valueOf(id),
+                    "per kg=" + perKgRate + ", per box=" + perBoxRate);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Party rates saved. Party bills on the next submitted manifest will use these prices.");
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+        return "redirect:/admin/billing";
     }
 
     @PostMapping("/{lane}")
@@ -73,7 +97,7 @@ public class AdminBillingController {
                     "BRANCH_RATES_UPDATE", "BRANCH", String.valueOf(id),
                     "per kg=" + perKgRate + ", per box=" + perBoxRate);
             redirectAttributes.addFlashAttribute("successMessage",
-                    "Branch rates saved. New invoices for that destination will use these prices.");
+                    "Branch rates saved. Branch bills on the next submitted manifest will use these prices.");
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
         }

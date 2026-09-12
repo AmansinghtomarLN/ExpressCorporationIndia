@@ -14,48 +14,93 @@
     <div class="container">
         <span class="eyebrow">Admin Console</span>
         <h1>Dashboard</h1>
-        <p>Operations overview for Express Corporation of India.</p>
+        <p th:text="${periodLabel}">Operations overview for the selected period.</p>
 
         <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
+        <div class="ops-tabs">
+            <a th:href="@{/admin(period='TODAY')}" th:classappend="${period == 'TODAY'} ? ' active'">Today</a>
+            <a th:href="@{/admin(period='WEEK')}" th:classappend="${period == 'WEEK'} ? ' active'">Week</a>
+            <a th:href="@{/admin(period='MONTH')}" th:classappend="${period == 'MONTH'} ? ' active'">Month</a>
+            <a th:href="@{/admin(period='QUARTER')}" th:classappend="${period == 'QUARTER'} ? ' active'">Quarter</a>
+            <a th:href="@{/admin(period='HALFYEAR')}" th:classappend="${period == 'HALFYEAR'} ? ' active'">Half-year</a>
+            <a th:href="@{/admin(period='ANNUAL')}" th:classappend="${period == 'ANNUAL'} ? ' active'">Annual</a>
+        </div>
+
         <div class="kpi-grid" th:if="${stats}">
-            <div class="kpi-card">
+            <a class="kpi-card" th:href="@{/admin/shipments}">
                 <span class="muted">Total Shipments</span>
                 <strong th:text="${stats.totalShipments}">0</strong>
-            </div>
-            <div class="kpi-card">
+            </a>
+            <a class="kpi-card" th:href="@{/admin/shipments(status='BOOKED')}">
                 <span class="muted">Booked</span>
                 <strong th:text="${stats.booked}">0</strong>
-            </div>
-            <div class="kpi-card">
+            </a>
+            <a class="kpi-card" th:href="@{/admin/shipments(status='IN_TRANSIT')}">
                 <span class="muted">In Transit</span>
                 <strong th:text="${stats.inTransit}">0</strong>
-            </div>
-            <div class="kpi-card">
+            </a>
+            <a class="kpi-card" th:href="@{/admin/shipments(status='OUT_FOR_DELIVERY')}">
                 <span class="muted">Out for Delivery</span>
                 <strong th:text="${stats.outForDelivery}">0</strong>
-            </div>
-            <div class="kpi-card">
+            </a>
+            <a class="kpi-card" th:href="@{/admin/shipments(status='DELIVERED')}">
                 <span class="muted">Delivered</span>
                 <strong th:text="${stats.delivered}">0</strong>
-            </div>
-            <div class="kpi-card">
+            </a>
+            <a class="kpi-card" th:href="@{/admin/monitoring}">
                 <span class="muted">Delayed</span>
                 <strong th:text="${stats.delayed}">0</strong>
-            </div>
-            <div class="kpi-card">
+            </a>
+            <a class="kpi-card" th:href="@{/admin/contacts}">
                 <span class="muted">Unread Contacts</span>
                 <strong th:text="${stats.unreadContacts}">0</strong>
-            </div>
-            <div class="kpi-card">
-                <span class="muted">Unpaid Invoices</span>
-                <strong th:text="${stats.unpaidInvoices}">0</strong>
-            </div>
+            </a>
+            <a class="kpi-card" th:href="@{/admin/manifests(status='IN_PROGRESS', from=${periodFrom}, to=${periodTo})}">
+                <span class="muted">In-progress manifests</span>
+                <strong th:text="${inProgressManifests}">0</strong>
+            </a>
+            <a class="kpi-card" th:href="@{/admin/manifests(status='SUBMITTED', from=${periodFrom}, to=${periodTo})}">
+                <span class="muted">Submitted manifests</span>
+                <strong th:text="${submittedManifests}">0</strong>
+            </a>
+            <a class="kpi-card" th:href="@{/admin/billing/parties(status='PENDING', from=${periodFrom}, to=${periodTo})}">
+                <span class="muted">Pending party bills</span>
+                <strong th:text="${pendingPartyBills}">0</strong>
+                <small class="muted" th:text="'Rs. ' + ${#numbers.formatDecimal(pendingPartyAmount, 1, 2)}">Rs. 0.00</small>
+            </a>
+            <a class="kpi-card" th:href="@{/admin/billing/branches(status='PENDING', from=${periodFrom}, to=${periodTo})}">
+                <span class="muted">Pending branch bills</span>
+                <strong th:text="${pendingBranchBills}">0</strong>
+                <small class="muted" th:text="'Rs. ' + ${#numbers.formatDecimal(pendingBranchAmount, 1, 2)}">Rs. 0.00</small>
+            </a>
+            <a class="kpi-card" th:href="@{/admin/billing/parties(status='HISTORY', from=${periodFrom}, to=${periodTo})}">
+                <span class="muted">Received party bills</span>
+                <strong th:text="${receivedPartyBills}">0</strong>
+                <small class="muted" th:text="'Rs. ' + ${#numbers.formatDecimal(receivedPartyAmount, 1, 2)}">Rs. 0.00</small>
+            </a>
+            <a class="kpi-card" th:href="@{/admin/billing/branches(status='HISTORY', from=${periodFrom}, to=${periodTo})}">
+                <span class="muted">Received branch bills</span>
+                <strong th:text="${receivedBranchBills}">0</strong>
+                <small class="muted" th:text="'Rs. ' + ${#numbers.formatDecimal(receivedBranchAmount, 1, 2)}">Rs. 0.00</small>
+            </a>
+        </div>
+
+        <div class="admin-toolbar" style="margin-top:8px;">
+            <h2 style="margin:0;">Quick links</h2>
+        </div>
+        <div class="admin-filter-buttons" style="margin-bottom:28px; flex-wrap:wrap;">
+            <a class="btn btn-primary" th:href="@{/admin/manifests(status='IN_PROGRESS')}">In-progress manifests</a>
+            <a class="btn btn-dark" th:href="@{/admin/billing/parties}">Party bills</a>
+            <a class="btn btn-dark" th:href="@{/admin/billing/branches}">Branch bills</a>
+            <a class="btn btn-dark" th:href="@{/admin/billing}">Rate setup</a>
+            <a class="btn btn-dark" th:href="@{/admin/parties}">Parties</a>
+            <a class="btn btn-dark" th:href="@{/admin/shipments/new}">Book shipment</a>
         </div>
 
         <div class="admin-toolbar">
-            <h2 style="margin:0;">Recent Shipments</h2>
+            <h2 style="margin:0;">Shipments in this period</h2>
             <a class="btn btn-sm btn-primary" th:href="@{/admin/shipments}">View all</a>
         </div>
 
@@ -88,7 +133,7 @@
         </div>
 
         <div th:if="${recentShipments == null or #lists.isEmpty(recentShipments)}" class="alert alert-info" style="margin-top:16px;">
-            No recent shipments to show.
+            No shipments in this period.
         </div>
     </div>
 </section>

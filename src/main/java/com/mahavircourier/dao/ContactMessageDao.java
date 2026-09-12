@@ -7,7 +7,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
+import java.sql.Date;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -72,6 +74,14 @@ public class ContactMessageDao {
     public long countUnread() {
         Long count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM contact_messages WHERE status = 'UNREAD'", Long.class);
+        return count != null ? count : 0L;
+    }
+
+    public long countUnreadBetween(LocalDate from, LocalDate to) {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM contact_messages WHERE status = 'UNREAD' " +
+                        "AND DATE(created_at) >= ? AND DATE(created_at) <= ?",
+                Long.class, Date.valueOf(from), Date.valueOf(to));
         return count != null ? count : 0L;
     }
 }

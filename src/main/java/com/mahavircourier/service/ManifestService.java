@@ -36,6 +36,7 @@ public class ManifestService {
     private final ShipmentService shipmentService;
     private final RateCardService rateCardService;
     private final BranchDao branchDao;
+    private final ManifestBillService manifestBillService;
 
     public ManifestService(ManifestDao manifestDao,
                            ManifestItemDao manifestItemDao,
@@ -44,7 +45,8 @@ public class ManifestService {
                            ShipmentDao shipmentDao,
                            ShipmentService shipmentService,
                            RateCardService rateCardService,
-                           BranchDao branchDao) {
+                           BranchDao branchDao,
+                           ManifestBillService manifestBillService) {
         this.manifestDao = manifestDao;
         this.manifestItemDao = manifestItemDao;
         this.partyDao = partyDao;
@@ -53,6 +55,7 @@ public class ManifestService {
         this.shipmentService = shipmentService;
         this.rateCardService = rateCardService;
         this.branchDao = branchDao;
+        this.manifestBillService = manifestBillService;
     }
 
     public List<Manifest> search(String query, Long partyId, LocalDate from, LocalDate to) {
@@ -70,6 +73,14 @@ public class ManifestService {
 
     public long countCreated() {
         return manifestDao.countByStatus(Manifest.STATUS_CREATED);
+    }
+
+    public long countInProgressBetween(LocalDate from, LocalDate to) {
+        return manifestDao.countByStatusCreatedBetween(Manifest.STATUS_IN_PROGRESS, from, to);
+    }
+
+    public long countCreatedBetween(LocalDate from, LocalDate to) {
+        return manifestDao.countByStatusCreatedBetween(Manifest.STATUS_CREATED, from, to);
     }
 
     public Optional<Manifest> findById(Long id) {
@@ -206,6 +217,7 @@ public class ManifestService {
         }
         manifest.setStatus(Manifest.STATUS_CREATED);
         manifestDao.updateStatus(id, Manifest.STATUS_CREATED);
+        manifestBillService.createForSubmittedManifest(id);
         return findById(id).orElse(manifest);
     }
 
@@ -258,6 +270,9 @@ public class ManifestService {
             }
         }
         refreshTotals(id);
+        if (Manifest.STATUS_CREATED.equals(existing.getStatus())) {
+            manifestBillService.refreshPendingIfPresent(id);
+        }
         return findById(id).orElse(existing);
     }
 
@@ -349,6 +364,7 @@ public class ManifestService {
             shipment.setStatus("DISPATCHED");
             shipment = shipmentService.createFromManifest(
                     shipment, location, "Dispatched on manifest " + manifest.getManifestNumber());
+            manifestBillService.refreshPendingIfPresent(manifest.getId());
         } else {
             shipment.setStatus("BOOKED");
             shipment = shipmentService.persistNewShipment(

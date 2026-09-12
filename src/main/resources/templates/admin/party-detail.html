@@ -20,6 +20,7 @@
                 <p class="muted" th:text="${party.city + (party.state != null ? ', ' + party.state : '')}">City</p>
             </div>
             <div class="admin-filter-buttons">
+                <a class="btn btn-dark" th:href="@{/admin/billing/parties(partyId=${party.id})}">Party bills</a>
                 <a class="btn btn-primary" th:href="@{/admin/manifests/new(partyId=${party.id})}">New Manifest</a>
             </div>
         </div>
@@ -73,6 +74,18 @@
                 <div class="form-group">
                     <label>Address</label>
                     <input type="text" name="address" th:value="${party.address}">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Party per kg (optional)</label>
+                        <input type="number" name="perKgRate" step="0.01" min="0"
+                               th:value="${party.perKgRate}" placeholder="Leave blank to use branch rates">
+                    </div>
+                    <div class="form-group">
+                        <label>Party per box (optional)</label>
+                        <input type="number" name="perBoxRate" step="0.01" min="0"
+                               th:value="${party.perBoxRate}" placeholder="Leave blank to use branch rates">
+                    </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">

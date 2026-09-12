@@ -38,6 +38,12 @@ public class PartyDao {
         p.setPincode(rs.getString("pincode"));
         p.setNotes(rs.getString("notes"));
         p.setEnabled(rs.getBoolean("enabled"));
+        try {
+            p.setPerKgRate(rs.getBigDecimal("per_kg_rate"));
+            p.setPerBoxRate(rs.getBigDecimal("per_box_rate"));
+        } catch (Exception ignored) {
+            // optional rate columns
+        }
         Timestamp created = rs.getTimestamp("created_at");
         if (created != null) {
             p.setCreatedAt(created.toLocalDateTime());
@@ -101,7 +107,8 @@ public class PartyDao {
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(
                     "INSERT INTO parties (party_name, contact_person, phone, email, gstin, address, " +
-                            "city, state, pincode, notes, enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            "city, state, pincode, notes, enabled, per_kg_rate, per_box_rate) " +
+                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, party.getPartyName());
             ps.setString(2, party.getContactPerson());
@@ -114,6 +121,8 @@ public class PartyDao {
             ps.setString(9, party.getPincode());
             ps.setString(10, party.getNotes());
             ps.setBoolean(11, party.isEnabled());
+            ps.setBigDecimal(12, party.getPerKgRate());
+            ps.setBigDecimal(13, party.getPerBoxRate());
             return ps;
         }, keyHolder);
         Number key = keyHolder.getKey();
@@ -123,7 +132,8 @@ public class PartyDao {
     public void update(Party party) {
         jdbcTemplate.update(
                 "UPDATE parties SET party_name = ?, contact_person = ?, phone = ?, email = ?, gstin = ?, " +
-                        "address = ?, city = ?, state = ?, pincode = ?, notes = ?, enabled = ? WHERE id = ?",
+                        "address = ?, city = ?, state = ?, pincode = ?, notes = ?, enabled = ?, " +
+                        "per_kg_rate = ?, per_box_rate = ? WHERE id = ?",
                 party.getPartyName(),
                 party.getContactPerson(),
                 party.getPhone(),
@@ -135,6 +145,8 @@ public class PartyDao {
                 party.getPincode(),
                 party.getNotes(),
                 party.isEnabled(),
+                party.getPerKgRate(),
+                party.getPerBoxRate(),
                 party.getId());
     }
 

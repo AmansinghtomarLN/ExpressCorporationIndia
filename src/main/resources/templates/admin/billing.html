@@ -13,10 +13,18 @@
 <section class="section">
     <div class="container wide-page">
         <span class="eyebrow">Billing</span>
-        <h1>Branch-wise courier rates</h1>
-        <p>Each consignment number gets one invoice when the manifest is saved. Charge is only
-            <strong>weight × per kg + boxes × per box</strong> for the destination branch.
-            Service type (Domestic Standard / Express / International) is not billed.</p>
+        <div class="admin-toolbar" style="align-items:flex-start;">
+            <div>
+                <h1>Rate setup</h1>
+                <p>Submitting a manifest creates <strong>two bills</strong>: a party bill and a branch bill.
+                    Charge is only <strong>weight × per kg + boxes × per box</strong>.
+                    Party rates are optional — if blank, the destination branch rates are used.</p>
+            </div>
+            <div class="admin-filter-buttons">
+                <a class="btn btn-primary" th:href="@{/admin/billing/parties}">Party bills</a>
+                <a class="btn btn-dark" th:href="@{/admin/billing/branches}">Branch bills</a>
+            </div>
+        </div>
 
         <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
@@ -68,8 +76,45 @@
         </div>
 
         <div class="form-card wide" style="margin-top:24px;">
+            <h3>Optional rates by party</h3>
+            <p class="muted">Leave blank to bill the party at the destination branch’s per-kg / per-box rates.</p>
+            <div style="overflow-x:auto;">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>Party</th>
+                        <th>City</th>
+                        <th>Per kg (Rs.)</th>
+                        <th>Per box (Rs.)</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="p : ${parties}">
+                        <td th:text="${p.partyName}">Party</td>
+                        <td th:text="${p.city}">City</td>
+                        <td colspan="3">
+                            <form method="post" th:action="@{/admin/billing/party-rates/{id}(id=${p.id})}"
+                                  class="admin-filter-buttons" style="align-items:center;">
+                                <input type="number" step="0.01" min="0" name="perKgRate"
+                                       th:value="${p.perKgRate}" placeholder="Branch" style="width:110px;">
+                                <input type="number" step="0.01" min="0" name="perBoxRate"
+                                       th:value="${p.perBoxRate}" placeholder="Branch" style="width:110px;">
+                                <button type="submit" class="btn btn-sm btn-dark">Save</button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div th:if="${parties == null or #lists.isEmpty(parties)}" class="alert alert-info" style="margin-top:16px;">
+                No parties found. Add them under <a th:href="@{/admin/parties}">Parties</a>.
+            </div>
+        </div>
+
+        <div class="form-card wide" style="margin-top:24px;">
             <h3>Rates by branch</h3>
-            <p class="muted">Destination city on the manifest line is matched to the branch city. That branch’s rates create the invoice.</p>
+            <p class="muted">These rates create the branch bill when a manifest to that destination is submitted.</p>
             <div style="overflow-x:auto;">
                 <table class="data-table">
                     <thead>

@@ -7,6 +7,7 @@ import com.mahavircourier.model.ManifestItem;
 import com.mahavircourier.service.AuditService;
 import com.mahavircourier.service.BranchService;
 import com.mahavircourier.service.CustomUserDetails;
+import com.mahavircourier.service.ManifestBillService;
 import com.mahavircourier.service.ManifestService;
 import com.mahavircourier.service.PartyService;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -27,15 +28,18 @@ public class AdminManifestController {
     private static final int BLANK_ROWS = 20;
 
     private final ManifestService manifestService;
+    private final ManifestBillService manifestBillService;
     private final PartyService partyService;
     private final BranchService branchService;
     private final AuditService auditService;
 
     public AdminManifestController(ManifestService manifestService,
+                                   ManifestBillService manifestBillService,
                                    PartyService partyService,
                                    BranchService branchService,
                                    AuditService auditService) {
         this.manifestService = manifestService;
+        this.manifestBillService = manifestBillService;
         this.partyService = partyService;
         this.branchService = branchService;
         this.auditService = auditService;
@@ -51,7 +55,8 @@ public class AdminManifestController {
                        @RequestParam(value = "to", required = false)
                        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
                        Model model) {
-        String statusFilter = status == null || status.isBlank() ? "ALL" : status.trim();
+        String requested = status == null || status.isBlank() ? Manifest.STATUS_IN_PROGRESS : status.trim();
+        String statusFilter = requested;
         if ("ALL".equalsIgnoreCase(statusFilter)) {
             statusFilter = null;
         } else if ("SUBMITTED".equalsIgnoreCase(statusFilter)) {
@@ -63,7 +68,7 @@ public class AdminManifestController {
         model.addAttribute("q", q == null ? "" : q);
         model.addAttribute("partyId", partyId);
         model.addAttribute("branchId", branchId);
-        model.addAttribute("status", status == null || status.isBlank() ? "ALL" : status);
+        model.addAttribute("status", requested);
         model.addAttribute("from", from);
         model.addAttribute("to", to);
         model.addAttribute("inProgressCount", manifestService.countInProgress());
@@ -109,6 +114,7 @@ public class AdminManifestController {
         return manifestService.findById(id)
                 .map(manifest -> {
                     model.addAttribute("manifest", manifest);
+                    model.addAttribute("bills", manifestBillService.findByManifestId(manifest.getId()));
                     return "admin/manifest-detail";
                 })
                 .orElse("redirect:/admin/manifests");
@@ -170,7 +176,7 @@ public class AdminManifestController {
                     "Submitted MF " + created.getManifestNumber());
             redirectAttributes.addFlashAttribute("successMessage",
                     "Manifest " + created.getManifestNumber() + " submitted. "
-                            + created.getItems().size() + " shipment(s) dispatched and invoiced.");
+                            + created.getItems().size() + " shipment(s) dispatched. Party and branch bills created.");
             return "redirect:/admin/manifests/" + id;
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());

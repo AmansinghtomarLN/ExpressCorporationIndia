@@ -6,6 +6,7 @@ import com.mahavircourier.model.ContactMessage;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,5 +48,9 @@ public class ContactService {
 
     public long countUnread() {
         return contactMessageDao.countUnread();
+    }
+
+    public long countUnreadBetween(LocalDate from, LocalDate to) {
+        return contactMessageDao.countUnreadBetween(from, to);
     }
 }

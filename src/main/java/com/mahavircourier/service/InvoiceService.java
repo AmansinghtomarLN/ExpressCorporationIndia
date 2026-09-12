@@ -64,7 +64,7 @@ public class InvoiceService {
     public Invoice syncFromShipment(Shipment shipment) {
         Optional<Invoice> existing = invoiceDao.findByShipmentId(shipment.getId());
         if (existing.isEmpty()) {
-            return createForShipment(shipment);
+            return null;
         }
         Invoice invoice = existing.get();
         applyQuote(invoice, shipment);
