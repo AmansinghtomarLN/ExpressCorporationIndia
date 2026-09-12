@@ -136,6 +136,13 @@ public class ManifestItemDao {
         jdbcTemplate.update("UPDATE manifest_items SET shipment_id = ? WHERE id = ?", shipmentId, itemId);
     }
 
+    public int nextSerial(Long manifestId) {
+        Integer max = jdbcTemplate.queryForObject(
+                "SELECT COALESCE(MAX(serial_no), 0) FROM manifest_items WHERE manifest_id = ?",
+                Integer.class, manifestId);
+        return (max != null ? max : 0) + 1;
+    }
+
     public void deleteById(Long id) {
         jdbcTemplate.update("DELETE FROM manifest_items WHERE id = ?", id);
     }

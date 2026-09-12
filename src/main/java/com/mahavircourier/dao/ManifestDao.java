@@ -23,8 +23,10 @@ public class ManifestDao {
 
     private static final String SELECT_WITH_PARTY =
             "SELECT m.*, p.party_name, p.phone AS party_phone, p.city AS party_city, " +
-                    "p.address AS party_address, p.gstin AS party_gstin " +
-                    "FROM manifests m JOIN parties p ON p.id = m.party_id";
+                    "p.address AS party_address, p.gstin AS party_gstin, " +
+                    "b.branch_name AS dest_branch_name, b.city AS dest_branch_city " +
+                    "FROM manifests m LEFT JOIN parties p ON p.id = m.party_id " +
+                    "LEFT JOIN branches b ON b.id = m.destination_branch_id";
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -48,6 +50,19 @@ public class ManifestDao {
             m.setBillingLane(rs.getString("billing_lane"));
         } catch (Exception ignored) {
             m.setBillingLane("AUTO");
+        }
+        try {
+            m.setStatus(rs.getString("status"));
+        } catch (Exception ignored) {
+            m.setStatus(Manifest.STATUS_CREATED);
+        }
+        try {
+            long destBranch = rs.getLong("destination_branch_id");
+            m.setDestinationBranchId(rs.wasNull() ? null : destBranch);
+            m.setDestinationBranchName(rs.getString("dest_branch_name"));
+            m.setDestinationBranchCity(rs.getString("dest_branch_city"));
+        } catch (Exception ignored) {
+            // older rows
         }
         m.setRemarks(rs.getString("remarks"));
         m.setTotalBoxes(rs.getInt("total_boxes"));
@@ -74,12 +89,20 @@ public class ManifestDao {
     };
 
     public List<Manifest> search(String query, Long partyId, LocalDate from, LocalDate to) {
+        return search(query, partyId, from, to, null, null);
+    }
+
+    public List<Manifest> search(String query, Long partyId, LocalDate from, LocalDate to,
+                                 String status, Long destinationBranchId) {
         StringBuilder sql = new StringBuilder(SELECT_WITH_PARTY + " WHERE 1=1");
         List<Object> params = new ArrayList<>();
         if (query != null && !query.isBlank()) {
             String like = "%" + query.trim() + "%";
             sql.append(" AND (m.manifest_number LIKE ? OR m.through_name LIKE ? OR p.party_name LIKE ?")
+                    .append(" OR b.branch_name LIKE ? OR b.city LIKE ?")
                     .append(" OR EXISTS (SELECT 1 FROM manifest_items i WHERE i.manifest_id = m.id AND i.consignment_no LIKE ?))");
+            params.add(like);
+            params.add(like);
             params.add(like);
             params.add(like);
             params.add(like);
@@ -88,6 +111,14 @@ public class ManifestDao {
         if (partyId != null) {
             sql.append(" AND m.party_id = ?");
             params.add(partyId);
+        }
+        if (status != null && !status.isBlank()) {
+            sql.append(" AND m.status = ?");
+            params.add(status.trim());
+        }
+        if (destinationBranchId != null) {
+            sql.append(" AND m.destination_branch_id = ?");
+            params.add(destinationBranchId);
         }
         if (from != null) {
             sql.append(" AND m.manifest_date >= ?");
@@ -138,11 +169,15 @@ public class ManifestDao {
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(
                     "INSERT INTO manifests (manifest_number, party_id, manifest_date, through_name, " +
-                            "origin_city, service_type, billing_lane, remarks, total_boxes, total_weight) " +
-                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            "origin_city, service_type, billing_lane, remarks, total_boxes, total_weight, " +
+                            "status, destination_branch_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, manifest.getManifestNumber());
-            ps.setLong(2, manifest.getPartyId());
+            if (manifest.getPartyId() != null) {
+                ps.setLong(2, manifest.getPartyId());
+            } else {
+                ps.setNull(2, java.sql.Types.BIGINT);
+            }
             ps.setDate(3, Date.valueOf(manifest.getManifestDate()));
             ps.setString(4, manifest.getThroughName());
             ps.setString(5, manifest.getOriginCity());
@@ -151,6 +186,12 @@ public class ManifestDao {
             ps.setString(8, manifest.getRemarks());
             ps.setInt(9, manifest.getTotalBoxes());
             ps.setBigDecimal(10, manifest.getTotalWeight() != null ? manifest.getTotalWeight() : BigDecimal.ZERO);
+            ps.setString(11, manifest.getStatus() != null ? manifest.getStatus() : Manifest.STATUS_IN_PROGRESS);
+            if (manifest.getDestinationBranchId() != null) {
+                ps.setLong(12, manifest.getDestinationBranchId());
+            } else {
+                ps.setNull(12, java.sql.Types.BIGINT);
+            }
             return ps;
         }, keyHolder);
         Number key = keyHolder.getKey();
@@ -160,7 +201,8 @@ public class ManifestDao {
     public void update(Manifest manifest) {
         jdbcTemplate.update(
                 "UPDATE manifests SET party_id = ?, manifest_date = ?, through_name = ?, origin_city = ?, " +
-                        "service_type = ?, billing_lane = ?, remarks = ?, total_boxes = ?, total_weight = ? WHERE id = ?",
+                        "service_type = ?, billing_lane = ?, remarks = ?, total_boxes = ?, total_weight = ?, " +
+                        "status = ?, destination_branch_id = ? WHERE id = ?",
                 manifest.getPartyId(),
                 Date.valueOf(manifest.getManifestDate()),
                 manifest.getThroughName(),
@@ -170,7 +212,30 @@ public class ManifestDao {
                 manifest.getRemarks(),
                 manifest.getTotalBoxes(),
                 manifest.getTotalWeight() != null ? manifest.getTotalWeight() : BigDecimal.ZERO,
+                manifest.getStatus() != null ? manifest.getStatus() : Manifest.STATUS_CREATED,
+                manifest.getDestinationBranchId(),
                 manifest.getId());
+    }
+
+    public Optional<Manifest> findInProgressByBranch(Long destinationBranchId) {
+        try {
+            return Optional.ofNullable(jdbcTemplate.queryForObject(
+                    SELECT_WITH_PARTY + " WHERE m.destination_branch_id = ? AND m.status = ? " +
+                            "ORDER BY m.id DESC LIMIT 1",
+                    ROW_MAPPER, destinationBranchId, Manifest.STATUS_IN_PROGRESS));
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
+        }
+    }
+
+    public void updateStatus(Long id, String status) {
+        jdbcTemplate.update("UPDATE manifests SET status = ? WHERE id = ?", status, id);
+    }
+
+    public long countByStatus(String status) {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM manifests WHERE status = ?", Long.class, status);
+        return count != null ? count : 0L;
     }
 
     public void updateTotals(Long id, int boxes, BigDecimal weight) {

@@ -33,8 +33,16 @@ public class AdminShipmentForm {
     @NotBlank(message = "Origin city is required")
     private String originCity;
 
-    @NotBlank(message = "Destination city is required")
     private String destinationCity;
+
+    @NotNull(message = "Select a destination branch")
+    private Long destinationBranchId;
+
+    private Long partyId;
+    private String consignmentNo;
+
+    @NotNull(message = "Number of boxes is required")
+    private Integer numberOfBoxes = 1;
 
     @NotNull(message = "Weight is required")
     @DecimalMin(value = "0.1", message = "Weight must be at least 0.1 kg")
@@ -119,6 +127,38 @@ public class AdminShipmentForm {
 
     public void setDestinationCity(String destinationCity) {
         this.destinationCity = destinationCity;
+    }
+
+    public Long getDestinationBranchId() {
+        return destinationBranchId;
+    }
+
+    public void setDestinationBranchId(Long destinationBranchId) {
+        this.destinationBranchId = destinationBranchId;
+    }
+
+    public Long getPartyId() {
+        return partyId;
+    }
+
+    public void setPartyId(Long partyId) {
+        this.partyId = partyId;
+    }
+
+    public String getConsignmentNo() {
+        return consignmentNo;
+    }
+
+    public void setConsignmentNo(String consignmentNo) {
+        this.consignmentNo = consignmentNo;
+    }
+
+    public Integer getNumberOfBoxes() {
+        return numberOfBoxes;
+    }
+
+    public void setNumberOfBoxes(Integer numberOfBoxes) {
+        this.numberOfBoxes = numberOfBoxes;
     }
 
     public BigDecimal getWeightKg() {

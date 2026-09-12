@@ -6,6 +6,11 @@ document.addEventListener("DOMContentLoaded", function () {
     var tbody = document.querySelector("#manifest-lines tbody");
     var usedSet = new Set();
 
+    function branchOptionsHtml() {
+        var first = document.querySelector("#manifest-lines .dest-branch");
+        return first ? first.innerHTML : '<option value="">— Branch —</option>';
+    }
+
     function rowCount() {
         return tbody.querySelectorAll("tr").length;
     }
@@ -16,7 +21,8 @@ document.addEventListener("DOMContentLoaded", function () {
             '<td class="row-index"></td>' +
             '<td><input type="hidden" name="items[' + index + '].id" value="">' +
             '<input type="text" class="cno-input" name="items[' + index + '].consignmentNo" placeholder="37191" inputmode="numeric"></td>' +
-            '<td><input type="text" name="items[' + index + '].destinationCity" placeholder="MORENA"></td>' +
+            '<td><select class="dest-branch" name="items[' + index + '].destinationBranchId">' +
+            branchOptionsHtml() + '</select></td>' +
             '<td><input type="number" min="1" class="boxes-input" name="items[' + index + '].numberOfBoxes" placeholder="3"></td>' +
             '<td><input type="number" min="0.01" step="0.01" class="weight-input" name="items[' + index + '].weightKg" placeholder="40"></td>' +
             '<td class="cell-stack">' +
@@ -38,7 +44,8 @@ document.addEventListener("DOMContentLoaded", function () {
         var weight = 0;
         tbody.querySelectorAll("tr").forEach(function (tr) {
             var cno = (tr.querySelector(".cno-input") || {}).value || "";
-            var dest = (tr.querySelector('input[name$=".destinationCity"]') || {}).value || "";
+            var destSel = tr.querySelector(".dest-branch");
+            var dest = destSel ? destSel.value : ((tr.querySelector('input[name$=".destinationCity"]') || {}).value || "");
             var recv = (tr.querySelector('input[name$=".receiverName"]') || {}).value || "";
             var boxVal = parseFloat((tr.querySelector(".boxes-input") || {}).value || "0");
             var wtVal = parseFloat((tr.querySelector(".weight-input") || {}).value || "0");
@@ -170,6 +177,15 @@ document.addEventListener("DOMContentLoaded", function () {
     if (partySelect) {
         partySelect.addEventListener("change", loadPool);
         if (partySelect.value) loadPool();
+    }
+    var destHeader = document.querySelector('[name="destinationBranchId"]');
+    if (destHeader) {
+        destHeader.addEventListener("change", function () {
+            var v = destHeader.value;
+            document.querySelectorAll("#manifest-lines .dest-branch").forEach(function (sel) {
+                if (!sel.value) sel.value = v;
+            });
+        });
     }
     updateTotals();
 });

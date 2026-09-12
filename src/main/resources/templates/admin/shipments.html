@@ -20,7 +20,8 @@
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
         <div class="admin-toolbar">
-            <a class="btn btn-primary" th:href="@{/admin/manifests/new}">New Manifest</a>
+            <a class="btn btn-primary" th:href="@{/admin/shipments/new}">Book shipment</a>
+            <a class="btn btn-dark" th:href="@{/admin/manifests}">Manifests</a>
             <a class="btn btn-dark" th:href="@{/admin/shipments/export.csv}">Export CSV</a>
             <a class="btn btn-dark" th:href="@{/admin/shipments/bulk}">Bulk Update</a>
         </div>

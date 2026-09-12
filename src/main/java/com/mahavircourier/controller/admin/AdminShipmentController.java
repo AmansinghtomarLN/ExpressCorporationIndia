@@ -1,17 +1,24 @@
 package com.mahavircourier.controller.admin;
 
+import com.mahavircourier.dto.AdminShipmentForm;
 import com.mahavircourier.dto.PageResult;
+import com.mahavircourier.model.Manifest;
 import com.mahavircourier.model.Shipment;
 import com.mahavircourier.service.AuditService;
 import com.mahavircourier.service.BranchService;
 import com.mahavircourier.service.CustomUserDetails;
+import com.mahavircourier.service.ManifestService;
+import com.mahavircourier.service.PartyService;
 import com.mahavircourier.service.ShipmentService;
 import com.mahavircourier.service.StatusTransitions;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import jakarta.validation.Valid;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -32,13 +39,19 @@ public class AdminShipmentController {
 
     private final ShipmentService shipmentService;
     private final BranchService branchService;
+    private final PartyService partyService;
+    private final ManifestService manifestService;
     private final AuditService auditService;
 
     public AdminShipmentController(ShipmentService shipmentService,
                                    BranchService branchService,
+                                   PartyService partyService,
+                                   ManifestService manifestService,
                                    AuditService auditService) {
         this.shipmentService = shipmentService;
         this.branchService = branchService;
+        this.partyService = partyService;
+        this.manifestService = manifestService;
         this.auditService = auditService;
     }
 
@@ -62,17 +75,60 @@ public class AdminShipmentController {
     }
 
     @GetMapping("/new")
-    public String newForm(RedirectAttributes redirectAttributes) {
-        redirectAttributes.addFlashAttribute("errorMessage",
-                "Shipments are created only from a manifest. Add C.Nos on a new manifest.");
-        return "redirect:/admin/manifests/new";
+    public String newForm(@RequestParam(value = "branchId", required = false) Long branchId,
+                          @RequestParam(value = "manifestId", required = false) Long manifestId,
+                          Model model) {
+        AdminShipmentForm form = new AdminShipmentForm();
+        if (branchId != null) {
+            form.setDestinationBranchId(branchId);
+        } else if (manifestId != null) {
+            manifestService.findById(manifestId).ifPresent(m -> {
+                form.setDestinationBranchId(m.getDestinationBranchId());
+                form.setPartyId(m.getPartyId());
+            });
+        }
+        model.addAttribute("form", form);
+        model.addAttribute("manifestId", manifestId);
+        model.addAttribute("lockDestination", form.getDestinationBranchId() != null);
+        populateBookingLookups(model);
+        return "admin/shipment-form";
     }
 
     @PostMapping
-    public String create(RedirectAttributes redirectAttributes) {
-        redirectAttributes.addFlashAttribute("errorMessage",
-                "Shipments are created only from a manifest.");
-        return "redirect:/admin/manifests/new";
+    public String create(@Valid @ModelAttribute("form") AdminShipmentForm form,
+                         BindingResult bindingResult,
+                         @RequestParam(value = "manifestId", required = false) Long manifestId,
+                         Model model,
+                         RedirectAttributes redirectAttributes) {
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("manifestId", manifestId);
+            model.addAttribute("lockDestination", form.getDestinationBranchId() != null && manifestId != null);
+            populateBookingLookups(model);
+            return "admin/shipment-form";
+        }
+        CustomUserDetails principal = AdminAuth.requirePrincipal();
+        try {
+            Shipment created = shipmentService.adminCreateShipment(form, principal.getUser().getId());
+            Manifest draft = manifestService.addBookedShipmentToBranchDraft(created, manifestId);
+            auditService.log(principal.getUser().getId(), principal.getUsername(),
+                    "SHIPMENT_BOOK", "SHIPMENT", String.valueOf(created.getId()),
+                    "C.No " + created.getTrackingId() + " → MF " + draft.getManifestNumber());
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Shipment " + created.getTrackingId() + " booked and added to in-progress manifest "
+                            + draft.getManifestNumber() + ".");
+            return "redirect:/admin/manifests/" + draft.getId();
+        } catch (IllegalArgumentException ex) {
+            model.addAttribute("manifestId", manifestId);
+            model.addAttribute("lockDestination", form.getDestinationBranchId() != null && manifestId != null);
+            populateBookingLookups(model);
+            model.addAttribute("errorMessage", ex.getMessage());
+            return "admin/shipment-form";
+        }
+    }
+
+    private void populateBookingLookups(Model model) {
+        model.addAttribute("branches", branchService.findAll());
+        model.addAttribute("parties", partyService.findEnabled());
     }
 
     @GetMapping("/export.csv")

@@ -1,5 +1,6 @@
 package com.mahavircourier.service;
 
+import com.mahavircourier.dao.BranchDao;
 import com.mahavircourier.dao.ConsignmentRangeDao;
 import com.mahavircourier.dao.ManifestDao;
 import com.mahavircourier.dao.ManifestItemDao;
@@ -7,6 +8,7 @@ import com.mahavircourier.dao.PartyDao;
 import com.mahavircourier.dao.ShipmentDao;
 import com.mahavircourier.dto.ManifestForm;
 import com.mahavircourier.dto.ManifestItemForm;
+import com.mahavircourier.model.Branch;
 import com.mahavircourier.model.Manifest;
 import com.mahavircourier.model.ManifestItem;
 import com.mahavircourier.model.Party;
@@ -33,6 +35,7 @@ public class ManifestService {
     private final ShipmentDao shipmentDao;
     private final ShipmentService shipmentService;
     private final RateCardService rateCardService;
+    private final BranchDao branchDao;
 
     public ManifestService(ManifestDao manifestDao,
                            ManifestItemDao manifestItemDao,
@@ -40,7 +43,8 @@ public class ManifestService {
                            ConsignmentRangeDao consignmentRangeDao,
                            ShipmentDao shipmentDao,
                            ShipmentService shipmentService,
-                           RateCardService rateCardService) {
+                           RateCardService rateCardService,
+                           BranchDao branchDao) {
         this.manifestDao = manifestDao;
         this.manifestItemDao = manifestItemDao;
         this.partyDao = partyDao;
@@ -48,10 +52,24 @@ public class ManifestService {
         this.shipmentDao = shipmentDao;
         this.shipmentService = shipmentService;
         this.rateCardService = rateCardService;
+        this.branchDao = branchDao;
     }
 
     public List<Manifest> search(String query, Long partyId, LocalDate from, LocalDate to) {
-        return manifestDao.search(query, partyId, from, to);
+        return search(query, partyId, from, to, null, null);
+    }
+
+    public List<Manifest> search(String query, Long partyId, LocalDate from, LocalDate to,
+                                 String status, Long destinationBranchId) {
+        return manifestDao.search(query, partyId, from, to, status, destinationBranchId);
+    }
+
+    public long countInProgress() {
+        return manifestDao.countByStatus(Manifest.STATUS_IN_PROGRESS);
+    }
+
+    public long countCreated() {
+        return manifestDao.countByStatus(Manifest.STATUS_CREATED);
     }
 
     public Optional<Manifest> findById(Long id) {
@@ -84,15 +102,22 @@ public class ManifestService {
 
     @Transactional
     public Manifest create(ManifestForm form, Long bookedByUserId) {
+        requireDestinationBranch(form.getDestinationBranchId());
+        Optional<Manifest> open = manifestDao.findInProgressByBranch(form.getDestinationBranchId());
+        if (open.isPresent()) {
+            return appendLines(open.get().getId(), form, bookedByUserId);
+        }
+
         List<ManifestItemForm> lines = collectFilledLines(form);
         if (lines.isEmpty()) {
-            throw new IllegalArgumentException("Add at least one consignment with C.No, destination, boxes, weight, and receiver");
+            throw new IllegalArgumentException("Add at least one consignment, or book a shipment to this branch first");
         }
-        Party party = requireEnabledParty(form.getPartyId());
+        Party party = form.getPartyId() != null ? requireEnabledParty(form.getPartyId()) : null;
         validateUniqueInForm(lines);
 
         Manifest manifest = new Manifest();
         applyHeader(manifest, form, party);
+        manifest.setStatus(Manifest.STATUS_IN_PROGRESS);
         manifest.setManifestNumber(resolveManifestNumber(form.getManifestNumber()));
         applyTotals(manifest, lines);
 
@@ -100,33 +125,88 @@ public class ManifestService {
         manifest.setId(manifestId);
 
         int serial = 1;
-        BigDecimal freightTotal = BigDecimal.ZERO;
-        List<ManifestItem> savedItems = new ArrayList<>();
         for (ManifestItemForm line : lines) {
-            ManifestItem item = toItem(line, manifestId, serial++);
-            validateNewConsignment(party.getId(), item.getConsignmentNo(), null);
-            Long itemId = manifestItemDao.save(item);
-            item.setId(itemId);
-
-            Shipment shipment = buildShipment(manifest, party, item, bookedByUserId);
-            shipment = shipmentService.createFromManifest(
-                    shipment,
-                    originOf(manifest, party),
-                    "Dispatched on manifest " + manifest.getManifestNumber()
-                            + (StringUtils.hasText(manifest.getThroughName())
-                            ? " via " + manifest.getThroughName() : ""));
-            manifestItemDao.updateShipmentId(itemId, shipment.getId());
-            item.setShipmentId(shipment.getId());
-            item.setFreightCharge(shipment.getFreightCharge());
-            item.setShipmentStatus(shipment.getStatus());
-            if (shipment.getFreightCharge() != null) {
-                freightTotal = freightTotal.add(shipment.getFreightCharge());
-            }
-            savedItems.add(item);
+            addDraftLine(manifest, party, line, serial++, bookedByUserId);
         }
-        manifest.setItems(savedItems);
-        manifest.setTotalFreight(freightTotal);
-        return manifest;
+        return findById(manifestId).orElse(manifest);
+    }
+
+    @Transactional
+    public Manifest addBookedShipmentToBranchDraft(Shipment shipment) {
+        return addBookedShipmentToBranchDraft(shipment, null);
+    }
+
+    @Transactional
+    public Manifest addBookedShipmentToBranchDraft(Shipment shipment, Long preferredManifestId) {
+        if (shipment == null || shipment.getId() == null) {
+            throw new IllegalArgumentException("Book the shipment first");
+        }
+        if (shipment.getAssignedBranchId() == null) {
+            throw new IllegalArgumentException("Shipment must have a destination branch");
+        }
+        Branch branch = branchDao.findById(shipment.getAssignedBranchId())
+                .orElseThrow(() -> new IllegalArgumentException("Destination branch not found"));
+
+        Manifest draft;
+        if (preferredManifestId != null) {
+            draft = manifestDao.findById(preferredManifestId)
+                    .orElseThrow(() -> new IllegalArgumentException("Manifest not found"));
+            if (!draft.isInProgress()) {
+                throw new IllegalArgumentException("Cannot add a shipment to a submitted manifest");
+            }
+            if (draft.getDestinationBranchId() != null
+                    && !draft.getDestinationBranchId().equals(branch.getId())) {
+                throw new IllegalArgumentException("This shipment's branch does not match the manifest destination");
+            }
+        } else {
+            draft = manifestDao.findInProgressByBranch(branch.getId())
+                    .orElseGet(() -> openDraftForBranch(branch, shipment));
+        }
+
+        if (manifestItemDao.existsByConsignmentNo(shipment.getTrackingId())) {
+            return findById(draft.getId()).orElse(draft);
+        }
+
+        ManifestItem item = new ManifestItem();
+        item.setManifestId(draft.getId());
+        item.setSerialNo(manifestItemDao.nextSerial(draft.getId()));
+        item.setConsignmentNo(shipment.getTrackingId());
+        item.setDestinationCity(branch.getCity());
+        item.setNumberOfBoxes(shipment.getNumberOfBoxes() != null ? shipment.getNumberOfBoxes() : 1);
+        item.setWeightKg(shipment.getWeightKg());
+        item.setReceiverName(shipment.getReceiverName());
+        item.setReceiverPhone(shipment.getReceiverPhone());
+        item.setShipmentId(shipment.getId());
+        manifestItemDao.save(item);
+
+        shipment.setManifestId(draft.getId());
+        shipmentDao.update(shipment);
+        refreshTotals(draft.getId());
+        return findById(draft.getId()).orElse(draft);
+    }
+
+    @Transactional
+    public Manifest finalize(Long id) {
+        Manifest manifest = manifestDao.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Manifest not found"));
+        if (!manifest.isInProgress()) {
+            throw new IllegalArgumentException("Manifest " + manifest.getManifestNumber() + " is already submitted");
+        }
+        List<ManifestItem> items = manifestItemDao.findByManifestId(id);
+        if (items.isEmpty()) {
+            throw new IllegalArgumentException("Add at least one consignment before submitting this manifest");
+        }
+        for (ManifestItem item : items) {
+            if (item.getShipmentId() != null) {
+                shipmentService.markDispatchedFromManifest(
+                        item.getShipmentId(),
+                        originOf(manifest, null),
+                        "Created on manifest " + manifest.getManifestNumber());
+            }
+        }
+        manifest.setStatus(Manifest.STATUS_CREATED);
+        manifestDao.updateStatus(id, Manifest.STATUS_CREATED);
+        return findById(id).orElse(manifest);
     }
 
     @Transactional
@@ -137,10 +217,7 @@ public class ManifestService {
         if (lines.isEmpty()) {
             throw new IllegalArgumentException("A manifest must keep at least one consignment");
         }
-        Party party = requireEnabledParty(form.getPartyId() != null ? form.getPartyId() : existing.getPartyId());
-        if (!party.getId().equals(existing.getPartyId())) {
-            throw new IllegalArgumentException("Cannot change the sending party after a manifest is saved");
-        }
+        Party party = resolvePartyForEdit(form, existing);
         validateUniqueInForm(lines);
 
         applyHeader(existing, form, party);
@@ -158,7 +235,7 @@ public class ManifestService {
                     throw new IllegalArgumentException("Line does not belong to this manifest");
                 }
                 item.setSerialNo(serial++);
-                item.setDestinationCity(required(line.getDestinationCity(), "Destination"));
+                item.setDestinationCity(resolveDestination(line, existing));
                 item.setNumberOfBoxes(positiveBoxes(line.getNumberOfBoxes()));
                 item.setWeightKg(positiveWeight(line.getWeightKg()));
                 item.setReceiverName(required(line.getReceiverName(), "Receiver / details"));
@@ -177,19 +254,10 @@ public class ManifestService {
                 }
                 seenIds.add(item.getId());
             } else {
-                ManifestItem item = toItem(line, id, serial++);
-                validateNewConsignment(party.getId(), item.getConsignmentNo(), null);
-                Long itemId = manifestItemDao.save(item);
-                item.setId(itemId);
-                Shipment shipment = buildShipment(existing, party, item, null);
-                shipment = shipmentService.createFromManifest(
-                        shipment,
-                        originOf(existing, party),
-                        "Dispatched on manifest " + existing.getManifestNumber());
-                manifestItemDao.updateShipmentId(itemId, shipment.getId());
-                seenIds.add(itemId);
+                addDraftLine(existing, party, line, serial++, null);
             }
         }
+        refreshTotals(id);
         return findById(id).orElse(existing);
     }
 
@@ -223,17 +291,133 @@ public class ManifestService {
         if (form.getManifestDate() == null) {
             throw new IllegalArgumentException("Manifest date is required");
         }
-        manifest.setPartyId(party.getId());
+        if (manifest.getDestinationBranchId() == null && form.getDestinationBranchId() != null) {
+            requireDestinationBranch(form.getDestinationBranchId());
+            manifest.setDestinationBranchId(form.getDestinationBranchId());
+        }
+        if (party != null) {
+            manifest.setPartyId(party.getId());
+            manifest.setPartyName(party.getPartyName());
+        }
         manifest.setManifestDate(form.getManifestDate());
         manifest.setThroughName(trimToNull(form.getThroughName()));
-        String origin = StringUtils.hasText(form.getOriginCity()) ? form.getOriginCity().trim() : party.getCity();
+        String origin = StringUtils.hasText(form.getOriginCity())
+                ? form.getOriginCity().trim()
+                : (party != null ? party.getCity() : manifest.getOriginCity());
         manifest.setOriginCity(origin);
         String service = StringUtils.hasText(form.getServiceType())
                 ? form.getServiceType().trim() : "DOMESTIC_STANDARD";
         manifest.setServiceType(service);
         manifest.setBillingLane(BranchCategory.normalizeLane(form.getBillingLane()));
         manifest.setRemarks(trimToNull(form.getRemarks()));
-        manifest.setPartyName(party.getPartyName());
+    }
+
+    private Manifest appendLines(Long id, ManifestForm form, Long bookedByUserId) {
+        Manifest existing = manifestDao.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Manifest not found"));
+        List<ManifestItemForm> lines = collectFilledLines(form);
+        if (lines.isEmpty()) {
+            return findById(id).orElse(existing);
+        }
+        validateUniqueInForm(lines);
+        Party party = resolvePartyForEdit(form, existing);
+        applyHeader(existing, form, party);
+        existing.setStatus(Manifest.STATUS_IN_PROGRESS);
+        manifestDao.update(existing);
+        int serial = manifestItemDao.nextSerial(id);
+        for (ManifestItemForm line : lines) {
+            if (line.getId() == null) {
+                addDraftLine(existing, party, line, serial++, bookedByUserId);
+            }
+        }
+        refreshTotals(id);
+        return findById(id).orElse(existing);
+    }
+
+    private void addDraftLine(Manifest manifest, Party party, ManifestItemForm line, int serial, Long bookedByUserId) {
+        if (party == null) {
+            throw new IllegalArgumentException("Select the sending party to add a C.No");
+        }
+        ManifestItem item = toItem(line, manifest.getId(), serial, manifest);
+        validateNewConsignment(party.getId(), item.getConsignmentNo(), null);
+        Long itemId = manifestItemDao.save(item);
+        item.setId(itemId);
+
+        Shipment shipment = buildShipment(manifest, party, item, bookedByUserId);
+        String location = originOf(manifest, party);
+        if (Manifest.STATUS_CREATED.equals(manifest.getStatus())) {
+            shipment.setStatus("DISPATCHED");
+            shipment = shipmentService.createFromManifest(
+                    shipment, location, "Dispatched on manifest " + manifest.getManifestNumber());
+        } else {
+            shipment.setStatus("BOOKED");
+            shipment = shipmentService.persistNewShipment(
+                    shipment, location, "Booked on in-progress manifest " + manifest.getManifestNumber());
+        }
+        manifestItemDao.updateShipmentId(itemId, shipment.getId());
+    }
+
+    private Manifest openDraftForBranch(Branch branch, Shipment shipment) {
+        Manifest draft = new Manifest();
+        draft.setManifestNumber(manifestDao.nextManifestNumber());
+        draft.setPartyId(shipment.getPartyId());
+        draft.setManifestDate(LocalDate.now());
+        draft.setOriginCity(shipment.getOriginCity());
+        draft.setServiceType(StringUtils.hasText(shipment.getServiceType())
+                ? shipment.getServiceType() : "DOMESTIC_STANDARD");
+        draft.setBillingLane(StringUtils.hasText(shipment.getBillingLane()) ? shipment.getBillingLane() : "AUTO");
+        draft.setStatus(Manifest.STATUS_IN_PROGRESS);
+        draft.setDestinationBranchId(branch.getId());
+        draft.setRemarks("Auto-opened for " + branch.getCity() + " bookings");
+        draft.setTotalBoxes(0);
+        draft.setTotalWeight(BigDecimal.ZERO);
+        Long id = manifestDao.save(draft);
+        draft.setId(id);
+        return draft;
+    }
+
+    private Party resolvePartyForEdit(ManifestForm form, Manifest existing) {
+        Long partyId = form.getPartyId() != null ? form.getPartyId() : existing.getPartyId();
+        if (partyId == null) {
+            return null;
+        }
+        Party party = requireEnabledParty(partyId);
+        if (existing.getPartyId() != null && !party.getId().equals(existing.getPartyId())) {
+            throw new IllegalArgumentException("Cannot change the sending party after a manifest is saved");
+        }
+        return party;
+    }
+
+    private Branch requireDestinationBranch(Long branchId) {
+        if (branchId == null) {
+            throw new IllegalArgumentException("Select the destination branch");
+        }
+        return branchDao.findById(branchId)
+                .orElseThrow(() -> new IllegalArgumentException("Destination branch not found"));
+    }
+
+    private String resolveDestination(ManifestItemForm line, Manifest manifest) {
+        Long branchId = line.getDestinationBranchId() != null
+                ? line.getDestinationBranchId() : manifest.getDestinationBranchId();
+        if (branchId != null) {
+            return requireDestinationBranch(branchId).getCity();
+        }
+        if (StringUtils.hasText(line.getDestinationCity())) {
+            return line.getDestinationCity().trim();
+        }
+        throw new IllegalArgumentException("Destination branch is required");
+    }
+
+    private void refreshTotals(Long manifestId) {
+        int boxes = 0;
+        BigDecimal weight = BigDecimal.ZERO;
+        for (ManifestItem item : manifestItemDao.findByManifestId(manifestId)) {
+            boxes += item.getNumberOfBoxes();
+            if (item.getWeightKg() != null) {
+                weight = weight.add(item.getWeightKg());
+            }
+        }
+        manifestDao.updateTotals(manifestId, boxes, weight);
     }
 
     private String resolveManifestNumber(String requested) {
@@ -270,6 +454,7 @@ public class ManifestService {
             }
             boolean any = StringUtils.hasText(item.getConsignmentNo())
                     || StringUtils.hasText(item.getDestinationCity())
+                    || item.getDestinationBranchId() != null
                     || StringUtils.hasText(item.getReceiverName())
                     || item.getWeightKg() != null
                     || item.getNumberOfBoxes() != null;
@@ -307,12 +492,12 @@ public class ManifestService {
         }
     }
 
-    private ManifestItem toItem(ManifestItemForm line, Long manifestId, int serial) {
+    private ManifestItem toItem(ManifestItemForm line, Long manifestId, int serial, Manifest manifest) {
         ManifestItem item = new ManifestItem();
         item.setManifestId(manifestId);
         item.setSerialNo(serial);
         item.setConsignmentNo(normalizeConsignment(line.getConsignmentNo()));
-        item.setDestinationCity(required(line.getDestinationCity(), "Destination"));
+        item.setDestinationCity(resolveDestination(line, manifest));
         item.setNumberOfBoxes(positiveBoxes(line.getNumberOfBoxes()));
         item.setWeightKg(positiveWeight(line.getWeightKg()));
         item.setReceiverName(required(line.getReceiverName(), "Receiver / details"));
@@ -369,7 +554,10 @@ public class ManifestService {
         if (StringUtils.hasText(manifest.getOriginCity())) {
             return manifest.getOriginCity();
         }
-        return party.getCity();
+        if (party != null && StringUtils.hasText(party.getCity())) {
+            return party.getCity();
+        }
+        return manifest.getDestinationBranchCity() != null ? manifest.getDestinationBranchCity() : "Origin";
     }
 
     private String normalizeConsignment(String consignmentNo) {

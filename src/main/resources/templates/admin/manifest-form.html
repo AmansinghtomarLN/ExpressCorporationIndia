@@ -50,6 +50,15 @@
                     <input type="text" th:field="*{throughName}" placeholder="e.g. KALU">
                 </div>
                 <div class="form-group">
+                    <label>Destination branch *</label>
+                    <select th:field="*{destinationBranchId}" required>
+                        <option value="">— Select branch —</option>
+                        <option th:each="b : ${branches}"
+                                th:value="${b.id}"
+                                th:text="${b.city + ' — ' + b.branchName}">Branch</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label>Origin city</label>
                     <input type="text" th:field="*{originCity}" placeholder="Defaults to party city">
                 </div>
@@ -124,7 +133,7 @@
                 <tr>
                     <th>#</th>
                     <th>C.No *</th>
-                    <th>Destination *</th>
+                    <th>Destination branch *</th>
                     <th>Boxes *</th>
                     <th>Weight *</th>
                     <th>Receiver / phone *</th>
@@ -139,7 +148,14 @@
                                th:readonly="${item.id != null}"
                                placeholder="37191" inputmode="numeric">
                     </td>
-                    <td><input type="text" th:field="*{items[__${iter.index}__].destinationCity}" placeholder="MORENA"></td>
+                    <td>
+                        <select class="dest-branch" th:field="*{items[__${iter.index}__].destinationBranchId}">
+                            <option value="">— Branch —</option>
+                            <option th:each="b : ${branches}"
+                                    th:value="${b.id}"
+                                    th:text="${b.city}">City</option>
+                        </select>
+                    </td>
                     <td><input type="number" min="1" class="boxes-input" th:field="*{items[__${iter.index}__].numberOfBoxes}" placeholder="3"></td>
                     <td><input type="number" min="0.01" step="0.01" class="weight-input" th:field="*{items[__${iter.index}__].weightKg}" placeholder="40"></td>
                     <td class="cell-stack">
@@ -151,10 +167,10 @@
             </table>
             <p class="muted" style="margin-top:8px;">Empty rows are ignored. Add rows if you need more than the starter list.</p>
             <div class="admin-filter-buttons" style="margin-top:18px;">
-                <button type="submit" class="btn btn-primary"
-                        th:text="${editing} ? 'Save manifest changes' : 'Save manifest &amp; create shipments'">
-                    Save manifest
-                </button>
+                    <button type="submit" class="btn btn-dark"
+                            th:text="${editing} ? 'Save in-progress changes' : 'Save as in progress'">
+                        Save in progress
+                    </button>
                 <a class="btn btn-dark" th:href="@{/admin/manifests}">Cancel</a>
             </div>
         </form>

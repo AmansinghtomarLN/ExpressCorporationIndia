@@ -6,6 +6,7 @@ public class ManifestItemForm {
 
     private Long id;
     private String consignmentNo;
+    private Long destinationBranchId;
     private String destinationCity;
     private Integer numberOfBoxes;
     private BigDecimal weightKg;
@@ -26,6 +27,14 @@ public class ManifestItemForm {
 
     public void setConsignmentNo(String consignmentNo) {
         this.consignmentNo = consignmentNo;
+    }
+
+    public Long getDestinationBranchId() {
+        return destinationBranchId;
+    }
+
+    public void setDestinationBranchId(Long destinationBranchId) {
+        this.destinationBranchId = destinationBranchId;
     }
 
     public String getDestinationCity() {

@@ -8,6 +8,9 @@ import java.util.List;
 
 public class Manifest {
 
+    public static final String STATUS_IN_PROGRESS = "IN_PROGRESS";
+    public static final String STATUS_CREATED = "CREATED";
+
     private Long id;
     private String manifestNumber;
     private Long partyId;
@@ -16,6 +19,8 @@ public class Manifest {
     private String originCity;
     private String serviceType;
     private String billingLane = "AUTO";
+    private String status = STATUS_CREATED;
+    private Long destinationBranchId;
     private String remarks;
     private int totalBoxes;
     private BigDecimal totalWeight = BigDecimal.ZERO;
@@ -30,6 +35,8 @@ public class Manifest {
 
     private List<ManifestItem> items = new ArrayList<>();
     private BigDecimal totalFreight = BigDecimal.ZERO;
+    private String destinationBranchName;
+    private String destinationBranchCity;
 
     public Long getId() {
         return id;
@@ -93,6 +100,50 @@ public class Manifest {
 
     public void setBillingLane(String billingLane) {
         this.billingLane = billingLane;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public boolean isInProgress() {
+        return STATUS_IN_PROGRESS.equalsIgnoreCase(status);
+    }
+
+    public boolean isSubmitted() {
+        return STATUS_CREATED.equalsIgnoreCase(status);
+    }
+
+    public String getStatusLabel() {
+        return isInProgress() ? "In progress" : "Submitted";
+    }
+
+    public Long getDestinationBranchId() {
+        return destinationBranchId;
+    }
+
+    public void setDestinationBranchId(Long destinationBranchId) {
+        this.destinationBranchId = destinationBranchId;
+    }
+
+    public String getDestinationBranchName() {
+        return destinationBranchName;
+    }
+
+    public void setDestinationBranchName(String destinationBranchName) {
+        this.destinationBranchName = destinationBranchName;
+    }
+
+    public String getDestinationBranchCity() {
+        return destinationBranchCity;
+    }
+
+    public void setDestinationBranchCity(String destinationBranchCity) {
+        this.destinationBranchCity = destinationBranchCity;
     }
 
     public String getRemarks() {

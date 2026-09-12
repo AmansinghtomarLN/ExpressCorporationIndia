@@ -17,11 +17,27 @@
             <div>
                 <span class="eyebrow">Manifest</span>
                 <h1 th:text="'MF No ' + ${manifest.manifestNumber}">MF No 11820</h1>
-                <p th:text="${#temporals.format(manifest.manifestDate, 'dd MMM yyyy')} + ' · M/S ' + ${manifest.partyName}">Date · Party</p>
+                <p>
+                    <span class="status-badge"
+                          th:classappend="${manifest.inProgress} ? ' status-IN_PROGRESS' : ' status-CREATED'"
+                          th:text="${manifest.statusLabel}">In progress</span>
+                    <span th:text="${#temporals.format(manifest.manifestDate, 'dd MMM yyyy')}">Date</span>
+                    <span th:if="${manifest.destinationBranchName}" th:text="' · ' + ${manifest.destinationBranchName}"> · Branch</span>
+                    <span th:if="${manifest.partyName}" th:text="' · M/S ' + ${manifest.partyName}"> · Party</span>
+                </p>
             </div>
             <div class="admin-filter-buttons">
-                <a class="btn btn-primary" th:href="@{/admin/manifests/{id}/print(id=${manifest.id})}">Print</a>
-                <a class="btn btn-dark" th:href="@{/admin/manifests/{id}/edit(id=${manifest.id})}">Edit</a>
+                <a class="btn btn-dark" th:if="${manifest.inProgress}"
+                   th:href="@{/admin/shipments/new(branchId=${manifest.destinationBranchId}, manifestId=${manifest.id})}">Add shipment</a>
+                <a class="btn btn-dark" th:if="${manifest.inProgress}"
+                   th:href="@{/admin/manifests/{id}/edit(id=${manifest.id})}">Update consignments</a>
+                <form th:if="${manifest.inProgress}" th:action="@{/admin/manifests/{id}/finalize(id=${manifest.id})}" method="post"
+                      onsubmit="return confirm('Submit this manifest? Shipments will be dispatched and invoiced.');">
+                    <button type="submit" class="btn btn-primary">Submit manifest</button>
+                </form>
+                <a class="btn btn-dark" th:href="@{/admin/manifests/{id}/print(id=${manifest.id})}">Print</a>
+                <a class="btn btn-dark" th:unless="${manifest.inProgress}"
+                   th:href="@{/admin/manifests/{id}/edit(id=${manifest.id})}">Edit</a>
             </div>
         </div>
 
@@ -39,6 +55,7 @@
             <div>
                 <h4>Dispatch</h4>
                 <p th:text="'Through: ' + ${manifest.throughName != null ? manifest.throughName : '—'}">Through</p>
+                <p th:text="'Destination: ' + (${manifest.destinationBranchName != null ? manifest.destinationBranchName : '—'})">Destination</p>
                 <p th:text="'Origin: ' + ${manifest.originCity != null ? manifest.originCity : '—'}">Origin</p>
                 <p th:text="'Service: ' + ${#strings.replace(manifest.serviceType,'_',' ')}">Service</p>
                 <p th:text="'Billing: ' + (${manifest.billingLane == 'NATIONAL'} ? 'National (CG)' : (${manifest.billingLane == 'DOMESTIC'} ? 'Domestic (MP)' : 'Auto by destination'))">Billing</p>
@@ -105,14 +122,20 @@
                     </td>
                     <td>
                         <a class="btn btn-sm btn-dark" th:if="${item.shipmentId != null}"
-                           th:href="@{/admin/shipments/{id}(id=${item.shipmentId})}">Shipment</a>
+                           th:href="@{/admin/shipments/{id}(id=${item.shipmentId})}"
+                           th:text="${manifest.inProgress} ? 'Update' : 'Shipment'">Update</a>
                     </td>
                 </tr>
                 </tbody>
             </table>
         </div>
 
-        <p class="muted" style="margin-top:16px;">Each C.No has exactly one invoice. Freight is destination-branch per kg + per box. Service type is not charged.</p>
+        <p class="muted" style="margin-top:16px;" th:if="${manifest.inProgress}">
+            Review this in-progress sheet. Add or update shipments, then click <strong>Submit manifest</strong>.
+        </p>
+        <p class="muted" style="margin-top:16px;" th:unless="${manifest.inProgress}">
+            Submitted. Each C.No has one invoice from destination-branch per kg + per box.
+        </p>
     </div>
 </section>
 

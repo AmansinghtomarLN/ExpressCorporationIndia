@@ -17,6 +17,7 @@ public class ManifestForm {
     private String originCity;
     private String serviceType = "DOMESTIC_STANDARD";
     private String billingLane = "AUTO";
+    private Long destinationBranchId;
     private String remarks;
     private List<ManifestItemForm> items = new ArrayList<>();
 
@@ -99,6 +100,14 @@ public class ManifestForm {
 
     public void setBillingLane(String billingLane) {
         this.billingLane = billingLane;
+    }
+
+    public Long getDestinationBranchId() {
+        return destinationBranchId;
+    }
+
+    public void setDestinationBranchId(Long destinationBranchId) {
+        this.destinationBranchId = destinationBranchId;
     }
 
     public String getRemarks() {

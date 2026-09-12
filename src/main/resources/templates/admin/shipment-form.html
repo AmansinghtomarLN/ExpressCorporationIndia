@@ -12,15 +12,19 @@
 
 <section class="section">
     <div class="container">
-        <p><a th:href="@{/admin/shipments}" class="muted">&larr; Back to shipments</a></p>
+        <p>
+            <a th:if="${manifestId != null}" th:href="@{/admin/manifests/{id}(id=${manifestId})}" class="muted">&larr; Back to manifest</a>
+            <a th:unless="${manifestId != null}" th:href="@{/admin/shipments}" class="muted">&larr; Back to shipments</a>
+        </p>
         <span class="eyebrow">Admin Console</span>
-        <h1>New Shipment</h1>
-        <p>Create an admin booking for Express Corporation of India.</p>
+        <h1>Book shipment</h1>
+        <p>Book one consignment to a destination branch. It is added to that branch’s in-progress manifest for review, then you submit the MF.</p>
 
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
         <div class="form-card wide" style="margin:24px 0 0;">
             <form th:object="${form}" method="post" th:action="@{/admin/shipments}">
+                <input type="hidden" name="manifestId" th:if="${manifestId != null}" th:value="${manifestId}">
 
                 <h4>Sender Details</h4>
                 <div class="form-row">
@@ -60,6 +64,24 @@
                     <div class="error-text" th:if="${#fields.hasErrors('receiverAddress')}" th:errors="*{receiverAddress}"></div>
                 </div>
 
+                <h4 style="margin-top:20px;">Party &amp; C.No</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="partyId">Sending party *</label>
+                        <select id="partyId" th:field="*{partyId}" required>
+                            <option value="">— Select party —</option>
+                            <option th:each="p : ${parties}"
+                                    th:value="${p.id}"
+                                    th:text="${p.partyName + ' — ' + p.city}">Party</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="consignmentNo">C.No</label>
+                        <input type="text" id="consignmentNo" th:field="*{consignmentNo}"
+                               placeholder="Leave blank to use next unused" inputmode="numeric">
+                    </div>
+                </div>
+
                 <h4 style="margin-top:20px;">Shipment Details</h4>
                 <div class="form-row">
                     <div class="form-group">
@@ -68,12 +90,24 @@
                         <div class="error-text" th:if="${#fields.hasErrors('originCity')}" th:errors="*{originCity}"></div>
                     </div>
                     <div class="form-group">
-                        <label for="destinationCity">Destination City</label>
-                        <input type="text" id="destinationCity" th:field="*{destinationCity}" required>
-                        <div class="error-text" th:if="${#fields.hasErrors('destinationCity')}" th:errors="*{destinationCity}"></div>
+                        <label for="destinationBranchId">Destination branch *</label>
+                        <input type="hidden" th:if="${lockDestination}" th:field="*{destinationBranchId}">
+                        <select id="destinationBranchId" th:unless="${lockDestination}"
+                                th:field="*{destinationBranchId}" required>
+                            <option value="">— Select branch —</option>
+                            <option th:each="b : ${branches}"
+                                    th:value="${b.id}"
+                                    th:text="${b.city + ' — ' + b.branchName}">Branch</option>
+                        </select>
+                        <p class="muted" th:if="${lockDestination}">Locked to this manifest’s destination branch.</p>
+                        <div class="error-text" th:if="${#fields.hasErrors('destinationBranchId')}" th:errors="*{destinationBranchId}"></div>
                     </div>
                 </div>
                 <div class="form-row">
+                    <div class="form-group">
+                        <label for="numberOfBoxes">Boxes *</label>
+                        <input type="number" min="1" id="numberOfBoxes" th:field="*{numberOfBoxes}" required>
+                    </div>
                     <div class="form-group">
                         <label for="weightKg">Weight (kg)</label>
                         <input type="number" step="0.1" min="0.1" id="weightKg" th:field="*{weightKg}" required>
@@ -102,34 +136,25 @@
                     </div>
                 </div>
 
-                <h4 style="margin-top:20px;">Assignment</h4>
+                <h4 style="margin-top:20px;">Assignment (optional)</h4>
                 <div class="form-row">
-                    <div class="form-group">
-                        <label for="assignedBranchId">Branch</label>
-                        <select id="assignedBranchId" th:field="*{assignedBranchId}">
-                            <option value="">— Select branch —</option>
-                            <option th:each="b : ${branches}"
-                                    th:value="${b.id}"
-                                    th:text="${b.branchName + ' (' + b.city + ')'}">Branch</option>
-                        </select>
-                    </div>
                     <div class="form-group">
                         <label for="assignedHub">Hub</label>
                         <input type="text" id="assignedHub" th:field="*{assignedHub}" placeholder="e.g. Ahmedabad Hub">
                     </div>
-                </div>
-                <div class="form-row">
                     <div class="form-group">
                         <label for="courierName">Courier Name</label>
                         <input type="text" id="courierName" th:field="*{courierName}">
                     </div>
+                </div>
+                <div class="form-row">
                     <div class="form-group">
                         <label for="courierPhone">Courier Phone</label>
                         <input type="text" id="courierPhone" th:field="*{courierPhone}">
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-block">Create Shipment</button>
+                <button type="submit" class="btn btn-primary btn-block">Book shipment</button>
             </form>
         </div>
     </div>

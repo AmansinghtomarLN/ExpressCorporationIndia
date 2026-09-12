@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,17 +13,85 @@
     <div class="container">
         <div class="form-card wide">
             <span class="eyebrow">Booking</span>
-            <h2>Shipments start from a manifest</h2>
-            <p>Every courier must belong to a party manifest (MF No + C.No). Standalone booking is turned off so no shipment is created without a manifest number.</p>
+            <h2>Book a shipment</h2>
+            <p>Choose the destination branch. The booking is added to that branch’s in-progress manifest until the desk creates the MF.</p>
             <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
-            <div class="alert alert-info">
-                Ask your booking desk / admin to add the consignment on a manifest. Then track it here with the C.No.
-            </div>
-            <div class="admin-filter-buttons">
-                <a class="btn btn-primary" href="/track">Track a consignment</a>
-                <a class="btn btn-dark" href="/admin/manifests/new"
-                   sec:authorize="hasAnyRole('ADMIN','STAFF')">Create a manifest</a>
-            </div>
+
+            <form th:object="${form}" method="post" th:action="@{/book}">
+                <h4>Sender</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" th:field="*{senderName}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="text" th:field="*{senderPhone}" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Address</label>
+                    <textarea rows="2" th:field="*{senderAddress}" required></textarea>
+                </div>
+
+                <h4>Receiver</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" th:field="*{receiverName}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="text" th:field="*{receiverPhone}" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Address</label>
+                    <textarea rows="2" th:field="*{receiverAddress}" required></textarea>
+                </div>
+
+                <h4>Route</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Origin city</label>
+                        <input type="text" th:field="*{originCity}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Destination branch</label>
+                        <select th:field="*{destinationBranchId}" required>
+                            <option value="">— Select branch —</option>
+                            <option th:each="b : ${branches}"
+                                    th:value="${b.id}"
+                                    th:text="${b.city + ' — ' + b.branchName}">Branch</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Boxes</label>
+                        <input type="number" min="1" th:field="*{numberOfBoxes}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Weight (kg)</label>
+                        <input type="number" step="0.1" min="0.1" th:field="*{weightKg}" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Service</label>
+                        <select th:field="*{serviceType}" required>
+                            <option value="DOMESTIC_STANDARD">Domestic Standard</option>
+                            <option value="DOMESTIC_EXPRESS">Domestic Express</option>
+                            <option value="INTERNATIONAL">International</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>COD (Rs.)</label>
+                        <input type="number" step="0.01" min="0" th:field="*{codAmount}">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Book shipment</button>
+            </form>
         </div>
     </div>
 </section>

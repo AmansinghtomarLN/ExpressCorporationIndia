@@ -5,6 +5,7 @@ import com.mahavircourier.dto.ManifestItemForm;
 import com.mahavircourier.model.Manifest;
 import com.mahavircourier.model.ManifestItem;
 import com.mahavircourier.service.AuditService;
+import com.mahavircourier.service.BranchService;
 import com.mahavircourier.service.CustomUserDetails;
 import com.mahavircourier.service.ManifestService;
 import com.mahavircourier.service.PartyService;
@@ -27,30 +28,46 @@ public class AdminManifestController {
 
     private final ManifestService manifestService;
     private final PartyService partyService;
+    private final BranchService branchService;
     private final AuditService auditService;
 
     public AdminManifestController(ManifestService manifestService,
                                    PartyService partyService,
+                                   BranchService branchService,
                                    AuditService auditService) {
         this.manifestService = manifestService;
         this.partyService = partyService;
+        this.branchService = branchService;
         this.auditService = auditService;
     }
 
     @GetMapping
     public String list(@RequestParam(value = "q", required = false) String q,
                        @RequestParam(value = "partyId", required = false) Long partyId,
+                       @RequestParam(value = "branchId", required = false) Long branchId,
+                       @RequestParam(value = "status", required = false) String status,
                        @RequestParam(value = "from", required = false)
                        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
                        @RequestParam(value = "to", required = false)
                        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
                        Model model) {
-        model.addAttribute("manifests", manifestService.search(q, partyId, from, to));
+        String statusFilter = status == null || status.isBlank() ? "ALL" : status.trim();
+        if ("ALL".equalsIgnoreCase(statusFilter)) {
+            statusFilter = null;
+        } else if ("SUBMITTED".equalsIgnoreCase(statusFilter)) {
+            statusFilter = Manifest.STATUS_CREATED;
+        }
+        model.addAttribute("manifests", manifestService.search(q, partyId, from, to, statusFilter, branchId));
         model.addAttribute("parties", partyService.findEnabled());
+        model.addAttribute("branches", branchService.findAll());
         model.addAttribute("q", q == null ? "" : q);
         model.addAttribute("partyId", partyId);
+        model.addAttribute("branchId", branchId);
+        model.addAttribute("status", status == null || status.isBlank() ? "ALL" : status);
         model.addAttribute("from", from);
         model.addAttribute("to", to);
+        model.addAttribute("inProgressCount", manifestService.countInProgress());
+        model.addAttribute("createdCount", manifestService.countCreated());
         return "admin/manifests";
     }
 
@@ -60,7 +77,7 @@ public class AdminManifestController {
         form.setPartyId(partyId);
         form.setManifestNumber(manifestService.suggestNextNumber());
         model.addAttribute("form", form);
-        model.addAttribute("parties", partyService.findEnabled());
+        populateManifestLookups(model);
         return "admin/manifest-form";
     }
 
@@ -75,13 +92,13 @@ public class AdminManifestController {
                     "MANIFEST_CREATE", "MANIFEST", String.valueOf(created.getId()),
                     "MF " + created.getManifestNumber() + " — " + created.getItems().size() + " consignments dispatched");
             redirectAttributes.addFlashAttribute("successMessage",
-                    "Manifest " + created.getManifestNumber() + " saved. "
-                            + created.getItems().size() + " shipment(s) created as DISPATCHED.");
+                    "In-progress manifest " + created.getManifestNumber() + " saved. "
+                            + created.getItems().size() + " consignment(s) ready to create.");
             return "redirect:/admin/manifests/" + created.getId();
         } catch (IllegalArgumentException ex) {
             form.ensureMinRows(BLANK_ROWS);
             model.addAttribute("form", form);
-            model.addAttribute("parties", partyService.findEnabled());
+            populateManifestLookups(model);
             model.addAttribute("errorMessage", ex.getMessage());
             return "admin/manifest-form";
         }
@@ -112,7 +129,7 @@ public class AdminManifestController {
         return manifestService.findById(id)
                 .map(manifest -> {
                     model.addAttribute("form", toForm(manifest));
-                    model.addAttribute("parties", partyService.findEnabled());
+                    populateManifestLookups(model);
                     model.addAttribute("editing", true);
                     return "admin/manifest-form";
                 })
@@ -136,10 +153,28 @@ public class AdminManifestController {
             form.setId(id);
             form.ensureMinRows(BLANK_ROWS);
             model.addAttribute("form", form);
-            model.addAttribute("parties", partyService.findEnabled());
+            populateManifestLookups(model);
             model.addAttribute("editing", true);
             model.addAttribute("errorMessage", ex.getMessage());
             return "admin/manifest-form";
+        }
+    }
+
+    @PostMapping("/{id}/finalize")
+    public String finalize(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        CustomUserDetails principal = AdminAuth.requirePrincipal();
+        try {
+            Manifest created = manifestService.finalize(id);
+            auditService.log(principal.getUser().getId(), principal.getUsername(),
+                    "MANIFEST_CREATE", "MANIFEST", String.valueOf(id),
+                    "Submitted MF " + created.getManifestNumber());
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Manifest " + created.getManifestNumber() + " submitted. "
+                            + created.getItems().size() + " shipment(s) dispatched and invoiced.");
+            return "redirect:/admin/manifests/" + id;
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+            return "redirect:/admin/manifests/" + id;
         }
     }
 
@@ -194,12 +229,18 @@ public class AdminManifestController {
         form.setOriginCity(manifest.getOriginCity());
         form.setServiceType(manifest.getServiceType());
         form.setBillingLane(manifest.getBillingLane());
+        form.setDestinationBranchId(manifest.getDestinationBranchId());
         form.setRemarks(manifest.getRemarks());
         for (ManifestItem item : manifest.getItems()) {
             ManifestItemForm line = new ManifestItemForm();
             line.setId(item.getId());
             line.setConsignmentNo(item.getConsignmentNo());
             line.setDestinationCity(item.getDestinationCity());
+            branchService.findAll().stream()
+                    .filter(b -> item.getDestinationCity() != null
+                            && item.getDestinationCity().equalsIgnoreCase(b.getCity()))
+                    .findFirst()
+                    .ifPresent(b -> line.setDestinationBranchId(b.getId()));
             line.setNumberOfBoxes(item.getNumberOfBoxes());
             line.setWeightKg(item.getWeightKg());
             line.setReceiverName(item.getReceiverName());
@@ -208,5 +249,10 @@ public class AdminManifestController {
         }
         form.ensureMinRows(Math.max(BLANK_ROWS, form.getItems().size() + 3));
         return form;
+    }
+
+    private void populateManifestLookups(Model model) {
+        model.addAttribute("parties", partyService.findEnabled());
+        model.addAttribute("branches", branchService.findAll());
     }
 }

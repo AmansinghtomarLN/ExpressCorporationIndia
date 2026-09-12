@@ -392,3 +392,30 @@ SET @sql := (
   WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'invoices' AND COLUMN_NAME = 'per_box_rate'
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE manifests ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT ''CREATED''',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'manifests' AND COLUMN_NAME = 'status'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE manifests ADD COLUMN destination_branch_id BIGINT NULL',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'manifests' AND COLUMN_NAME = 'destination_branch_id'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(
+    (SELECT IS_NULLABLE FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'manifests' AND COLUMN_NAME = 'party_id') = 'NO',
+    'ALTER TABLE manifests MODIFY party_id BIGINT NULL',
+    'SELECT 1')
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;

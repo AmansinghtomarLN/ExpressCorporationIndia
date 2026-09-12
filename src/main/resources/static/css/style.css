@@ -218,6 +218,37 @@ p { margin: 0 0 12px; color: var(--gray-700); }
 .status-OUT_FOR_DELIVERY { background: #fd7e14; }
 .status-DELIVERED { background: #198754; }
 .status-CANCELLED, .status-RTO { background: var(--primary); }
+.status-IN_PROGRESS { background: #0d6efd; }
+.status-CREATED { background: #198754; }
+
+.ops-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 8px 0 18px;
+}
+.ops-tabs a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: var(--gray-100);
+    color: var(--gray-700);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+.ops-tabs a.active {
+    background: var(--primary);
+    color: var(--white);
+}
+.ops-tabs a span {
+    background: rgba(0,0,0,0.08);
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-size: 0.78rem;
+}
+.ops-tabs a.active span { background: rgba(255,255,255,0.2); }
 
 .timeline { position: relative; margin: 24px 0 0; padding-left: 28px; }
 .timeline::before {

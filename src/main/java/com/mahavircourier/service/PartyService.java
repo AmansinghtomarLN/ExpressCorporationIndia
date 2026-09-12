@@ -165,6 +165,14 @@ public class PartyService {
         return pool;
     }
 
+    public String nextUnusedConsignment(Long partyId) {
+        String next = buildPool(partyId).getNextNumber();
+        if (!StringUtils.hasText(next)) {
+            throw new IllegalArgumentException("No unused C.No left for this party. Allocate a new range first.");
+        }
+        return next;
+    }
+
     public boolean ownsConsignment(Long partyId, String consignmentNo) {
         Long number = parseConsignment(consignmentNo);
         return number != null && consignmentRangeDao.covers(partyId, number);

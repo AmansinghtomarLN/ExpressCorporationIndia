@@ -10,26 +10,55 @@
 <div th:replace="~{fragments/header :: header}"></div>
 <div th:replace="~{fragments/admin-nav :: adminNav}"></div>
 
-<section class="section">
-    <div class="container">
+<section class="section ops-page">
+    <div class="container full-page">
         <span class="eyebrow">Admin Console</span>
         <div class="admin-toolbar" style="align-items:flex-start;">
             <div>
                 <h1>Manifests</h1>
-                <p>Source of every shipment. Totals for boxes and weight are stored with the MF No for billing.</p>
+                <p>Book a shipment → it opens or joins that branch’s <strong>in-progress</strong> manifest. Review, add or update consignments, then <strong>submit</strong>. Filter by branch or date.</p>
             </div>
-            <a class="btn btn-primary" th:href="@{/admin/manifests/new}">New Manifest</a>
+            <div class="admin-filter-buttons">
+                <a class="btn btn-dark" th:href="@{/admin/shipments/new}">Book shipment</a>
+                <a class="btn btn-primary" th:href="@{/admin/manifests/new}">New Manifest</a>
+            </div>
         </div>
 
         <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
+        <div class="ops-tabs">
+            <a th:href="@{/admin/manifests(status='IN_PROGRESS', q=${q}, partyId=${partyId}, branchId=${branchId}, from=${from}, to=${to})}"
+               th:classappend="${status == 'IN_PROGRESS'} ? ' active'">
+                In progress <span th:text="${inProgressCount}">0</span>
+            </a>
+            <a th:href="@{/admin/manifests(status='SUBMITTED', q=${q}, partyId=${partyId}, branchId=${branchId}, from=${from}, to=${to})}"
+               th:classappend="${status == 'SUBMITTED' or status == 'CREATED'} ? ' active'">
+                Submitted <span th:text="${createdCount}">0</span>
+            </a>
+            <a th:href="@{/admin/manifests(status='ALL', q=${q}, partyId=${partyId}, branchId=${branchId}, from=${from}, to=${to})}"
+               th:classappend="${status == 'ALL'} ? ' active'">
+                All
+            </a>
+        </div>
+
         <form class="admin-filters" method="get" th:action="@{/admin/manifests}">
-            <div class="admin-filters-row" style="grid-template-columns: 1.6fr 1fr 0.9fr 0.9fr auto;">
+            <input type="hidden" name="status" th:value="${status}">
+            <div class="admin-filters-row" style="grid-template-columns: 1.4fr 1fr 1fr 0.8fr 0.8fr auto;">
                 <div class="form-group">
                     <label for="q">Search</label>
                     <input type="text" id="q" name="q" th:value="${q}"
-                           placeholder="MF No, party, through, or C.No">
+                           placeholder="MF No, branch, party, or C.No">
+                </div>
+                <div class="form-group">
+                    <label for="branchId">Destination branch</label>
+                    <select id="branchId" name="branchId">
+                        <option value="">All branches</option>
+                        <option th:each="b : ${branches}"
+                                th:value="${b.id}"
+                                th:selected="${branchId != null and branchId == b.id}"
+                                th:text="${b.city + ' — ' + b.branchName}">Branch</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="partyId">Party</label>
@@ -51,46 +80,50 @@
                 </div>
                 <div class="admin-filter-buttons">
                     <button type="submit" class="btn btn-primary">Search</button>
-                    <a class="btn btn-dark" th:href="@{/admin/manifests}">Clear</a>
+                    <a class="btn btn-dark" th:href="@{/admin/manifests(status=${status})}">Clear</a>
                 </div>
             </div>
         </form>
 
-        <div style="overflow-x:auto;">
-            <table class="data-table">
-                <thead>
-                <tr>
-                    <th>MF No</th>
-                    <th>Date</th>
-                    <th>M/S (Party)</th>
-                    <th>Through</th>
-                    <th>Origin</th>
-                    <th>Boxes</th>
-                    <th>Weight</th>
-                    <th></th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="m : ${manifests}">
-                    <td><strong th:text="${m.manifestNumber}">11820</strong></td>
-                    <td th:text="${#temporals.format(m.manifestDate, 'dd/MM/yy')}">19/08/26</td>
-                    <td th:text="${m.partyName}">GWALIOR</td>
-                    <td th:text="${m.throughName != null ? m.throughName : '—'}">KALU</td>
-                    <td th:text="${m.originCity != null ? m.originCity : '—'}">Indore</td>
-                    <td th:text="${m.totalBoxes}">55</td>
-                    <td th:text="${m.totalWeight}">325</td>
-                    <td>
-                        <div class="admin-filter-buttons">
-                            <a class="btn btn-sm btn-dark" th:href="@{/admin/manifests/{id}(id=${m.id})}">Open</a>
-                            <a class="btn btn-sm btn-dark" th:href="@{/admin/manifests/{id}/print(id=${m.id})}">Print</a>
-                        </div>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th>MF No</th>
+                <th>Status</th>
+                <th>Destination</th>
+                <th>Date</th>
+                <th>Party</th>
+                <th>Boxes</th>
+                <th>Weight</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="m : ${manifests}">
+                <td><strong th:text="${m.manifestNumber}">11820</strong></td>
+                <td>
+                    <span class="status-badge"
+                          th:classappend="${m.inProgress} ? ' status-IN_PROGRESS' : ' status-CREATED'"
+                          th:text="${m.statusLabel}">In progress</span>
+                </td>
+                <td th:text="${m.destinationBranchName != null ? m.destinationBranchName : (m.destinationBranchCity != null ? m.destinationBranchCity : '—')}">Gwalior</td>
+                <td th:text="${#temporals.format(m.manifestDate, 'dd/MM/yy')}">19/08/26</td>
+                <td th:text="${m.partyName != null ? m.partyName : '—'}">GWALIOR</td>
+                <td th:text="${m.totalBoxes}">55</td>
+                <td th:text="${m.totalWeight}">325</td>
+                <td>
+                    <div class="admin-filter-buttons">
+                        <a class="btn btn-sm btn-dark" th:href="@{/admin/manifests/{id}(id=${m.id})}">Open</a>
+                        <a class="btn btn-sm btn-dark" th:href="@{/admin/manifests/{id}/print(id=${m.id})}">Print</a>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
         <div th:if="${manifests == null or #lists.isEmpty(manifests)}" class="alert alert-info" style="margin-top:16px;">
-            No manifests found.
+            <span th:if="${status == 'IN_PROGRESS'}">No in-progress manifests. Book a shipment to a branch to open one.</span>
+            <span th:if="${status == 'SUBMITTED' or status == 'CREATED'}">No submitted manifests yet.</span>
+            <span th:if="${status == 'ALL'}">No manifests found.</span>
         </div>
     </div>
 </section>

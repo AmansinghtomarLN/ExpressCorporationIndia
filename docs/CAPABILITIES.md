@@ -52,7 +52,7 @@ Web app for courier **booking**, **public tracking**, **customer account**, and 
 
 ### Customer (logged in)
 - My Account dashboard — list own shipments
-- Book a shipment (gets tracking ID immediately)
+- Book a shipment to a **destination branch** (added to that branch’s in-progress manifest)
 - Track any public tracking ID
 - Logout (CSRF-safe)
 
@@ -99,15 +99,19 @@ Dashboard · Manifests · Parties · C.No Ranges · Shipments · Reports · Moni
 - Party C.No picker shows unused numbers (click to fill) and booked numbers (cannot reuse)
 - Live totals for lines, boxes, and weight; stored on the saved manifest
 - Add 10 / 25 / 50 extra rows (100+ consignments supported)
-- Line items fit the page width (no sideways scroll): C.No, destination, boxes, weight, receiver + optional phone
+- Line items fit the page width (no sideways scroll): C.No, destination **branch**, boxes, weight, receiver + optional phone
+- Destination is chosen from the branch list (not free text)
+- **Individual shipments can be booked** to a destination branch
+- Booking auto-opens or updates that branch’s **In progress** manifest
+- Review an in-progress sheet: add shipment, update consignments, then **Submit**
+- In progress / Submitted / All tabs; filter by destination branch and date
+- **Submit** finalizes the sheet: shipments go `DISPATCHED` and invoices are generated
 - C.No must be numeric, inside the party’s allocated range, and unused
-- **Saving a manifest automatically creates one shipment per C.No** with status `DISPATCHED`
-- Standalone admin/customer booking is blocked — every new shipment must come from a manifest
 - Public + admin tracking show **MF No**
 - One consignment belongs to exactly one manifest
-- Edit header / existing lines (syncs shipment details); add more C.Nos (creates more shipments)
+- Edit header / existing lines (syncs shipment details); add more C.Nos
 - Print sheet matching the physical manifest (totals for boxes + weight)
-- Billing snapshot: total boxes, total weight, estimated freight (each C.No gets one invoice from the destination branch rates)
+- Billing snapshot after create: total boxes, total weight, freight (one invoice per C.No)
 
 ### 4.2 Shipments (`/admin/shipments`)
 **List**
@@ -117,10 +121,11 @@ Dashboard · Manifests · Parties · C.No Ranges · Shipments · Reports · Moni
 - Columns include status, expected delivery, freight, COD
 
 **Create**
-- Admin can create a shipment (`/admin/shipments/new`)
-- Can set branch/hub/courier/COD at create time
+- Admin can book an individual shipment (`/admin/shipments/new`)
+- Required: sending party, destination **branch**, boxes, weight, receiver
+- C.No is next unused for the party unless entered
+- Booking is added to the branch’s in-progress manifest (invoice waits until the MF is created)
 - Freight calculated from destination-branch per kg + per box
-- Invoice auto-created (one per C.No)
 
 **Detail / manage (`/admin/shipments/{id}`)**
 - View full party details, route, service, expected delivery, freight, COD

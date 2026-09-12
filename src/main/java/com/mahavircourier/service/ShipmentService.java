@@ -6,6 +6,8 @@ import com.mahavircourier.dto.AdminShipmentForm;
 import com.mahavircourier.dto.BookingForm;
 import com.mahavircourier.dto.DashboardStats;
 import com.mahavircourier.dto.PageResult;
+import com.mahavircourier.model.Branch;
+import com.mahavircourier.model.Party;
 import com.mahavircourier.model.Shipment;
 import com.mahavircourier.model.TrackingEvent;
 import org.springframework.stereotype.Service;
@@ -30,19 +32,25 @@ public class ShipmentService {
     private final InvoiceService invoiceService;
     private final NotificationService notificationService;
     private final ContactService contactService;
+    private final BranchService branchService;
+    private final PartyService partyService;
 
     public ShipmentService(ShipmentDao shipmentDao,
                            TrackingEventDao trackingEventDao,
                            RateCardService rateCardService,
                            InvoiceService invoiceService,
                            NotificationService notificationService,
-                           ContactService contactService) {
+                           ContactService contactService,
+                           BranchService branchService,
+                           PartyService partyService) {
         this.shipmentDao = shipmentDao;
         this.trackingEventDao = trackingEventDao;
         this.rateCardService = rateCardService;
         this.invoiceService = invoiceService;
         this.notificationService = notificationService;
         this.contactService = contactService;
+        this.branchService = branchService;
+        this.partyService = partyService;
     }
 
     /**
@@ -52,28 +60,80 @@ public class ShipmentService {
      */
     @Transactional
     public Shipment bookShipment(BookingForm form, Long userId) {
-        throw new IllegalArgumentException(
-                "Shipments can only be created from a manifest. Use Admin → Manifests.");
+        Branch branch = requireBranch(form.getDestinationBranchId());
+        Shipment shipment = new Shipment();
+        shipment.setTrackingId(nextGeneratedTrackingId());
+        shipment.setSenderName(form.getSenderName().trim());
+        shipment.setSenderPhone(form.getSenderPhone().trim());
+        shipment.setSenderAddress(form.getSenderAddress().trim());
+        shipment.setReceiverName(form.getReceiverName().trim());
+        shipment.setReceiverPhone(form.getReceiverPhone().trim());
+        shipment.setReceiverAddress(StringUtils.hasText(form.getReceiverAddress())
+                ? form.getReceiverAddress().trim() : branch.getCity());
+        shipment.setOriginCity(form.getOriginCity().trim());
+        applyDestinationBranch(shipment, branch);
+        shipment.setWeightKg(form.getWeightKg());
+        shipment.setNumberOfBoxes(form.getNumberOfBoxes() != null && form.getNumberOfBoxes() > 0
+                ? form.getNumberOfBoxes() : 1);
+        shipment.setServiceType(form.getServiceType());
+        shipment.setStatus("BOOKED");
+        shipment.setBookedByUserId(userId);
+        shipment.setCodAmount(form.getCodAmount() != null ? form.getCodAmount() : BigDecimal.ZERO);
+        applyFreight(shipment);
+        return persistNewShipment(shipment, shipment.getOriginCity(),
+                "Booked to " + branch.getCity() + " — waiting on in-progress manifest");
     }
 
     @Transactional
     public Shipment adminCreateShipment(AdminShipmentForm form, Long bookedByUserId) {
-        throw new IllegalArgumentException(
-                "Shipments can only be created from a manifest. Open New Manifest and add C.Nos.");
+        Branch branch = requireBranch(form.getDestinationBranchId());
+        if (form.getPartyId() == null) {
+            throw new IllegalArgumentException("Select the sending party so a C.No can be assigned");
+        }
+        Party party = partyService.findById(form.getPartyId())
+                .orElseThrow(() -> new IllegalArgumentException("Party not found"));
+        String cno = StringUtils.hasText(form.getConsignmentNo())
+                ? form.getConsignmentNo().trim()
+                : partyService.nextUnusedConsignment(party.getId());
+        if (!partyService.ownsConsignment(party.getId(), cno)) {
+            throw new IllegalArgumentException("C.No " + cno + " is not allocated to " + party.getPartyName());
+        }
+        if (shipmentDao.existsByTrackingId(cno)) {
+            throw new IllegalArgumentException("C.No " + cno + " is already used");
+        }
+
+        Shipment shipment = new Shipment();
+        shipment.setTrackingId(cno);
+        shipment.setSenderName(StringUtils.hasText(form.getSenderName()) ? form.getSenderName().trim() : party.getPartyName());
+        shipment.setSenderPhone(StringUtils.hasText(form.getSenderPhone()) ? form.getSenderPhone().trim() : party.getPhone());
+        shipment.setSenderAddress(StringUtils.hasText(form.getSenderAddress())
+                ? form.getSenderAddress().trim()
+                : (StringUtils.hasText(party.getAddress()) ? party.getAddress() : party.getCity()));
+        shipment.setReceiverName(form.getReceiverName().trim());
+        shipment.setReceiverPhone(form.getReceiverPhone().trim());
+        shipment.setReceiverAddress(StringUtils.hasText(form.getReceiverAddress())
+                ? form.getReceiverAddress().trim() : branch.getCity());
+        shipment.setOriginCity(StringUtils.hasText(form.getOriginCity()) ? form.getOriginCity().trim() : party.getCity());
+        applyDestinationBranch(shipment, branch);
+        shipment.setWeightKg(form.getWeightKg());
+        shipment.setNumberOfBoxes(form.getNumberOfBoxes() != null && form.getNumberOfBoxes() > 0
+                ? form.getNumberOfBoxes() : 1);
+        shipment.setServiceType(form.getServiceType());
+        shipment.setStatus("BOOKED");
+        shipment.setBookedByUserId(bookedByUserId);
+        shipment.setPartyId(party.getId());
+        shipment.setAssignedHub(form.getAssignedHub());
+        shipment.setCourierName(form.getCourierName());
+        shipment.setCourierPhone(form.getCourierPhone());
+        shipment.setCodAmount(form.getCodAmount() != null ? form.getCodAmount() : BigDecimal.ZERO);
+        shipment.setExpectedDelivery(form.getExpectedDelivery());
+        applyFreight(shipment);
+        return persistNewShipment(shipment, shipment.getOriginCity(),
+                "Booked to " + branch.getCity() + " — waiting on in-progress manifest");
     }
 
-    /**
-     * Creates a shipment from a saved manifest line. Manifest + consignment
-     * number are required — operational shipments are not created without them.
-     */
     @Transactional
-    public Shipment createFromManifest(Shipment shipment, String eventLocation, String remarks) {
-        if (shipment.getManifestId() == null) {
-            throw new IllegalArgumentException("Shipment cannot be created without a manifest number");
-        }
-        if (shipment.getPartyId() == null) {
-            throw new IllegalArgumentException("Shipment must belong to a sending party");
-        }
+    public Shipment persistNewShipment(Shipment shipment, String eventLocation, String remarks) {
         if (!StringUtils.hasText(shipment.getTrackingId())) {
             throw new IllegalArgumentException("Consignment / tracking number is required");
         }
@@ -83,7 +143,7 @@ public class ShipmentService {
         }
         shipment.setTrackingId(trackingId);
         if (!StringUtils.hasText(shipment.getStatus())) {
-            shipment.setStatus("DISPATCHED");
+            shipment.setStatus("BOOKED");
         }
         if (!StringUtils.hasText(shipment.getServiceType())) {
             shipment.setServiceType("DOMESTIC_STANDARD");
@@ -91,20 +151,7 @@ public class ShipmentService {
         if (shipment.getExpectedDelivery() == null) {
             shipment.setExpectedDelivery(estimateDelivery(shipment.getServiceType()));
         }
-        if (shipment.getFreightCharge() == null) {
-            var quote = rateCardService.quote(
-                    shipment.getDestinationCity(),
-                    shipment.getBillingLane(),
-                    shipment.getWeightKg(),
-                    shipment.getNumberOfBoxes());
-            shipment.setFreightCharge(quote.getAmount());
-            if (shipment.getAssignedBranchId() == null) {
-                shipment.setAssignedBranchId(quote.getBranchId());
-            }
-            if (!StringUtils.hasText(shipment.getBillingLane())) {
-                shipment.setBillingLane(quote.getLane());
-            }
-        }
+        applyFreight(shipment);
         if (shipment.getCodAmount() == null) {
             shipment.setCodAmount(BigDecimal.ZERO);
         }
@@ -118,9 +165,34 @@ public class ShipmentService {
         event.setLocation(StringUtils.hasText(eventLocation) ? eventLocation.trim() : shipment.getOriginCity());
         event.setRemarks(remarks);
         trackingEventDao.save(event);
+        return shipment;
+    }
 
+    @Transactional
+    public Shipment createFromManifest(Shipment shipment, String eventLocation, String remarks) {
+        if (shipment.getManifestId() == null) {
+            throw new IllegalArgumentException("Shipment cannot be created without a manifest number");
+        }
+        shipment = persistNewShipment(shipment, eventLocation, remarks);
         invoiceService.createForShipment(shipment);
         return shipment;
+    }
+
+    @Transactional
+    public void markDispatchedFromManifest(Long shipmentId, String location, String remarks) {
+        Shipment shipment = shipmentDao.findById(shipmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Shipment not found"));
+        if (!"DISPATCHED".equals(shipment.getStatus())) {
+            shipment.setStatus("DISPATCHED");
+            shipmentDao.update(shipment);
+            TrackingEvent event = new TrackingEvent();
+            event.setShipmentId(shipmentId);
+            event.setStatus("DISPATCHED");
+            event.setLocation(StringUtils.hasText(location) ? location.trim() : shipment.getOriginCity());
+            event.setRemarks(remarks);
+            trackingEventDao.save(event);
+        }
+        invoiceService.createForShipment(shipment);
     }
 
     @Transactional
@@ -446,6 +518,50 @@ public class ShipmentService {
         } catch (DateTimeParseException e) {
             throw new IllegalArgumentException("Invalid date: " + value);
         }
+    }
+
+    private Branch requireBranch(Long branchId) {
+        if (branchId == null) {
+            throw new IllegalArgumentException("Select a destination branch");
+        }
+        return branchService.findById(branchId)
+                .orElseThrow(() -> new IllegalArgumentException("Destination branch not found"));
+    }
+
+    private void applyDestinationBranch(Shipment shipment, Branch branch) {
+        shipment.setAssignedBranchId(branch.getId());
+        shipment.setDestinationCity(branch.getCity());
+        shipment.setBillingLane(StringUtils.hasText(branch.getBranchCategory())
+                ? branch.getBranchCategory() : "DOMESTIC");
+    }
+
+    private void applyFreight(Shipment shipment) {
+        if (shipment.getFreightCharge() != null) {
+            return;
+        }
+        var quote = rateCardService.quote(
+                shipment.getDestinationCity(),
+                shipment.getBillingLane(),
+                shipment.getWeightKg(),
+                shipment.getNumberOfBoxes());
+        shipment.setFreightCharge(quote.getAmount());
+        if (shipment.getAssignedBranchId() == null) {
+            shipment.setAssignedBranchId(quote.getBranchId());
+        }
+        if (!StringUtils.hasText(shipment.getBillingLane())) {
+            shipment.setBillingLane(quote.getLane());
+        }
+    }
+
+    private String nextGeneratedTrackingId() {
+        String prefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyMMdd"));
+        for (int i = 1; i < 10000; i++) {
+            String candidate = prefix + String.format("%04d", i);
+            if (!shipmentDao.existsByTrackingId(candidate)) {
+                return candidate;
+            }
+        }
+        throw new IllegalArgumentException("Could not generate a tracking number for today");
     }
 
     private LocalDate estimateDelivery(String serviceType) {
