@@ -26,10 +26,11 @@
             <div class="manifest-meta">
                 <div><strong>Date:</strong> <span th:text="${#temporals.format(manifest.manifestDate, 'dd/MM/yy')}">19/08/26</span></div>
                 <div><strong>MF No:</strong> <span th:text="${manifest.manifestNumber}">11820</span></div>
-                <div><strong>M/S:</strong> <span th:text="${manifest.partyName}">GWALIOR</span></div>
-                <div><strong>Through:</strong> <span th:text="${manifest.throughName != null ? manifest.throughName : '—'}">KALU</span></div>
+                <div><strong>Destination branch:</strong>
+                    <span th:text="${manifest.destinationBranchDisplay}">ECI - Bhopal — Bhopal</span></div>
+                <div><strong>Through:</strong> <span th:text="${manifest.throughName != null and !manifest.throughName.isBlank() ? manifest.throughName : '—'}">KALU</span></div>
                 <div><strong>Origin:</strong> <span th:text="${manifest.originCity != null ? manifest.originCity : '—'}">Indore</span></div>
-                <div><strong>Lines:</strong> <span th:text="${#lists.size(manifest.items)}">17</span></div>
+                <div><strong>Consignments:</strong> <span th:text="${#lists.size(manifest.items)}">17</span></div>
             </div>
             <table class="manifest-print">
                 <thead>

@@ -26,7 +26,7 @@ import java.util.Map;
 @RequestMapping("/admin/manifests")
 public class AdminManifestController {
 
-    private static final int BLANK_ROWS = 20;
+    private static final int BLANK_ROWS = 1;
 
     private final ManifestService manifestService;
     private final ManifestBillService manifestBillService;
@@ -263,12 +263,35 @@ public class AdminManifestController {
             line.setReceiverPhone(item.getReceiverPhone());
             form.getItems().add(line);
         }
-        form.ensureMinRows(Math.max(BLANK_ROWS, form.getItems().size() + 3));
+        form.ensureMinRows(form.getItems().size() + 1);
         return form;
     }
 
     private void populateManifestLookups(Model model) {
         model.addAttribute("parties", partyService.findEnabled());
         model.addAttribute("branches", branchService.findAll());
+        model.addAttribute("branchOptionsJson", branchOptionsJson());
+    }
+
+    private String branchOptionsJson() {
+        StringBuilder json = new StringBuilder("[");
+        var branches = branchService.findAll();
+        for (int i = 0; i < branches.size(); i++) {
+            var branch = branches.get(i);
+            if (i > 0) {
+                json.append(',');
+            }
+            json.append("{\"id\":").append(branch.getId())
+                    .append(",\"label\":\"").append(jsonEscape(branch.getCity() + " — " + branch.getBranchName()))
+                    .append("\"}");
+        }
+        return json.append(']').toString();
+    }
+
+    private static String jsonEscape(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("\\", "\\\\").replace("\"", "\\\"").replace("<", "\\u003c");
     }
 }

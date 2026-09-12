@@ -15,7 +15,7 @@
         <p><a th:href="@{/admin/manifests}" class="muted">&larr; Back to manifests</a></p>
         <span class="eyebrow">Operations</span>
         <h1 th:text="${editing} ? 'Edit Manifest' : 'Create Manifest'">Create Manifest</h1>
-        <p>Choose a destination branch, then enter party, C.No, boxes, weight, and receiver on each row.
+        <p>Choose a destination branch, then add one or more consignments.
             Leave C.No blank to allocate the next unused number for that party.</p>
 
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
@@ -38,16 +38,15 @@
                     <label>Through (driver / agent)</label>
                     <input type="text" th:field="*{throughName}" placeholder="e.g. KALU">
                 </div>
-                <div class="form-group searchable-select">
+                <div class="form-group dest-field">
                     <label>Destination branch *</label>
-                    <input type="search" class="branch-search" placeholder="Search branch..."
-                           data-target="destinationBranchId" autocomplete="off">
-                    <select id="destinationBranchId" th:field="*{destinationBranchId}" required>
-                        <option value="">— Select branch —</option>
-                        <option th:each="b : ${branches}"
-                                th:value="${b.id}"
-                                th:text="${b.city + ' — ' + b.branchName}">Branch</option>
-                    </select>
+                    <div class="combo">
+                        <input type="hidden" id="destinationBranchId" class="combo-value dest-header"
+                               th:field="*{destinationBranchId}">
+                        <input type="search" class="combo-search" placeholder="Search branch…"
+                               autocomplete="off">
+                        <ul class="combo-list" hidden></ul>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Origin city</label>
@@ -84,12 +83,8 @@
 
             <div class="admin-toolbar">
                 <h3 style="margin:0;">Consignments</h3>
-                <input type="search" id="line-branch-filter" class="branch-search-inline"
-                       placeholder="Filter destination branches…" autocomplete="off">
                 <div class="admin-filter-buttons">
-                    <button type="button" class="btn btn-sm btn-dark" data-add-rows="10">+ 10 rows</button>
-                    <button type="button" class="btn btn-sm btn-dark" data-add-rows="25">+ 25 rows</button>
-                    <button type="button" class="btn btn-sm btn-primary" data-add-rows="50">+ 50 rows</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="add-consignment">+ Add consignment</button>
                 </div>
             </div>
             <table class="data-table manifest-lines" id="manifest-lines">
@@ -133,17 +128,18 @@
                                placeholder="Blank = auto" inputmode="numeric">
                     </td>
                     <td>
-                        <select class="dest-branch" th:field="*{items[__${iter.index}__].destinationBranchId}">
-                            <option value="">— Branch —</option>
-                            <option th:each="b : ${branches}"
-                                    th:value="${b.id}"
-                                    th:text="${b.city + ' — ' + b.branchName}">City</option>
-                        </select>
+                        <div class="combo">
+                            <input type="hidden" class="combo-value dest-branch"
+                                   th:field="*{items[__${iter.index}__].destinationBranchId}">
+                            <input type="search" class="combo-search" placeholder="Search branch…"
+                                   autocomplete="off">
+                            <ul class="combo-list" hidden></ul>
+                        </div>
                     </td>
                     <td><input type="number" min="1" class="boxes-input" th:field="*{items[__${iter.index}__].numberOfBoxes}" placeholder="3"></td>
                     <td><input type="number" min="0.01" step="0.01" class="weight-input" th:field="*{items[__${iter.index}__].weightKg}" placeholder="40"></td>
                     <td class="cell-stack">
-                        <input type="text" th:field="*{items[__${iter.index}__].receiverName}" placeholder="REAL DIAGNOSTIC">
+                        <input type="text" th:field="*{items[__${iter.index}__].receiverName}" placeholder="Receiver name">
                         <input type="text" th:field="*{items[__${iter.index}__].receiverPhone}" placeholder="Phone (optional)">
                     </td>
                 </tr>
@@ -162,6 +158,7 @@
 </section>
 
 <div th:replace="~{fragments/footer :: footer}"></div>
+<script type="application/json" id="branch-options" th:utext="${branchOptionsJson}">[]</script>
 <script src="/js/manifest-form.js"></script>
 </body>
 </html>

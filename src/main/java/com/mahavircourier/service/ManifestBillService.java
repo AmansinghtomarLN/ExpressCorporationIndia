@@ -196,6 +196,13 @@ public class ManifestBillService {
         return filtered;
     }
 
+    public LocalDate manifestDateFor(Long manifestId) {
+        if (manifestId == null) {
+            return null;
+        }
+        return manifestDao.findById(manifestId).map(Manifest::getManifestDate).orElse(null);
+    }
+
     @Transactional
     public ManifestBill updateDetails(Long id, BigDecimal weightKg, BigDecimal perKgRate,
                                       String notes, String status) {

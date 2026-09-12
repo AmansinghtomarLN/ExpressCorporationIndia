@@ -119,6 +119,7 @@ public class AdminManifestBillController {
                 .map(bill -> {
                     model.addAttribute("bill", bill);
                     model.addAttribute("lines", manifestBillService.linesFor(bill));
+                    model.addAttribute("manifestDate", manifestBillService.manifestDateFor(bill.getManifestId()));
                     model.addAttribute("listPath", listPath);
                     model.addAttribute("title", title);
                     model.addAttribute("savePath", listPath + "/" + id);

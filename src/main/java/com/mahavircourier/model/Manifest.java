@@ -146,6 +146,17 @@ public class Manifest {
         this.destinationBranchCity = destinationBranchCity;
     }
 
+    public String getDestinationBranchDisplay() {
+        if (destinationBranchName != null && !destinationBranchName.isBlank()) {
+            return destinationBranchCity != null && !destinationBranchCity.isBlank()
+                    ? destinationBranchName + " — " + destinationBranchCity
+                    : destinationBranchName;
+        }
+        return destinationBranchCity != null && !destinationBranchCity.isBlank()
+                ? destinationBranchCity
+                : "—";
+    }
+
     public String getRemarks() {
         return remarks;
     }

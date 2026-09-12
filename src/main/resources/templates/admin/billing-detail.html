@@ -27,6 +27,11 @@
                     <input type="text" th:value="${bill.billNumber}" readonly>
                 </div>
                 <div class="form-group">
+                    <label>Date</label>
+                    <input type="text" readonly
+                           th:value="${bill.createdAt != null ? #temporals.format(bill.createdAt, 'dd MMM yyyy') : '—'}">
+                </div>
+                <div class="form-group">
                     <label>Manifest</label>
                     <p style="margin-top:8px;">
                         <a th:href="@{/admin/manifests/{id}(id=${bill.manifestId})}"
@@ -59,8 +64,9 @@
             <div class="form-row">
                 <div class="form-group">
                     <label>Amount (Rs.)</label>
-                    <input type="text" th:value="${#numbers.formatDecimal(bill.freightAmount, 1, 2)}" readonly>
-                    <p class="muted">Recalculated on save as weight × per kg.</p>
+                    <input type="text" id="freightAmount" readonly
+                           th:value="${#numbers.formatDecimal(bill.freightAmount, 1, 2)}">
+                    <p class="muted">Weight × per kg. Updates as you edit; not typed in.</p>
                 </div>
                 <div class="form-group">
                     <label for="status">Payment status</label>
@@ -86,6 +92,7 @@
                     <thead>
                     <tr>
                         <th>#</th>
+                        <th>Date</th>
                         <th>C.No</th>
                         <th>Party</th>
                         <th>Destination</th>
@@ -97,6 +104,7 @@
                     <tbody>
                     <tr th:each="line : ${lines}">
                         <td th:text="${line.serialNo}">1</td>
+                        <td th:text="${manifestDate != null ? #temporals.format(manifestDate, 'dd MMM yyyy') : '—'}">Date</td>
                         <td th:text="${line.consignmentNo}">37191</td>
                         <td th:text="${line.partyName != null ? line.partyName : '—'}">Party</td>
                         <td th:text="${line.destinationCity}">City</td>
@@ -115,5 +123,25 @@
 </section>
 
 <div th:replace="~{fragments/footer :: footer}"></div>
+<script>
+(function () {
+    var weight = document.getElementById("weightKg");
+    var rate = document.getElementById("perKgRate");
+    var amount = document.getElementById("freightAmount");
+    if (!weight || !rate || !amount) return;
+    function recalc() {
+        var w = parseFloat(weight.value);
+        var r = parseFloat(rate.value);
+        if (isNaN(w) || isNaN(r)) {
+            amount.value = "0.00";
+            return;
+        }
+        amount.value = (w * r).toFixed(2);
+    }
+    weight.addEventListener("input", recalc);
+    rate.addEventListener("input", recalc);
+    recalc();
+})();
+</script>
 </body>
 </html>

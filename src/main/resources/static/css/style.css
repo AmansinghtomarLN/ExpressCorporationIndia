@@ -409,6 +409,41 @@ table.data-table th { background: var(--gray-100); font-weight: 700; }
     width: min(280px, 100%);
     margin: 0;
 }
+.combo {
+    position: relative;
+}
+.combo-search {
+    width: 100%;
+    min-width: 0;
+    padding: 9px 10px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    background: #fff;
+}
+.combo-list {
+    position: absolute;
+    z-index: 30;
+    left: 0;
+    right: 0;
+    top: calc(100% + 2px);
+    max-height: 220px;
+    overflow: auto;
+    margin: 0;
+    padding: 4px 0;
+    list-style: none;
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+.combo-list li {
+    padding: 8px 10px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+.combo-list li:hover {
+    background: var(--gray-100, #f3f4f6);
+}
 
 .kpi-grid {
     display: grid;
@@ -561,9 +596,12 @@ table.manifest-print th, table.manifest-print td {
 .manifest-page { padding: 22px 22px 28px; }
 .manifest-head {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px 14px;
+    grid-template-columns: repeat(4, minmax(180px, 1fr));
+    gap: 14px 16px;
     margin-bottom: 8px;
+}
+.manifest-head .dest-field {
+    min-width: 220px;
 }
 .manifest-head .form-group { margin-bottom: 0; }
 .manifest-head input,
@@ -580,7 +618,7 @@ table.manifest-lines td {
 }
 table.manifest-lines .col-sno { width: 44px; }
 table.manifest-lines .col-cno { width: 118px; }
-table.manifest-lines .col-dest { width: 18%; }
+table.manifest-lines .col-dest { width: 22%; }
 table.manifest-lines .col-boxes { width: 88px; }
 table.manifest-lines .col-weight { width: 100px; }
 table.manifest-lines .col-party { width: auto; }
