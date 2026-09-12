@@ -146,7 +146,10 @@
                     </thead>
                     <tbody>
                     <tr th:each="bill : ${bills}">
-                        <td th:text="${bill.billNumber}">PTY-…</td>
+                        <td>
+                            <a th:href="${bill.partyBill} ? @{/admin/billing/parties/{id}(id=${bill.id})} : @{/admin/billing/branches/{id}(id=${bill.id})}"
+                               th:text="${bill.billNumber}">PTY-…</a>
+                        </td>
                         <td th:text="${bill.typeLabel}">Party</td>
                         <td th:text="${bill.partyDisplay}">Party</td>
                         <td th:text="${bill.branchDisplay}">Branch</td>
@@ -160,7 +163,7 @@
                         </td>
                         <td>
                             <a class="btn btn-sm btn-dark"
-                               th:href="${bill.partyBill} ? @{/admin/billing/parties} : @{/admin/billing/branches}">Open</a>
+                               th:href="${bill.partyBill} ? @{/admin/billing/parties/{id}(id=${bill.id})} : @{/admin/billing/branches/{id}(id=${bill.id})}">Open</a>
                         </td>
                     </tr>
                     </tbody>
@@ -171,7 +174,7 @@
             </div>
         </div>
         <p class="muted" style="margin-top:16px;" th:unless="${manifest.inProgress}">
-            Submitted. Party and branch bills use weight × per kg + boxes × per box.
+            Submitted. Party and branch bills use weight × per kg.
         </p>
     </div>
 </section>

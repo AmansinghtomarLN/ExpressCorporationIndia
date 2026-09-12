@@ -14,6 +14,8 @@ public class ManifestItem {
     private String receiverName;
     private String receiverPhone;
     private Long shipmentId;
+    private Long partyId;
+    private String partyName;
     private BigDecimal freightCharge;
     private String shipmentStatus;
     private Long invoiceId;
@@ -98,6 +100,22 @@ public class ManifestItem {
 
     public void setShipmentId(Long shipmentId) {
         this.shipmentId = shipmentId;
+    }
+
+    public Long getPartyId() {
+        return partyId;
+    }
+
+    public void setPartyId(Long partyId) {
+        this.partyId = partyId;
+    }
+
+    public String getPartyName() {
+        return partyName;
+    }
+
+    public void setPartyName(String partyName) {
+        this.partyName = partyName;
     }
 
     public BigDecimal getFreightCharge() {

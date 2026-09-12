@@ -15,7 +15,8 @@
         <p><a th:href="@{/admin/manifests}" class="muted">&larr; Back to manifests</a></p>
         <span class="eyebrow">Operations</span>
         <h1 th:text="${editing} ? 'Edit Manifest' : 'Create Manifest'">Create Manifest</h1>
-        <p>Select a party, click unused C.Nos to fill rows, then enter destination, boxes, weight, and receiver on the same screen.</p>
+        <p>Choose a destination branch, then enter party, C.No, boxes, weight, and receiver on each row.
+            Leave C.No blank to allocate the next unused number for that party.</p>
 
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
@@ -27,31 +28,21 @@
             <div class="manifest-head">
                 <div class="form-group">
                     <label>MF No</label>
-                    <input type="text" th:field="*{manifestNumber}"
-                           th:readonly="${editing}"
-                           placeholder="Auto if left blank">
+                    <input type="text" th:field="*{manifestNumber}" readonly>
                 </div>
                 <div class="form-group">
                     <label>Date *</label>
                     <input type="date" th:field="*{manifestDate}" required>
                 </div>
                 <div class="form-group">
-                    <label>M/S Party *</label>
-                    <select id="partyId" th:field="*{partyId}" required th:disabled="${editing}">
-                        <option value="">— Select sending party —</option>
-                        <option th:each="p : ${parties}"
-                                th:value="${p.id}"
-                                th:text="${p.partyName + ' — ' + p.city}">Party</option>
-                    </select>
-                    <input type="hidden" th:if="${editing}" th:field="*{partyId}">
-                </div>
-                <div class="form-group">
                     <label>Through (driver / agent)</label>
                     <input type="text" th:field="*{throughName}" placeholder="e.g. KALU">
                 </div>
-                <div class="form-group">
+                <div class="form-group searchable-select">
                     <label>Destination branch *</label>
-                    <select th:field="*{destinationBranchId}" required>
+                    <input type="search" class="branch-search" placeholder="Search branch..."
+                           data-target="destinationBranchId" autocomplete="off">
+                    <select id="destinationBranchId" th:field="*{destinationBranchId}" required>
                         <option value="">— Select branch —</option>
                         <option th:each="b : ${branches}"
                                 th:value="${b.id}"
@@ -60,7 +51,7 @@
                 </div>
                 <div class="form-group">
                     <label>Origin city</label>
-                    <input type="text" th:field="*{originCity}" placeholder="Defaults to party city">
+                    <input type="text" th:field="*{originCity}" placeholder="Working city, e.g. Indore">
                 </div>
                 <div class="form-group">
                     <label>Billing</label>
@@ -83,7 +74,7 @@
                     <input type="text" th:field="*{remarks}">
                 </div>
             </div>
-            <p class="muted">Invoice = weight × branch per kg + boxes × branch per box. Service type is not billed.</p>
+            <p class="muted">Bills use weight × per kg. Service type is not billed.</p>
 
             <div class="totals-bar" id="totals-bar">
                 <div><span class="muted">Lines</span><strong id="total-lines">0</strong></div>
@@ -91,29 +82,10 @@
                 <div><span class="muted">Total weight</span><strong id="total-weight">0</strong></div>
             </div>
 
-            <aside class="cno-panel cno-panel-inline form-card">
-                <div class="cno-panel-top">
-                    <div>
-                        <h3>Party C.Nos</h3>
-                        <p class="muted" id="pool-hint">Select a party to load unused consignment numbers.</p>
-                    </div>
-                    <div id="pool-stats" class="pool-stats" hidden></div>
-                </div>
-                <div id="pool-ranges" class="pool-ranges"></div>
-                <div class="cno-pool-grid">
-                    <div>
-                        <h4>Available — click to fill a row</h4>
-                        <div id="pool-available" class="cno-chip-wrap"></div>
-                    </div>
-                    <details class="booked-fold">
-                        <summary>Already booked (cannot reuse)</summary>
-                        <div id="pool-used" class="cno-chip-wrap"></div>
-                    </details>
-                </div>
-            </aside>
-
             <div class="admin-toolbar">
                 <h3 style="margin:0;">Consignments</h3>
+                <input type="search" id="line-branch-filter" class="branch-search-inline"
+                       placeholder="Filter destination branches…" autocomplete="off">
                 <div class="admin-filter-buttons">
                     <button type="button" class="btn btn-sm btn-dark" data-add-rows="10">+ 10 rows</button>
                     <button type="button" class="btn btn-sm btn-dark" data-add-rows="25">+ 25 rows</button>
@@ -123,16 +95,18 @@
             <table class="data-table manifest-lines" id="manifest-lines">
                 <colgroup>
                     <col class="col-sno">
+                    <col class="col-party">
                     <col class="col-cno">
                     <col class="col-dest">
                     <col class="col-boxes">
                     <col class="col-weight">
-                    <col class="col-party">
+                    <col class="col-recv">
                 </colgroup>
                 <thead>
                 <tr>
                     <th>#</th>
-                    <th>C.No *</th>
+                    <th>Party *</th>
+                    <th>C.No</th>
                     <th>Destination branch *</th>
                     <th>Boxes *</th>
                     <th>Weight *</th>
@@ -143,17 +117,27 @@
                 <tr th:each="item, iter : *{items}">
                     <td class="row-index" th:text="${iter.count}">1</td>
                     <td>
+                        <select class="party-select" th:field="*{items[__${iter.index}__].partyId}"
+                                th:disabled="${item.id != null}">
+                            <option value="">— Party —</option>
+                            <option th:each="p : ${parties}"
+                                    th:value="${p.id}"
+                                    th:text="${p.partyName}">Party</option>
+                        </select>
+                    </td>
+                    <td>
                         <input type="hidden" th:field="*{items[__${iter.index}__].id}">
+                        <input type="hidden" th:if="${item.id != null}" th:field="*{items[__${iter.index}__].partyId}">
                         <input type="text" class="cno-input" th:field="*{items[__${iter.index}__].consignmentNo}"
                                th:readonly="${item.id != null}"
-                               placeholder="37191" inputmode="numeric">
+                               placeholder="Blank = auto" inputmode="numeric">
                     </td>
                     <td>
                         <select class="dest-branch" th:field="*{items[__${iter.index}__].destinationBranchId}">
                             <option value="">— Branch —</option>
                             <option th:each="b : ${branches}"
                                     th:value="${b.id}"
-                                    th:text="${b.city}">City</option>
+                                    th:text="${b.city + ' — ' + b.branchName}">City</option>
                         </select>
                     </td>
                     <td><input type="number" min="1" class="boxes-input" th:field="*{items[__${iter.index}__].numberOfBoxes}" placeholder="3"></td>
@@ -165,7 +149,7 @@
                 </tr>
                 </tbody>
             </table>
-            <p class="muted" style="margin-top:8px;">Empty rows are ignored. Add rows if you need more than the starter list.</p>
+            <p class="muted" style="margin-top:8px;">Empty rows are ignored. Leave C.No blank to generate and allocate one for the row’s party.</p>
             <div class="admin-filter-buttons" style="margin-top:18px;">
                     <button type="submit" class="btn btn-dark"
                             th:text="${editing} ? 'Save in-progress changes' : 'Save as in progress'">

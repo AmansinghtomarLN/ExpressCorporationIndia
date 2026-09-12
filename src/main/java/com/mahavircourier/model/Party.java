@@ -132,7 +132,7 @@ public class Party {
     }
 
     public boolean hasCustomRates() {
-        return perKgRate != null || perBoxRate != null;
+        return perKgRate != null;
     }
 
     public boolean isEnabled() {

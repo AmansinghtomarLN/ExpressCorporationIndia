@@ -180,6 +180,52 @@ public class ManifestBillService {
         manifestBillDao.updateStatus(bill.getId(), ManifestBill.STATUS_PENDING);
     }
 
+    public List<ManifestItem> linesFor(ManifestBill bill) {
+        List<ManifestItem> items = manifestItemDao.findByManifestId(bill.getManifestId());
+        if (!bill.isPartyBill() || bill.getPartyId() == null) {
+            return items;
+        }
+        Manifest manifest = manifestDao.findById(bill.getManifestId()).orElse(null);
+        List<ManifestItem> filtered = new ArrayList<>();
+        for (ManifestItem item : items) {
+            Long partyId = resolvePartyId(manifest, item);
+            if (bill.getPartyId().equals(partyId)) {
+                filtered.add(item);
+            }
+        }
+        return filtered;
+    }
+
+    @Transactional
+    public ManifestBill updateDetails(Long id, BigDecimal weightKg, BigDecimal perKgRate,
+                                      String notes, String status) {
+        ManifestBill bill = requireBill(id);
+        if (weightKg != null && weightKg.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Weight cannot be negative");
+        }
+        if (perKgRate != null && perKgRate.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Per kg rate cannot be negative");
+        }
+        if (weightKg != null) {
+            bill.setWeightKg(weightKg);
+        }
+        if (perKgRate != null) {
+            bill.setPerKgRate(perKgRate);
+        }
+        bill.setPerBoxRate(BigDecimal.ZERO);
+        bill.setFreightAmount(rateCardService.computeFreight(
+                bill.getWeightKg(), bill.getNumberOfBoxes(), bill.getPerKgRate(), BigDecimal.ZERO));
+        if (notes != null) {
+            bill.setNotes(StringUtils.hasText(notes) ? notes.trim() : null);
+        }
+        if (ManifestBill.STATUS_RECEIVED.equalsIgnoreCase(status)
+                || ManifestBill.STATUS_PENDING.equalsIgnoreCase(status)) {
+            bill.setStatus(status.trim().toUpperCase());
+        }
+        manifestBillDao.updateAmounts(bill);
+        return bill;
+    }
+
     private ManifestBill requireBill(Long id) {
         return manifestBillDao.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Bill not found"));
@@ -220,7 +266,7 @@ public class ManifestBillService {
         bill.setWeightKg(totals.weight);
         bill.setNumberOfBoxes(totals.boxes);
         bill.setPerKgRate(quote.getPerKgRate());
-        bill.setPerBoxRate(quote.getPerBoxRate());
+        bill.setPerBoxRate(BigDecimal.ZERO);
         bill.setFreightAmount(quote.getAmount());
         bill.setNotes(notes);
         return bill;

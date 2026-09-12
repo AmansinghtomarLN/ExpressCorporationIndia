@@ -380,6 +380,35 @@ table.data-table th { background: var(--gray-100); font-weight: 700; }
     background: rgba(193, 18, 31, 0.1);
     color: var(--primary);
 }
+.workspace-bar {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+.workspace-bar select {
+    min-width: 180px;
+    max-width: 260px;
+    padding: 6px 8px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    background: #fff;
+}
+.searchable-select .branch-search,
+.branch-search-inline {
+    width: 100%;
+    margin-bottom: 6px;
+    padding: 8px 10px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+}
+.branch-search-inline {
+    width: min(280px, 100%);
+    margin: 0;
+}
 
 .kpi-grid {
     display: grid;

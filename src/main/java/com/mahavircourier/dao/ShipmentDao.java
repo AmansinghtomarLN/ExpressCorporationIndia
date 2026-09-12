@@ -153,6 +153,12 @@ public class ShipmentDao {
         }
     }
 
+    public List<String> findTrackingIdsByParty(Long partyId) {
+        return jdbcTemplate.queryForList(
+                "SELECT tracking_id FROM shipments WHERE party_id = ? ORDER BY tracking_id ASC",
+                String.class, partyId);
+    }
+
     public boolean existsByTrackingId(String trackingId) {
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM shipments WHERE tracking_id = ?", Integer.class, trackingId);

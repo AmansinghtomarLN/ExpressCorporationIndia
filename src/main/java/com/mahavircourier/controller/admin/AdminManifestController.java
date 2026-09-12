@@ -10,6 +10,7 @@ import com.mahavircourier.service.CustomUserDetails;
 import com.mahavircourier.service.ManifestBillService;
 import com.mahavircourier.service.ManifestService;
 import com.mahavircourier.service.PartyService;
+import com.mahavircourier.service.WorkspaceService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
@@ -32,17 +33,20 @@ public class AdminManifestController {
     private final PartyService partyService;
     private final BranchService branchService;
     private final AuditService auditService;
+    private final WorkspaceService workspaceService;
 
     public AdminManifestController(ManifestService manifestService,
                                    ManifestBillService manifestBillService,
                                    PartyService partyService,
                                    BranchService branchService,
-                                   AuditService auditService) {
+                                   AuditService auditService,
+                                   WorkspaceService workspaceService) {
         this.manifestService = manifestService;
         this.manifestBillService = manifestBillService;
         this.partyService = partyService;
         this.branchService = branchService;
         this.auditService = auditService;
+        this.workspaceService = workspaceService;
     }
 
     @GetMapping
@@ -81,6 +85,11 @@ public class AdminManifestController {
         ManifestForm form = ManifestForm.blank(BLANK_ROWS);
         form.setPartyId(partyId);
         form.setManifestNumber(manifestService.suggestNextNumber());
+        try {
+            form.setOriginCity(workspaceService.resolveCurrent(AdminAuth.requirePrincipal().getUser()).getCity());
+        } catch (IllegalArgumentException ignored) {
+            form.setOriginCity(WorkspaceService.DEFAULT_CITY);
+        }
         model.addAttribute("form", form);
         populateManifestLookups(model);
         return "admin/manifest-form";
@@ -247,6 +256,7 @@ public class AdminManifestController {
                             && item.getDestinationCity().equalsIgnoreCase(b.getCity()))
                     .findFirst()
                     .ifPresent(b -> line.setDestinationBranchId(b.getId()));
+            line.setPartyId(item.getPartyId());
             line.setNumberOfBoxes(item.getNumberOfBoxes());
             line.setWeightKg(item.getWeightKg());
             line.setReceiverName(item.getReceiverName());

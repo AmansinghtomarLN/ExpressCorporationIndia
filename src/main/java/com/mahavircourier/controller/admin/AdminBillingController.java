@@ -56,7 +56,7 @@ public class AdminBillingController {
             partyService.saveRates(id, perKgRate, perBoxRate);
             auditService.log(principal.getUser().getId(), principal.getUsername(),
                     "PARTY_RATES_UPDATE", "PARTY", String.valueOf(id),
-                    "per kg=" + perKgRate + ", per box=" + perBoxRate);
+                    "per kg=" + perKgRate);
             redirectAttributes.addFlashAttribute("successMessage",
                     "Party rates saved. Party bills on the next submitted manifest will use these prices.");
         } catch (IllegalArgumentException ex) {
@@ -85,17 +85,17 @@ public class AdminBillingController {
         return "redirect:/admin/billing";
     }
 
-    @PostMapping("/branches/{id}")
+    @PostMapping("/branch-rates/{id}")
     public String saveBranchRates(@PathVariable Long id,
                                   @RequestParam BigDecimal perKgRate,
-                                  @RequestParam BigDecimal perBoxRate,
+                                  @RequestParam(required = false) BigDecimal perBoxRate,
                                   RedirectAttributes redirectAttributes) {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
-            rateCardService.saveBranchRates(id, perKgRate, perBoxRate);
+            rateCardService.saveBranchRates(id, perKgRate, perBoxRate != null ? perBoxRate : BigDecimal.ZERO);
             auditService.log(principal.getUser().getId(), principal.getUsername(),
                     "BRANCH_RATES_UPDATE", "BRANCH", String.valueOf(id),
-                    "per kg=" + perKgRate + ", per box=" + perBoxRate);
+                    "per kg=" + perKgRate);
             redirectAttributes.addFlashAttribute("successMessage",
                     "Branch rates saved. Branch bills on the next submitted manifest will use these prices.");
         } catch (IllegalArgumentException ex) {

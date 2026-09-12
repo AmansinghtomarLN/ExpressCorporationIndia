@@ -164,13 +164,14 @@ public class ManifestBillDao {
     public void updateAmounts(ManifestBill bill) {
         jdbcTemplate.update(
                 "UPDATE manifest_bills SET weight_kg = ?, number_of_boxes = ?, per_kg_rate = ?, " +
-                        "per_box_rate = ?, freight_amount = ?, notes = ? WHERE id = ?",
+                        "per_box_rate = ?, freight_amount = ?, notes = ?, status = ? WHERE id = ?",
                 bill.getWeightKg() != null ? bill.getWeightKg() : BigDecimal.ZERO,
                 bill.getNumberOfBoxes(),
                 bill.getPerKgRate() != null ? bill.getPerKgRate() : BigDecimal.ZERO,
                 bill.getPerBoxRate() != null ? bill.getPerBoxRate() : BigDecimal.ZERO,
                 bill.getFreightAmount() != null ? bill.getFreightAmount() : BigDecimal.ZERO,
                 bill.getNotes(),
+                bill.getStatus() != null ? bill.getStatus() : ManifestBill.STATUS_PENDING,
                 bill.getId());
     }
 

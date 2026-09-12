@@ -16,7 +16,7 @@
         <div class="admin-toolbar" style="align-items:flex-start;">
             <div>
                 <h1>Sending Parties</h1>
-                <p>Consignors (M/S). Assign a C.No range, then create manifests from unused numbers only.</p>
+                <p>Consignors. Assign a C.No range when you have one; booking can also generate a number.</p>
             </div>
             <a class="btn btn-primary" th:href="@{/admin/manifests/new}">New Manifest</a>
         </div>
@@ -96,19 +96,11 @@
                     <input type="text" id="address" name="address"
                            th:value="${editParty != null ? editParty.address : ''}">
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="perKgRate">Party per kg (optional)</label>
-                        <input type="number" id="perKgRate" name="perKgRate" step="0.01" min="0"
-                               th:value="${editParty != null ? editParty.perKgRate : ''}"
-                               placeholder="Leave blank to use branch rates">
-                    </div>
-                    <div class="form-group">
-                        <label for="perBoxRate">Party per box (optional)</label>
-                        <input type="number" id="perBoxRate" name="perBoxRate" step="0.01" min="0"
-                               th:value="${editParty != null ? editParty.perBoxRate : ''}"
-                               placeholder="Leave blank to use branch rates">
-                    </div>
+                <div class="form-group">
+                    <label for="perKgRate">Party per kg (optional)</label>
+                    <input type="number" id="perKgRate" name="perKgRate" step="0.01" min="0"
+                           th:value="${editParty != null ? editParty.perKgRate : ''}"
+                           placeholder="Leave blank to use branch rates">
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -161,7 +153,6 @@
                     <th>City</th>
                     <th>GSTIN</th>
                     <th>Per kg</th>
-                    <th>Per box</th>
                     <th>C.No ranges</th>
                     <th>Manifests</th>
                     <th>Status</th>
@@ -176,7 +167,6 @@
                     <td th:text="${p.city}">City</td>
                     <td th:text="${p.gstin != null ? p.gstin : '—'}">GSTIN</td>
                     <td th:text="${p.perKgRate != null ? 'Rs. ' + #numbers.formatDecimal(p.perKgRate, 1, 2) : 'Branch'}">Branch</td>
-                    <td th:text="${p.perBoxRate != null ? 'Rs. ' + #numbers.formatDecimal(p.perBoxRate, 1, 2) : 'Branch'}">Branch</td>
                     <td th:text="${p.rangeCount}">0</td>
                     <td th:text="${p.manifestCount}">0</td>
                     <td>

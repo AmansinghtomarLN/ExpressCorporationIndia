@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Bill | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section ops-page">
+    <div class="container full-page">
+        <p><a th:href="${listPath}" class="muted">&larr; Back to bills</a></p>
+        <span class="eyebrow">Billing</span>
+        <h1 th:text="${title}">Bill</h1>
+        <p>Charge is <strong>weight × per kg</strong>. Edit the rates or totals below and save.</p>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <form class="form-card wide" method="post" th:action="${savePath}">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Bill #</label>
+                    <input type="text" th:value="${bill.billNumber}" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Manifest</label>
+                    <p style="margin-top:8px;">
+                        <a th:href="@{/admin/manifests/{id}(id=${bill.manifestId})}"
+                           th:text="${bill.manifestNumber}">MF</a>
+                    </p>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Party</label>
+                    <input type="text" th:value="${bill.partyDisplay}" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Destination branch</label>
+                    <input type="text" th:value="${bill.branchDisplay}" readonly>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="weightKg">Weight (kg)</label>
+                    <input type="number" id="weightKg" name="weightKg" step="0.01" min="0"
+                           th:value="${bill.weightKg}" required>
+                </div>
+                <div class="form-group">
+                    <label for="perKgRate">Per kg (Rs.)</label>
+                    <input type="number" id="perKgRate" name="perKgRate" step="0.01" min="0"
+                           th:value="${bill.perKgRate}" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Amount (Rs.)</label>
+                    <input type="text" th:value="${#numbers.formatDecimal(bill.freightAmount, 1, 2)}" readonly>
+                    <p class="muted">Recalculated on save as weight × per kg.</p>
+                </div>
+                <div class="form-group">
+                    <label for="status">Payment status</label>
+                    <select id="status" name="status">
+                        <option value="PENDING" th:selected="${bill.pending}">Pending</option>
+                        <option value="RECEIVED" th:selected="${!bill.pending}">Received</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="notes">Notes</label>
+                <input type="text" id="notes" name="notes" th:value="${bill.notes}">
+            </div>
+            <div class="admin-filter-buttons">
+                <button type="submit" class="btn btn-primary">Save bill</button>
+            </div>
+        </form>
+
+        <div class="form-card wide" style="margin-top:24px;">
+            <h3>Consignments on this bill</h3>
+            <div style="overflow-x:auto;">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>C.No</th>
+                        <th>Party</th>
+                        <th>Destination</th>
+                        <th>Weight</th>
+                        <th>Boxes</th>
+                        <th>Receiver</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="line : ${lines}">
+                        <td th:text="${line.serialNo}">1</td>
+                        <td th:text="${line.consignmentNo}">37191</td>
+                        <td th:text="${line.partyName != null ? line.partyName : '—'}">Party</td>
+                        <td th:text="${line.destinationCity}">City</td>
+                        <td th:text="${line.weightKg} + ' kg'">40 kg</td>
+                        <td th:text="${line.numberOfBoxes}">3</td>
+                        <td th:text="${line.receiverName}">Receiver</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div th:if="${lines == null or #lists.isEmpty(lines)}" class="alert alert-info" style="margin-top:16px;">
+                No consignment lines found on the source manifest.
+            </div>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

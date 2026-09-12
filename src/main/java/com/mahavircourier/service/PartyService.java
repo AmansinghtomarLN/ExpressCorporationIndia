@@ -1,9 +1,11 @@
 package com.mahavircourier.service;
 
 import com.mahavircourier.dao.ConsignmentRangeDao;
+import com.mahavircourier.dao.CnoSettingsDao;
 import com.mahavircourier.dao.ManifestDao;
 import com.mahavircourier.dao.ManifestItemDao;
 import com.mahavircourier.dao.PartyDao;
+import com.mahavircourier.dao.ShipmentDao;
 import com.mahavircourier.dto.ConsignmentPool;
 import com.mahavircourier.model.ConsignmentRange;
 import com.mahavircourier.model.Party;
@@ -25,15 +27,21 @@ public class PartyService {
     private final ConsignmentRangeDao consignmentRangeDao;
     private final ManifestDao manifestDao;
     private final ManifestItemDao manifestItemDao;
+    private final ShipmentDao shipmentDao;
+    private final CnoSettingsDao cnoSettingsDao;
 
     public PartyService(PartyDao partyDao,
                         ConsignmentRangeDao consignmentRangeDao,
                         ManifestDao manifestDao,
-                        ManifestItemDao manifestItemDao) {
+                        ManifestItemDao manifestItemDao,
+                        ShipmentDao shipmentDao,
+                        CnoSettingsDao cnoSettingsDao) {
         this.partyDao = partyDao;
         this.consignmentRangeDao = consignmentRangeDao;
         this.manifestDao = manifestDao;
         this.manifestItemDao = manifestItemDao;
+        this.shipmentDao = shipmentDao;
+        this.cnoSettingsDao = cnoSettingsDao;
     }
 
     public List<Party> search(String query) {
@@ -102,8 +110,12 @@ public class PartyService {
             throw new IllegalArgumentException("Range end must be greater than or equal to range start");
         }
         if (consignmentRangeDao.overlaps(start, end, null)) {
+            String owner = consignmentRangeDao.findCovering(start)
+                    .or(() -> consignmentRangeDao.findCovering(end))
+                    .map(ConsignmentRange::getPartyName)
+                    .orElse("another party");
             throw new IllegalArgumentException(
-                    "This consignment range overlaps another party's allocated numbers");
+                    "This consignment range overlaps numbers allocated to " + owner);
         }
         ConsignmentRange range = new ConsignmentRange();
         range.setPartyId(partyId);
@@ -140,6 +152,15 @@ public class PartyService {
                 used.add(parsed);
             }
             usedDisplay.add(cno);
+        }
+        for (String cno : shipmentDao.findTrackingIdsByParty(partyId)) {
+            Long parsed = parseConsignment(cno);
+            if (parsed != null) {
+                used.add(parsed);
+            }
+            if (!usedDisplay.contains(cno)) {
+                usedDisplay.add(cno);
+            }
         }
 
         ConsignmentPool pool = new ConsignmentPool();
@@ -189,9 +210,85 @@ public class PartyService {
         return next;
     }
 
+    /**
+     * Uses the requested C.No if it is free, or generates and assigns a new one
+     * when the party has no remaining allocated numbers.
+     */
+    @Transactional
+    public String resolveForBooking(Long partyId, String requested) {
+        partyDao.findById(partyId).orElseThrow(() -> new IllegalArgumentException("Party not found"));
+        if (StringUtils.hasText(requested)) {
+            Long number = parseConsignment(requested.trim());
+            if (number == null) {
+                throw new IllegalArgumentException("Consignment number must be numeric");
+            }
+            String token = String.valueOf(number);
+            if (shipmentDao.existsByTrackingId(token) || manifestItemDao.existsByConsignmentNo(token)) {
+                throw new IllegalArgumentException("C.No " + number + " is already used");
+            }
+            claimNumber(partyId, number);
+            return token;
+        }
+        return allocateNext(partyId);
+    }
+
+    @Transactional
+    public String allocateNext(Long partyId) {
+        ConsignmentPool pool = buildPool(partyId);
+        if (pool.getAvailable() != null) {
+            for (String candidate : pool.getAvailable()) {
+                if (StringUtils.hasText(candidate)
+                        && !shipmentDao.existsByTrackingId(candidate)
+                        && !manifestItemDao.existsByConsignmentNo(candidate)) {
+                    return candidate;
+                }
+            }
+        }
+        long generated = nextVacantNumber();
+        claimNumber(partyId, generated);
+        return String.valueOf(generated);
+    }
+
+    @Transactional
+    public void claimNumber(Long partyId, long number) {
+        Optional<ConsignmentRange> owner = consignmentRangeDao.findCovering(number);
+        if (owner.isPresent()) {
+            if (!owner.get().getPartyId().equals(partyId)) {
+                String name = owner.get().getPartyName() != null ? owner.get().getPartyName() : "another party";
+                throw new IllegalArgumentException(
+                        "C.No " + number + " is allocated to " + name + " and cannot be used");
+            }
+            return;
+        }
+        addRange(partyId, number, number, "Auto-allocated");
+    }
+
+    public Optional<ConsignmentRange> findOwner(long number) {
+        return consignmentRangeDao.findCovering(number);
+    }
+
     public boolean ownsConsignment(Long partyId, String consignmentNo) {
         Long number = parseConsignment(consignmentNo);
         return number != null && consignmentRangeDao.covers(partyId, number);
+    }
+
+    private long nextVacantNumber() {
+        long seriesStart = 1L;
+        try {
+            long configured = cnoSettingsDao.load().getSeriesStart();
+            if (configured > 0) {
+                seriesStart = configured;
+            }
+        } catch (Exception ignored) {
+            // use 1
+        }
+        long candidate = Math.max(seriesStart, consignmentRangeDao.maxAllocatedEnd() + 1);
+        while (consignmentRangeDao.findCovering(candidate).isPresent()
+                || shipmentDao.existsByTrackingId(String.valueOf(candidate))
+                || manifestItemDao.existsByConsignmentNo(String.valueOf(candidate))) {
+            candidate++;
+        }
+        return candidate;
     }
 
     public static Long parseConsignment(String consignmentNo) {

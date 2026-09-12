@@ -64,6 +64,7 @@ Web app for courier **booking**, **public tracking**, **customer account**, and 
 
 ### Public track privacy
 - Public track page shows **names + cities**, not full street addresses
+- Weight and M/S party name are not shown on the public track page
 - API still returns full shipment object (left as-is by product decision)
 
 ---
@@ -92,26 +93,29 @@ Dashboard · Manifests · Parties · C.No Ranges · Shipments · Reports · Moni
 - Create / edit / disable sending parties (M/S consignors)
 - Required: party name, phone, city
 - Optional: contact person, email, address, state, pincode, GSTIN, notes
-- Optional **per kg** and **per box** rates (blank = use destination branch rates on the party bill)
+- Optional **per kg** rate (blank = use destination branch per-kg on the party bill)
 - Assign **consignment number ranges** per party (numeric C.No = tracking number)
 - Ranges cannot overlap another party
+- A party cannot book or use a C.No / range assigned to another party
+- Booking without an unused allocated C.No generates a new number and assigns it to that party
 - Cannot delete a party that already has manifests
 - Cannot delete a range that already has used C.Nos
 
 ### 4.1b Manifests (`/admin/manifests`)
 - Search by MF No, party, through (driver/agent), or C.No; filter by party and date
-- Create a paper-style manifest: date, MF No, M/S party, through, origin, service, line items
-- Party C.No picker shows unused numbers (click to fill) and booked numbers (cannot reuse)
+- Create a paper-style manifest: date, **read-only MF No**, through, origin, service, line items
+- Destination branch dropdown is searchable
+- Line items: **party**, C.No (blank = auto-allocate), destination **branch**, boxes, weight, receiver + optional phone
 - Live totals for lines, boxes, and weight; stored on the saved manifest
 - Add 10 / 25 / 50 extra rows (100+ consignments supported)
-- Line items fit the page width (no sideways scroll): C.No, destination **branch**, boxes, weight, receiver + optional phone
 - Destination is chosen from the branch list (not free text)
 - **Individual shipments can be booked** to a destination branch
 - Booking auto-opens or updates that branch’s **In progress** manifest
 - Review an in-progress sheet: add shipment, update consignments, then **Submit**
 - Opens on **In progress** by default; **Submitted** and **All** tabs still available; filter by destination branch and date
 - **Submit** finalizes the sheet: shipments go `DISPATCHED` and **two bills** are created (party + branch)
-- C.No must be numeric, inside the party’s allocated range, and unused
+- C.No must be numeric and unused; if the party has no remaining range, a new number is generated and allocated
+- A C.No already allocated to another party is rejected
 - Public + admin tracking show **MF No**
 - One consignment belongs to exactly one manifest
 - Edit header / existing lines (syncs shipment details); add more C.Nos
@@ -128,9 +132,10 @@ Dashboard · Manifests · Parties · C.No Ranges · Shipments · Reports · Moni
 **Create**
 - Admin can book an individual shipment (`/admin/shipments/new`)
 - Required: sending party, destination **branch**, boxes, weight, receiver
-- C.No is next unused for the party unless entered
+- C.No is next unused for the party unless entered; if the party has none, a new number is generated and allocated
 - Booking is added to the branch’s in-progress manifest (invoice waits until the MF is created)
-- Freight calculated from destination-branch per kg + per box
+- Freight calculated from destination-branch **per kg** only
+- Origin city defaults to the user’s working branch (Indore unless changed)
 
 **Detail / manage (`/admin/shipments/{id}`)**
 - View full party details, route, service, expected delivery, freight, COD
@@ -160,6 +165,12 @@ On each successful status update:
 - Notification log entries are written (EMAIL + SMS simulation)
 - Audit log entry is written
 
+### 4.3a Working branch
+- Admin / staff nav shows **Working from: city — branch**
+- Defaults to **Indore** until the user picks another branch
+- Changing it prefills origin city on new booking and new manifest
+- Stored per user (`users.current_branch_id`)
+
 ### 4.4 Users (`/admin/users`)
 - Search users
 - Create user with role `CUSTOMER` | `STAFF` | `ADMIN`
@@ -183,14 +194,15 @@ On each successful status update:
 - Every submitted manifest creates:
   - **Party bill(s)** — one per distinct sending party on the sheet
   - **Branch bill** — one for the destination branch
-- Formula: `totalWeight × perKg + totalBoxes × perBox` (no minimum, no base rate)
-- **Party rates** (optional per kg + per box). If unset, the destination branch rates are used
-- **Branch rates** (optional per kg + per box; category defaults fill them)
+- Formula: `totalWeight × perKg` (no per-box charge, no minimum, no base rate)
+- **Party rates** (optional per kg). If unset, the destination branch per-kg is used
+- **Branch rates** (optional per kg; category defaults fill them)
+- Each party/branch bill has an **editable detail** page (weight, per kg, notes, payment status) plus consignment lines
 - **No service-type charge** — Domestic Standard / Express / International are operational labels only
 - Category defaults:
   - **Domestic** — Madhya Pradesh branches
   - **National** — Chhattisgarh branches
-- Saving a category default applies per-kg and per-box to every branch in that category
+- Saving a category default applies the per-kg rate to every branch in that category
 - Each party and each branch can then be edited individually
 - Preview calculator by branch
 
@@ -199,6 +211,7 @@ On each successful status update:
 - Opens on **Pending** by default; **History** shows received bills; **All** shows both
 - Filters: party, destination branch, date range
 - Payment status: **Pending** / **Received** (toggle either way)
+- Bill number opens an editable detail page
 - Links back to the source manifest
 
 ### 4.6d Branch bills (`/admin/billing/branches`)
@@ -216,7 +229,7 @@ On each successful status update:
 
 ### 4.7 Rates (`/admin/rates`)
 - Legacy service-type rate cards (kept for history)
-- **Not used for invoices** — freight is branch per-kg + per-box only
+- **Not used for invoices** — freight is branch per-kg only
 - Seeded defaults remain for the unused calculator:
   - Domestic Standard: base 80 + 15/kg
   - Domestic Express: base 120 + 25/kg
@@ -415,7 +428,7 @@ Without these, the app still runs; notifications are logged as `FAILED`/`SKIPPED
 - [x] Rate cards + freight calculation
 - [x] Invoices + COD status (historical)
 - [x] Manifest-level party + branch bills on submit
-- [x] Optional party and branch per-kg / per-box rates
+- [x] Optional party and branch per-kg rates (billed on weight only)
 - [x] Bill payment status Pending / Received
 - [x] Notification log (simulated)
 - [x] Audit log

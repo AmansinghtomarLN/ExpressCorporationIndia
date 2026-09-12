@@ -64,6 +64,24 @@ public class ConsignmentRangeDao {
         }
     }
 
+    public Optional<ConsignmentRange> findCovering(long consignmentNumber) {
+        try {
+            return Optional.ofNullable(jdbcTemplate.queryForObject(
+                    "SELECT r.*, p.party_name FROM consignment_ranges r " +
+                            "JOIN parties p ON p.id = r.party_id " +
+                            "WHERE ? BETWEEN r.range_start AND r.range_end LIMIT 1",
+                    ROW_MAPPER, consignmentNumber));
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
+        }
+    }
+
+    public long maxAllocatedEnd() {
+        Long max = jdbcTemplate.queryForObject(
+                "SELECT COALESCE(MAX(range_end), 0) FROM consignment_ranges", Long.class);
+        return max != null ? max : 0L;
+    }
+
     public boolean covers(Long partyId, long consignmentNumber) {
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM consignment_ranges WHERE party_id = ? AND ? BETWEEN range_start AND range_end",

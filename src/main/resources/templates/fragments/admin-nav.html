@@ -16,5 +16,15 @@
         <a th:href="@{/admin/invoices}">Old invoices</a>
         <a th:href="@{/admin/notifications}">Notifications</a>
         <a th:href="@{/admin/audit}">Audit</a>
+        <form class="workspace-bar" th:if="${workspaceBranch != null}"
+              th:action="@{/admin/workspace/branch}" method="post">
+            <span>Working from</span>
+            <select name="branchId" onchange="this.form.submit()">
+                <option th:each="b : ${workspaceBranches}"
+                        th:value="${b.id}"
+                        th:selected="${workspaceBranch.id == b.id}"
+                        th:text="${b.city + ' — ' + b.branchName}">Indore</option>
+            </select>
+        </form>
     </div>
 </nav>

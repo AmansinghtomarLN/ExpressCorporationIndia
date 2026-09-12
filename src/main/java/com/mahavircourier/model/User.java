@@ -11,6 +11,7 @@ public class User {
     private String passwordHash;
     private String role;       // CUSTOMER | ADMIN | STAFF
     private boolean enabled = true;
+    private Long currentBranchId;
     private LocalDateTime createdAt;
 
     public User() {
@@ -70,6 +71,14 @@ public class User {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public Long getCurrentBranchId() {
+        return currentBranchId;
+    }
+
+    public void setCurrentBranchId(Long currentBranchId) {
+        this.currentBranchId = currentBranchId;
     }
 
     public LocalDateTime getCreatedAt() {

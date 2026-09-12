@@ -17,8 +17,8 @@
             <div>
                 <h1>Rate setup</h1>
                 <p>Submitting a manifest creates <strong>two bills</strong>: a party bill and a branch bill.
-                    Charge is only <strong>weight × per kg + boxes × per box</strong>.
-                    Party rates are optional — if blank, the destination branch rates are used.</p>
+                    Charge is only <strong>weight × per kg</strong>.
+                    Party rates are optional — if blank, the destination branch per-kg rate is used.</p>
             </div>
             <div class="admin-filter-buttons">
                 <a class="btn btn-primary" th:href="@{/admin/billing/parties}">Party bills</a>
@@ -33,16 +33,11 @@
             <form class="form-card" method="post" th:action="@{/admin/billing/DOMESTIC}">
                 <span class="meta-chip">Category default</span>
                 <h3>Domestic (Madhya Pradesh)</h3>
-                <p class="muted">Saving this applies the two rates to every Domestic branch. You can still edit a branch afterwards.</p>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Per kg (Rs.)</label>
-                        <input type="number" step="0.01" min="0" name="perKgRate" required th:value="${domestic.perKgRate}">
-                    </div>
-                    <div class="form-group">
-                        <label>Per box (Rs.)</label>
-                        <input type="number" step="0.01" min="0" name="perBoxRate" required th:value="${domestic.perBoxRate}">
-                    </div>
+                <p class="muted">Saving this applies the per-kg rate to every Domestic branch. You can still edit a branch afterwards.</p>
+                <div class="form-group">
+                    <label>Per kg (Rs.)</label>
+                    <input type="number" step="0.01" min="0" name="perKgRate" required th:value="${domestic.perKgRate}">
+                    <input type="hidden" name="perBoxRate" value="0">
                 </div>
                 <div class="form-group">
                     <label>Notes</label>
@@ -55,16 +50,11 @@
             <form class="form-card" method="post" th:action="@{/admin/billing/NATIONAL}">
                 <span class="meta-chip">Category default</span>
                 <h3>National (Chhattisgarh)</h3>
-                <p class="muted">Saving this applies the two rates to every National branch. You can still edit a branch afterwards.</p>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Per kg (Rs.)</label>
-                        <input type="number" step="0.01" min="0" name="perKgRate" required th:value="${national.perKgRate}">
-                    </div>
-                    <div class="form-group">
-                        <label>Per box (Rs.)</label>
-                        <input type="number" step="0.01" min="0" name="perBoxRate" required th:value="${national.perBoxRate}">
-                    </div>
+                <p class="muted">Saving this applies the per-kg rate to every National branch. You can still edit a branch afterwards.</p>
+                <div class="form-group">
+                    <label>Per kg (Rs.)</label>
+                    <input type="number" step="0.01" min="0" name="perKgRate" required th:value="${national.perKgRate}">
+                    <input type="hidden" name="perBoxRate" value="0">
                 </div>
                 <div class="form-group">
                     <label>Notes</label>
@@ -77,7 +67,7 @@
 
         <div class="form-card wide" style="margin-top:24px;">
             <h3>Optional rates by party</h3>
-            <p class="muted">Leave blank to bill the party at the destination branch’s per-kg / per-box rates.</p>
+            <p class="muted">Leave blank to bill the party at the destination branch’s per-kg rate.</p>
             <div style="overflow-x:auto;">
                 <table class="data-table">
                     <thead>
@@ -85,7 +75,6 @@
                         <th>Party</th>
                         <th>City</th>
                         <th>Per kg (Rs.)</th>
-                        <th>Per box (Rs.)</th>
                         <th></th>
                     </tr>
                     </thead>
@@ -93,13 +82,11 @@
                     <tr th:each="p : ${parties}">
                         <td th:text="${p.partyName}">Party</td>
                         <td th:text="${p.city}">City</td>
-                        <td colspan="3">
+                        <td colspan="2">
                             <form method="post" th:action="@{/admin/billing/party-rates/{id}(id=${p.id})}"
                                   class="admin-filter-buttons" style="align-items:center;">
                                 <input type="number" step="0.01" min="0" name="perKgRate"
                                        th:value="${p.perKgRate}" placeholder="Branch" style="width:110px;">
-                                <input type="number" step="0.01" min="0" name="perBoxRate"
-                                       th:value="${p.perBoxRate}" placeholder="Branch" style="width:110px;">
                                 <button type="submit" class="btn btn-sm btn-dark">Save</button>
                             </form>
                         </td>
@@ -123,7 +110,6 @@
                         <th>City</th>
                         <th>Category</th>
                         <th>Per kg (Rs.)</th>
-                        <th>Per box (Rs.)</th>
                         <th></th>
                     </tr>
                     </thead>
@@ -132,13 +118,11 @@
                         <td th:text="${b.branchName}">Branch</td>
                         <td th:text="${b.city}">City</td>
                         <td th:text="${b.branchCategory == 'NATIONAL' ? 'National' : 'Domestic'}">Domestic</td>
-                        <td colspan="3">
-                            <form method="post" th:action="@{/admin/billing/branches/{id}(id=${b.id})}"
+                        <td colspan="2">
+                            <form method="post" th:action="@{/admin/billing/branch-rates/{id}(id=${b.id})}"
                                   class="admin-filter-buttons" style="align-items:center;">
                                 <input type="number" step="0.01" min="0" name="perKgRate" required
                                        th:value="${b.perKgRate}" style="width:110px;">
-                                <input type="number" step="0.01" min="0" name="perBoxRate" required
-                                       th:value="${b.perBoxRate}" style="width:110px;">
                                 <button type="submit" class="btn btn-sm btn-dark">Save</button>
                             </form>
                         </td>
@@ -170,15 +154,9 @@
                     </select>
                 </div>
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Weight (kg)</label>
-                    <input type="number" id="preview-weight" step="0.01" value="40">
-                </div>
-                <div class="form-group">
-                    <label>Boxes</label>
-                    <input type="number" id="preview-boxes" value="3">
-                </div>
+            <div class="form-group">
+                <label>Weight (kg)</label>
+                <input type="number" id="preview-weight" step="0.01" value="40">
             </div>
             <p><strong id="preview-result">—</strong></p>
             <button type="button" class="btn btn-dark" id="preview-btn">Calculate</button>
@@ -192,9 +170,7 @@ document.getElementById("preview-btn").addEventListener("click", function () {
     var branchId = document.getElementById("preview-branch").value;
     var lane = document.getElementById("preview-lane").value;
     var weight = document.getElementById("preview-weight").value;
-    var boxes = document.getElementById("preview-boxes").value;
     var url = "/admin/billing/preview?weight=" + encodeURIComponent(weight)
-        + "&boxes=" + encodeURIComponent(boxes)
         + "&lane=" + encodeURIComponent(lane);
     if (branchId) {
         url += "&branchId=" + encodeURIComponent(branchId);

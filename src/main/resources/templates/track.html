@@ -42,8 +42,6 @@
                     <div>
                         <span class="meta-chip" th:if="${shipment.manifestNumber}"
                               th:text="'MF No ' + ${shipment.manifestNumber}">MF No 11820</span>
-                        <span class="meta-chip" th:if="${shipment.partyName}"
-                              th:text="'M/S ' + ${shipment.partyName}">M/S GWALIOR</span>
                         <span class="meta-chip" th:if="${shipment.numberOfBoxes != null}"
                               th:text="${shipment.numberOfBoxes} + ' box(es)'">3 boxes</span>
                     </div>
@@ -58,7 +56,7 @@
 
             <div class="form-row" style="margin-top:22px;">
                 <div>
-                    <h4>Sender / party</h4>
+                    <h4>Sender</h4>
                     <p th:text="${shipment.senderName}">Sender Name</p>
                     <p th:text="${shipment.originCity}">Origin City</p>
                 </div>
@@ -75,9 +73,8 @@
                     <p th:text="${shipment.expectedDelivery != null ? shipment.expectedDelivery : 'To be updated'}">Date</p>
                 </div>
             </div>
-            <div class="form-row" th:if="${shipment.weightKg != null}">
-                <div><h4>Weight</h4><p th:text="${shipment.weightKg} + ' kg'">40 kg</p></div>
-                <div th:if="${shipment.manifestNumber}">
+            <div class="form-row" th:if="${shipment.manifestNumber}">
+                <div>
                     <h4>Manifest</h4>
                     <p th:text="${shipment.manifestNumber}">11820</p>
                 </div>

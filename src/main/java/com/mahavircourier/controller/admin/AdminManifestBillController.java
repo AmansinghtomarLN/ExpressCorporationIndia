@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Controller
@@ -63,24 +64,82 @@ public class AdminManifestBillController {
         return "admin/billing-branches";
     }
 
+    @GetMapping("/parties/{id}")
+    public String partyBillDetail(@PathVariable Long id, Model model) {
+        return billDetail(id, "/admin/billing/parties", "Party bill", model);
+    }
+
+    @PostMapping("/parties/{id}")
+    public String savePartyBill(@PathVariable Long id,
+                                @RequestParam(required = false) BigDecimal weightKg,
+                                @RequestParam(required = false) BigDecimal perKgRate,
+                                @RequestParam(required = false) String notes,
+                                @RequestParam(required = false) String status,
+                                RedirectAttributes redirectAttributes) {
+        return saveBill(id, weightKg, perKgRate, notes, status, "/admin/billing/parties/" + id, redirectAttributes);
+    }
+
+    @GetMapping("/branches/{id}")
+    public String branchBillDetail(@PathVariable Long id, Model model) {
+        return billDetail(id, "/admin/billing/branches", "Branch bill", model);
+    }
+
+    @PostMapping("/branches/{id}")
+    public String saveBranchBill(@PathVariable Long id,
+                                 @RequestParam(required = false) BigDecimal weightKg,
+                                 @RequestParam(required = false) BigDecimal perKgRate,
+                                 @RequestParam(required = false) String notes,
+                                 @RequestParam(required = false) String status,
+                                 RedirectAttributes redirectAttributes) {
+        return saveBill(id, weightKg, perKgRate, notes, status, "/admin/billing/branches/" + id, redirectAttributes);
+    }
+
     @PostMapping("/parties/{id}/received")
     public String markPartyReceived(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-        return updateStatus(id, true, "/admin/billing/parties", redirectAttributes);
+        return updateStatus(id, true, "/admin/billing/parties/" + id, redirectAttributes);
     }
 
     @PostMapping("/parties/{id}/pending")
     public String markPartyPending(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-        return updateStatus(id, false, "/admin/billing/parties", redirectAttributes);
+        return updateStatus(id, false, "/admin/billing/parties/" + id, redirectAttributes);
     }
 
     @PostMapping("/branches/{id}/received")
     public String markBranchReceived(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-        return updateStatus(id, true, "/admin/billing/branches", redirectAttributes);
+        return updateStatus(id, true, "/admin/billing/branches/" + id, redirectAttributes);
     }
 
     @PostMapping("/branches/{id}/pending")
     public String markBranchPending(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-        return updateStatus(id, false, "/admin/billing/branches", redirectAttributes);
+        return updateStatus(id, false, "/admin/billing/branches/" + id, redirectAttributes);
+    }
+
+    private String billDetail(Long id, String listPath, String title, Model model) {
+        return manifestBillService.findById(id)
+                .map(bill -> {
+                    model.addAttribute("bill", bill);
+                    model.addAttribute("lines", manifestBillService.linesFor(bill));
+                    model.addAttribute("listPath", listPath);
+                    model.addAttribute("title", title);
+                    model.addAttribute("savePath", listPath + "/" + id);
+                    return "admin/billing-detail";
+                })
+                .orElse("redirect:" + listPath);
+    }
+
+    private String saveBill(Long id, BigDecimal weightKg, BigDecimal perKgRate, String notes,
+                            String status, String redirect, RedirectAttributes redirectAttributes) {
+        CustomUserDetails principal = AdminAuth.requirePrincipal();
+        try {
+            manifestBillService.updateDetails(id, weightKg, perKgRate, notes, status);
+            auditService.log(principal.getUser().getId(), principal.getUsername(),
+                    "BILL_UPDATE", "MANIFEST_BILL", String.valueOf(id),
+                    "Updated bill details");
+            redirectAttributes.addFlashAttribute("successMessage", "Bill details saved.");
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+        return "redirect:" + redirect;
     }
 
     private String updateStatus(Long id, boolean received, String redirect,

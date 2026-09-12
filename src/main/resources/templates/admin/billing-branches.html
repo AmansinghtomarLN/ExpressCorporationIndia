@@ -17,7 +17,7 @@
             <div>
                 <h1>Branch bills</h1>
                 <p>Pending bills first. Use <strong>History</strong> for received bills.
-                    Amount is <strong>weight × per kg + boxes × per box</strong>.</p>
+                    Amount is <strong>weight × per kg</strong>.</p>
             </div>
             <div class="admin-filter-buttons">
                 <a class="btn btn-dark" th:href="@{/admin/billing/parties}">Party bills</a>
@@ -110,7 +110,6 @@
                     <th>Weight</th>
                     <th>Boxes</th>
                     <th>Per kg</th>
-                    <th>Per box</th>
                     <th>Amount</th>
                     <th>Status</th>
                     <th>Created</th>
@@ -119,7 +118,8 @@
                 </thead>
                 <tbody>
                 <tr th:each="bill : ${bills}">
-                    <td th:text="${bill.billNumber}">BRN-20260912-0001</td>
+                    <td><a th:href="@{/admin/billing/branches/{id}(id=${bill.id})}"
+                           th:text="${bill.billNumber}">BRN-20260912-0001</a></td>
                     <td>
                         <a th:href="@{/admin/manifests/{id}(id=${bill.manifestId})}"
                            th:text="${bill.manifestNumber}">MF</a>
@@ -129,7 +129,6 @@
                     <td th:text="${bill.weightKg} + ' kg'">40 kg</td>
                     <td th:text="${bill.numberOfBoxes}">3</td>
                     <td th:text="${'Rs. ' + #numbers.formatDecimal(bill.perKgRate, 1, 2)}">Rs. 0.00</td>
-                    <td th:text="${'Rs. ' + #numbers.formatDecimal(bill.perBoxRate, 1, 2)}">Rs. 0.00</td>
                     <td th:text="${'Rs. ' + #numbers.formatDecimal(bill.freightAmount, 1, 2)}">Rs. 0.00</td>
                     <td>
                         <span class="status-badge"
@@ -138,14 +137,8 @@
                     </td>
                     <td th:text="${bill.createdAt != null ? #temporals.format(bill.createdAt, 'dd MMM yyyy') : '—'}">Date</td>
                     <td>
-                        <form th:if="${bill.pending}" method="post"
-                              th:action="@{/admin/billing/branches/{id}/received(id=${bill.id})}">
-                            <button type="submit" class="btn btn-sm btn-primary">Mark received</button>
-                        </form>
-                        <form th:unless="${bill.pending}" method="post"
-                              th:action="@{/admin/billing/branches/{id}/pending(id=${bill.id})}">
-                            <button type="submit" class="btn btn-sm btn-dark">Mark pending</button>
-                        </form>
+                        <a class="btn btn-sm btn-dark"
+                           th:href="@{/admin/billing/branches/{id}(id=${bill.id})}">Open</a>
                     </td>
                 </tr>
                 </tbody>

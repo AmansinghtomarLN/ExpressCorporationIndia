@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 public class ManifestItemForm {
 
     private Long id;
+    private Long partyId;
     private String consignmentNo;
     private Long destinationBranchId;
     private String destinationCity;
@@ -19,6 +20,14 @@ public class ManifestItemForm {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getPartyId() {
+        return partyId;
+    }
+
+    public void setPartyId(Long partyId) {
+        this.partyId = partyId;
     }
 
     public String getConsignmentNo() {

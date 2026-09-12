@@ -75,17 +75,10 @@
                     <label>Address</label>
                     <input type="text" name="address" th:value="${party.address}">
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Party per kg (optional)</label>
-                        <input type="number" name="perKgRate" step="0.01" min="0"
-                               th:value="${party.perKgRate}" placeholder="Leave blank to use branch rates">
-                    </div>
-                    <div class="form-group">
-                        <label>Party per box (optional)</label>
-                        <input type="number" name="perBoxRate" step="0.01" min="0"
-                               th:value="${party.perBoxRate}" placeholder="Leave blank to use branch rates">
-                    </div>
+                <div class="form-group">
+                    <label>Party per kg (optional)</label>
+                    <input type="number" name="perKgRate" step="0.01" min="0"
+                           th:value="${party.perKgRate}" placeholder="Leave blank to use branch rates">
                 </div>
                 <div class="form-row">
                     <div class="form-group">

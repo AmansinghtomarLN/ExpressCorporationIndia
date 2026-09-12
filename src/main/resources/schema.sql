@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash   VARCHAR(255)  NOT NULL,
     role            VARCHAR(20)   NOT NULL DEFAULT 'CUSTOMER',   -- CUSTOMER | ADMIN | STAFF
     enabled         TINYINT(1)    NOT NULL DEFAULT 1,
+    current_branch_id BIGINT NULL,
     created_at      TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -435,6 +436,15 @@ SET @sql := (
     'SELECT 1')
   FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'parties' AND COLUMN_NAME = 'per_box_rate'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE users ADD COLUMN current_branch_id BIGINT NULL',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'users' AND COLUMN_NAME = 'current_branch_id'
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 

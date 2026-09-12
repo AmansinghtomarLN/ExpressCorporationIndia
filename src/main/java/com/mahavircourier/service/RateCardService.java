@@ -131,7 +131,7 @@ public class RateCardService {
     }
 
     /**
-     * Freight = weight × branch per-kg + boxes × branch per-box.
+     * Freight = weight × per-kg. Boxes are stored for operations but not billed.
      * Destination city maps to that branch's rates. Unmatched cities use the
      * Domestic/National category defaults. Service type is never billed.
      */
@@ -171,7 +171,7 @@ public class RateCardService {
     }
 
     /**
-     * Party bill rates: use the party's optional per-kg / per-box when either is set.
+     * Party bill rates: use the party's optional per-kg when set.
      * Otherwise fall back to the destination branch, then category tariff.
      */
     public FreightQuote quoteForParty(Party party, Long destBranchId, String lane,
@@ -188,7 +188,7 @@ public class RateCardService {
         quote.setBranchName(fallback.getBranchName());
         quote.setBranchCity(fallback.getBranchCity());
         quote.setPerKgRate(nvl(party.getPerKgRate()));
-        quote.setPerBoxRate(nvl(party.getPerBoxRate()));
+        quote.setPerBoxRate(BigDecimal.ZERO);
         quote.setAmount(computeFreight(weight, boxes, quote.getPerKgRate(), quote.getPerBoxRate()));
         return quote;
     }
@@ -214,10 +214,7 @@ public class RateCardService {
 
     public BigDecimal computeFreight(BigDecimal weight, Integer boxes, BigDecimal perKgRate, BigDecimal perBoxRate) {
         BigDecimal safeWeight = weight != null ? weight : BigDecimal.ZERO;
-        int boxCount = boxes != null && boxes > 0 ? boxes : 0;
-        return safeWeight.multiply(nvl(perKgRate))
-                .add(BigDecimal.valueOf(boxCount).multiply(nvl(perBoxRate)))
-                .setScale(2, RoundingMode.HALF_UP);
+        return safeWeight.multiply(nvl(perKgRate)).setScale(2, RoundingMode.HALF_UP);
     }
 
     private BigDecimal nvl(BigDecimal value) {

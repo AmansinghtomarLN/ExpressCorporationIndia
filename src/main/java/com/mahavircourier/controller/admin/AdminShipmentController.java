@@ -10,6 +10,7 @@ import com.mahavircourier.service.CustomUserDetails;
 import com.mahavircourier.service.ManifestService;
 import com.mahavircourier.service.PartyService;
 import com.mahavircourier.service.ShipmentService;
+import com.mahavircourier.service.WorkspaceService;
 import com.mahavircourier.service.StatusTransitions;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Controller;
@@ -42,17 +43,20 @@ public class AdminShipmentController {
     private final PartyService partyService;
     private final ManifestService manifestService;
     private final AuditService auditService;
+    private final WorkspaceService workspaceService;
 
     public AdminShipmentController(ShipmentService shipmentService,
                                    BranchService branchService,
                                    PartyService partyService,
                                    ManifestService manifestService,
-                                   AuditService auditService) {
+                                   AuditService auditService,
+                                   WorkspaceService workspaceService) {
         this.shipmentService = shipmentService;
         this.branchService = branchService;
         this.partyService = partyService;
         this.manifestService = manifestService;
         this.auditService = auditService;
+        this.workspaceService = workspaceService;
     }
 
     @GetMapping
@@ -79,6 +83,11 @@ public class AdminShipmentController {
                           @RequestParam(value = "manifestId", required = false) Long manifestId,
                           Model model) {
         AdminShipmentForm form = new AdminShipmentForm();
+        try {
+            form.setOriginCity(workspaceService.resolveCurrent(AdminAuth.requirePrincipal().getUser()).getCity());
+        } catch (IllegalArgumentException ignored) {
+            form.setOriginCity(WorkspaceService.DEFAULT_CITY);
+        }
         if (branchId != null) {
             form.setDestinationBranchId(branchId);
         } else if (manifestId != null) {

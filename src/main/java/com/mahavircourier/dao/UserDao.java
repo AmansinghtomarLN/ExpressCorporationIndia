@@ -32,6 +32,12 @@ public class UserDao {
         u.setPasswordHash(rs.getString("password_hash"));
         u.setRole(rs.getString("role"));
         u.setEnabled(rs.getBoolean("enabled"));
+        try {
+            long branchId = rs.getLong("current_branch_id");
+            u.setCurrentBranchId(rs.wasNull() ? null : branchId);
+        } catch (Exception ignored) {
+            // column added by schema upgrade
+        }
         Timestamp ts = rs.getTimestamp("created_at");
         if (ts != null) {
             u.setCreatedAt(ts.toLocalDateTime());
@@ -116,6 +122,10 @@ public class UserDao {
 
     public void updatePasswordHash(Long id, String passwordHash) {
         jdbcTemplate.update("UPDATE users SET password_hash = ? WHERE id = ?", passwordHash, id);
+    }
+
+    public void updateCurrentBranch(Long id, Long branchId) {
+        jdbcTemplate.update("UPDATE users SET current_branch_id = ? WHERE id = ?", branchId, id);
     }
 
     public void deleteById(Long id) {

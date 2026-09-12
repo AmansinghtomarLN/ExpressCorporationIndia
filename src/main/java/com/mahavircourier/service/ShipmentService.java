@@ -92,12 +92,7 @@ public class ShipmentService {
         }
         Party party = partyService.findById(form.getPartyId())
                 .orElseThrow(() -> new IllegalArgumentException("Party not found"));
-        String cno = StringUtils.hasText(form.getConsignmentNo())
-                ? form.getConsignmentNo().trim()
-                : partyService.nextUnusedConsignment(party.getId());
-        if (!partyService.ownsConsignment(party.getId(), cno)) {
-            throw new IllegalArgumentException("C.No " + cno + " is not allocated to " + party.getPartyName());
-        }
+        String cno = partyService.resolveForBooking(party.getId(), form.getConsignmentNo());
         if (shipmentDao.existsByTrackingId(cno)) {
             throw new IllegalArgumentException("C.No " + cno + " is already used");
         }

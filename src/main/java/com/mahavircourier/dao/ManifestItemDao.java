@@ -38,6 +38,13 @@ public class ManifestItemDao {
         long shipmentId = rs.getLong("shipment_id");
         item.setShipmentId(rs.wasNull() ? null : shipmentId);
         try {
+            long partyId = rs.getLong("shipment_party_id");
+            item.setPartyId(rs.wasNull() ? null : partyId);
+            item.setPartyName(rs.getString("shipment_party_name"));
+        } catch (Exception ignored) {
+            // optional join
+        }
+        try {
             item.setFreightCharge(rs.getBigDecimal("freight_charge"));
             item.setShipmentStatus(rs.getString("shipment_status"));
         } catch (Exception ignored) {
@@ -57,10 +64,12 @@ public class ManifestItemDao {
     public List<ManifestItem> findByManifestId(Long manifestId) {
         return jdbcTemplate.query(
                 "SELECT i.*, s.freight_charge, s.status AS shipment_status, " +
+                        "s.party_id AS shipment_party_id, p.party_name AS shipment_party_name, " +
                         "inv.id AS invoice_id, inv.invoice_number, " +
                         "COALESCE(b.branch_name, inv_b.branch_name) AS billed_branch_name " +
                         "FROM manifest_items i " +
                         "LEFT JOIN shipments s ON s.id = i.shipment_id " +
+                        "LEFT JOIN parties p ON p.id = s.party_id " +
                         "LEFT JOIN invoices inv ON inv.shipment_id = s.id " +
                         "LEFT JOIN branches b ON b.id = s.assigned_branch_id " +
                         "LEFT JOIN branches inv_b ON inv_b.id = inv.billed_branch_id " +

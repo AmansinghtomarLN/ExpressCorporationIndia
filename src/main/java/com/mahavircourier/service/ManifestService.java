@@ -1,7 +1,6 @@
 package com.mahavircourier.service;
 
 import com.mahavircourier.dao.BranchDao;
-import com.mahavircourier.dao.ConsignmentRangeDao;
 import com.mahavircourier.dao.ManifestDao;
 import com.mahavircourier.dao.ManifestItemDao;
 import com.mahavircourier.dao.PartyDao;
@@ -31,7 +30,7 @@ public class ManifestService {
     private final ManifestDao manifestDao;
     private final ManifestItemDao manifestItemDao;
     private final PartyDao partyDao;
-    private final ConsignmentRangeDao consignmentRangeDao;
+    private final PartyService partyService;
     private final ShipmentDao shipmentDao;
     private final ShipmentService shipmentService;
     private final RateCardService rateCardService;
@@ -41,7 +40,7 @@ public class ManifestService {
     public ManifestService(ManifestDao manifestDao,
                            ManifestItemDao manifestItemDao,
                            PartyDao partyDao,
-                           ConsignmentRangeDao consignmentRangeDao,
+                           PartyService partyService,
                            ShipmentDao shipmentDao,
                            ShipmentService shipmentService,
                            RateCardService rateCardService,
@@ -50,7 +49,7 @@ public class ManifestService {
         this.manifestDao = manifestDao;
         this.manifestItemDao = manifestItemDao;
         this.partyDao = partyDao;
-        this.consignmentRangeDao = consignmentRangeDao;
+        this.partyService = partyService;
         this.shipmentDao = shipmentDao;
         this.shipmentService = shipmentService;
         this.rateCardService = rateCardService;
@@ -101,12 +100,17 @@ public class ManifestService {
         if (number == null) {
             throw new IllegalArgumentException("Consignment number must be numeric");
         }
-        if (!consignmentRangeDao.covers(party.getId(), number)) {
+        Optional<com.mahavircourier.model.ConsignmentRange> owner = partyService.findOwner(number);
+        if (owner.isPresent() && !owner.get().getPartyId().equals(party.getId())) {
+            String name = owner.get().getPartyName() != null ? owner.get().getPartyName() : "another party";
             throw new IllegalArgumentException(
-                    "C.No " + normalized + " is not in " + party.getPartyName() + "'s allocated range");
+                    "C.No " + normalized + " is allocated to " + name + " and cannot be used");
         }
         if (manifestItemDao.existsByConsignmentNo(normalized) || shipmentDao.existsByTrackingId(normalized)) {
             throw new IllegalArgumentException("C.No " + normalized + " is already used on another manifest");
+        }
+        if (owner.isEmpty()) {
+            return "C.No " + normalized + " is free and will be allocated to " + party.getPartyName();
         }
         return "C.No " + normalized + " is available for " + party.getPartyName();
     }
@@ -319,6 +323,9 @@ public class ManifestService {
         String origin = StringUtils.hasText(form.getOriginCity())
                 ? form.getOriginCity().trim()
                 : (party != null ? party.getCity() : manifest.getOriginCity());
+        if (!StringUtils.hasText(origin)) {
+            origin = "Indore";
+        }
         manifest.setOriginCity(origin);
         String service = StringUtils.hasText(form.getServiceType())
                 ? form.getServiceType().trim() : "DOMESTIC_STANDARD";
@@ -350,16 +357,17 @@ public class ManifestService {
     }
 
     private void addDraftLine(Manifest manifest, Party party, ManifestItemForm line, int serial, Long bookedByUserId) {
-        if (party == null) {
-            throw new IllegalArgumentException("Select the sending party to add a C.No");
-        }
+        Party lineParty = resolveLineParty(line, party);
+        String cno = partyService.resolveForBooking(lineParty.getId(), line.getConsignmentNo());
+        line.setPartyId(lineParty.getId());
+        line.setConsignmentNo(cno);
         ManifestItem item = toItem(line, manifest.getId(), serial, manifest);
-        validateNewConsignment(party.getId(), item.getConsignmentNo(), null);
+        validateNewConsignment(lineParty.getId(), item.getConsignmentNo(), null);
         Long itemId = manifestItemDao.save(item);
         item.setId(itemId);
 
-        Shipment shipment = buildShipment(manifest, party, item, bookedByUserId);
-        String location = originOf(manifest, party);
+        Shipment shipment = buildShipment(manifest, lineParty, item, bookedByUserId);
+        String location = originOf(manifest, lineParty);
         if (Manifest.STATUS_CREATED.equals(manifest.getStatus())) {
             shipment.setStatus("DISPATCHED");
             shipment = shipmentService.createFromManifest(
@@ -449,7 +457,7 @@ public class ManifestService {
 
     private Party requireEnabledParty(Long partyId) {
         if (partyId == null) {
-            throw new IllegalArgumentException("Select the sending party (M/S)");
+            throw new IllegalArgumentException("Select the sending party");
         }
         Party party = partyDao.findById(partyId)
                 .orElseThrow(() -> new IllegalArgumentException("Party not found"));
@@ -472,6 +480,7 @@ public class ManifestService {
                     || StringUtils.hasText(item.getDestinationCity())
                     || item.getDestinationBranchId() != null
                     || StringUtils.hasText(item.getReceiverName())
+                    || item.getPartyId() != null
                     || item.getWeightKg() != null
                     || item.getNumberOfBoxes() != null;
             if (!any) {
@@ -486,10 +495,32 @@ public class ManifestService {
         Set<String> seen = new HashSet<>();
         for (ManifestItemForm line : lines) {
             String cno = normalizeConsignment(line.getConsignmentNo());
+            if (!StringUtils.hasText(cno)) {
+                continue;
+            }
             if (!seen.add(cno)) {
                 throw new IllegalArgumentException("Duplicate consignment number on this manifest: " + cno);
             }
         }
+    }
+
+    private Party resolveLineParty(ManifestItemForm line, Party headerParty) {
+        if (line.getPartyId() != null) {
+            return requireEnabledParty(line.getPartyId());
+        }
+        if (StringUtils.hasText(line.getConsignmentNo())) {
+            Long number = PartyService.parseConsignment(line.getConsignmentNo().trim());
+            if (number != null) {
+                Optional<com.mahavircourier.model.ConsignmentRange> owner = partyService.findOwner(number);
+                if (owner.isPresent()) {
+                    return requireEnabledParty(owner.get().getPartyId());
+                }
+            }
+        }
+        if (headerParty != null) {
+            return headerParty;
+        }
+        throw new IllegalArgumentException("Select a party on this row to allocate a C.No");
     }
 
     private void validateNewConsignment(Long partyId, String consignmentNo, Long excludeItemId) {
@@ -497,9 +528,7 @@ public class ManifestService {
         if (number == null) {
             throw new IllegalArgumentException("Consignment number must be numeric: " + consignmentNo);
         }
-        if (!consignmentRangeDao.covers(partyId, number)) {
-            throw new IllegalArgumentException("C.No " + consignmentNo + " is not allocated to this party");
-        }
+        partyService.claimNumber(partyId, number);
         boolean usedOnManifest = excludeItemId == null
                 ? manifestItemDao.existsByConsignmentNo(consignmentNo)
                 : manifestItemDao.existsByConsignmentNoExcluding(consignmentNo, excludeItemId);
