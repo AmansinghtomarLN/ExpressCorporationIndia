@@ -24,7 +24,7 @@
         <div class="form-card wide track-hero-card">
             <form th:action="@{/track}" method="get" class="track-form">
                 <input type="text" name="trackingId" th:value="${trackingId}"
-                       placeholder="C.No / tracking number, e.g. 37191" required>
+                       placeholder="Numeric shipment number, e.g. 37191" inputmode="numeric" required>
                 <button type="submit" class="btn btn-primary">Track Now</button>
             </form>
         </div>

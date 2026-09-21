@@ -182,18 +182,19 @@ public class ManifestBillService {
 
     public List<ManifestItem> linesFor(ManifestBill bill) {
         List<ManifestItem> items = manifestItemDao.findByManifestId(bill.getManifestId());
-        if (!bill.isPartyBill() || bill.getPartyId() == null) {
-            return items;
-        }
-        Manifest manifest = manifestDao.findById(bill.getManifestId()).orElse(null);
-        List<ManifestItem> filtered = new ArrayList<>();
-        for (ManifestItem item : items) {
-            Long partyId = resolvePartyId(manifest, item);
-            if (bill.getPartyId().equals(partyId)) {
-                filtered.add(item);
+        List<ManifestItem> result = items;
+        if (bill.isPartyBill() && bill.getPartyId() != null) {
+            Manifest manifest = manifestDao.findById(bill.getManifestId()).orElse(null);
+            result = new ArrayList<>();
+            for (ManifestItem item : items) {
+                Long partyId = resolvePartyId(manifest, item);
+                if (bill.getPartyId().equals(partyId)) {
+                    result.add(item);
+                }
             }
         }
-        return filtered;
+        applyLineAmounts(result, bill);
+        return result;
     }
 
     public LocalDate manifestDateFor(Long manifestId) {
@@ -315,6 +316,14 @@ public class ManifestBillService {
             }
         }
         throw new IllegalArgumentException("Cannot create a branch bill without a destination branch");
+    }
+
+    private void applyLineAmounts(List<ManifestItem> items, ManifestBill bill) {
+        BigDecimal rate = bill.getPerKgRate() != null ? bill.getPerKgRate() : BigDecimal.ZERO;
+        for (ManifestItem item : items) {
+            item.setFreightCharge(rateCardService.computeFreight(
+                    item.getWeightKg(), item.getNumberOfBoxes(), rate, BigDecimal.ZERO));
+        }
     }
 
     private LineTotals sumAll(List<ManifestItem> items) {

@@ -162,6 +162,8 @@
                         <td>
                             <a class="btn btn-sm btn-dark"
                                th:href="${bill.partyBill} ? @{/admin/billing/parties/{id}(id=${bill.id})} : @{/admin/billing/branches/{id}(id=${bill.id})}">Open</a>
+                            <a class="btn btn-sm btn-primary"
+                               th:href="${bill.partyBill} ? @{/admin/billing/parties/{id}/print(id=${bill.id})} : @{/admin/billing/branches/{id}/print(id=${bill.id})}">Print</a>
                         </td>
                     </tr>
                     </tbody>

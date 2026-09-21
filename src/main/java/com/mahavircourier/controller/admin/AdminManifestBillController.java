@@ -1,6 +1,7 @@
 package com.mahavircourier.controller.admin;
 
 import com.mahavircourier.model.ManifestBill;
+import com.mahavircourier.model.ManifestItem;
 import com.mahavircourier.service.AuditService;
 import com.mahavircourier.service.BranchService;
 import com.mahavircourier.service.CustomUserDetails;
@@ -18,6 +19,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Controller
 @RequestMapping("/admin/billing")
@@ -69,6 +71,11 @@ public class AdminManifestBillController {
         return billDetail(id, "/admin/billing/parties", "Party bill", model);
     }
 
+    @GetMapping("/parties/{id}/print")
+    public String printPartyBill(@PathVariable Long id, Model model) {
+        return billPrint(id, "/admin/billing/parties", model);
+    }
+
     @PostMapping("/parties/{id}")
     public String savePartyBill(@PathVariable Long id,
                                 @RequestParam(required = false) BigDecimal weightKg,
@@ -82,6 +89,11 @@ public class AdminManifestBillController {
     @GetMapping("/branches/{id}")
     public String branchBillDetail(@PathVariable Long id, Model model) {
         return billDetail(id, "/admin/billing/branches", "Branch bill", model);
+    }
+
+    @GetMapping("/branches/{id}/print")
+    public String printBranchBill(@PathVariable Long id, Model model) {
+        return billPrint(id, "/admin/billing/branches", model);
     }
 
     @PostMapping("/branches/{id}")
@@ -117,15 +129,46 @@ public class AdminManifestBillController {
     private String billDetail(Long id, String listPath, String title, Model model) {
         return manifestBillService.findById(id)
                 .map(bill -> {
-                    model.addAttribute("bill", bill);
-                    model.addAttribute("lines", manifestBillService.linesFor(bill));
-                    model.addAttribute("manifestDate", manifestBillService.manifestDateFor(bill.getManifestId()));
+                    addBillView(model, bill);
                     model.addAttribute("listPath", listPath);
                     model.addAttribute("title", title);
                     model.addAttribute("savePath", listPath + "/" + id);
+                    model.addAttribute("printPath", listPath + "/" + id + "/print");
                     return "admin/billing-detail";
                 })
                 .orElse("redirect:" + listPath);
+    }
+
+    private String billPrint(Long id, String listPath, Model model) {
+        return manifestBillService.findById(id)
+                .map(bill -> {
+                    addBillView(model, bill);
+                    model.addAttribute("backPath", listPath + "/" + id);
+                    return "admin/billing-print";
+                })
+                .orElse("redirect:" + listPath);
+    }
+
+    private void addBillView(Model model, ManifestBill bill) {
+        List<ManifestItem> lines = manifestBillService.linesFor(bill);
+        BigDecimal lineAmountTotal = BigDecimal.ZERO;
+        int lineBoxTotal = 0;
+        BigDecimal lineWeightTotal = BigDecimal.ZERO;
+        for (ManifestItem line : lines) {
+            if (line.getFreightCharge() != null) {
+                lineAmountTotal = lineAmountTotal.add(line.getFreightCharge());
+            }
+            lineBoxTotal += line.getNumberOfBoxes();
+            if (line.getWeightKg() != null) {
+                lineWeightTotal = lineWeightTotal.add(line.getWeightKg());
+            }
+        }
+        model.addAttribute("bill", bill);
+        model.addAttribute("lines", lines);
+        model.addAttribute("manifestDate", manifestBillService.manifestDateFor(bill.getManifestId()));
+        model.addAttribute("lineAmountTotal", lineAmountTotal);
+        model.addAttribute("lineBoxTotal", lineBoxTotal);
+        model.addAttribute("lineWeightTotal", lineWeightTotal);
     }
 
     private String saveBill(Long id, BigDecimal weightKg, BigDecimal perKgRate, String notes,

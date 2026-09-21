@@ -468,19 +468,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     wireAllCombos();
-    var destHeader = document.querySelector(".dest-header");
-    if (destHeader) {
-        destHeader.addEventListener("change", function () {
-            var v = destHeader.value;
-            var label = labelFor(v);
-            document.querySelectorAll("#manifest-lines .combo").forEach(function (combo) {
-                var hidden = combo.querySelector(".combo-value");
-                if (hidden && !hidden.value && v) {
-                    selectBranch(combo, v, label, false);
-                }
-            });
-        });
-    }
     tbody.querySelectorAll("tr.from-open").forEach(function (tr) {
         var sid = (tr.querySelector(".shipment-id") || {}).value;
         if (!sid) return;

@@ -118,7 +118,7 @@
                 </thead>
                 <tbody>
                 <tr th:each="s : ${recentShipments}">
-                    <td th:text="${s.trackingId}">ECI1000000001</td>
+                    <td th:text="${s.trackingId}">37191</td>
                     <td th:text="${s.originCity} + ' → ' + ${s.destinationCity}">Route</td>
                     <td>
                         <span class="status-badge" th:classappend="'status-' + ${s.status}"

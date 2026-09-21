@@ -14,8 +14,15 @@
     <div class="container full-page">
         <p><a th:href="${listPath}" class="muted">&larr; Back to bills</a></p>
         <span class="eyebrow">Billing</span>
-        <h1 th:text="${title}">Bill</h1>
-        <p>Charge is <strong>weight × per kg</strong>. Edit the rates or totals below and save.</p>
+        <div class="admin-toolbar" style="align-items:flex-start;">
+            <div>
+                <h1 th:text="${title}">Bill</h1>
+                <p>Charge is <strong>weight × per kg</strong>. Edit the rates or totals below and save.</p>
+            </div>
+            <div class="admin-filter-buttons">
+                <a class="btn btn-primary" th:href="${printPath}">Print</a>
+            </div>
+        </div>
 
         <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
@@ -82,6 +89,7 @@
             </div>
             <div class="admin-filter-buttons">
                 <button type="submit" class="btn btn-primary">Save bill</button>
+                <a class="btn btn-dark" th:href="${printPath}">Print</a>
             </div>
         </form>
 
@@ -93,11 +101,12 @@
                     <tr>
                         <th>#</th>
                         <th>Date</th>
-                        <th>C.No</th>
+                        <th>Consinement</th>
                         <th>Party</th>
                         <th>Destination</th>
-                        <th>Weight</th>
                         <th>Boxes</th>
+                        <th>Weight</th>
+                        <th>Amount</th>
                         <th>Receiver</th>
                     </tr>
                     </thead>
@@ -108,9 +117,17 @@
                         <td th:text="${line.consignmentNo}">37191</td>
                         <td th:text="${line.partyName != null ? line.partyName : '—'}">Party</td>
                         <td th:text="${line.destinationCity}">City</td>
-                        <td th:text="${line.weightKg} + ' kg'">40 kg</td>
                         <td th:text="${line.numberOfBoxes}">3</td>
+                        <td th:text="${line.weightKg} + ' kg'">40 kg</td>
+                        <td th:text="${line.freightCharge != null ? ('Rs. ' + #numbers.formatDecimal(line.freightCharge, 1, 2)) : '—'}">Rs. 0.00</td>
                         <td th:text="${line.receiverName}">Receiver</td>
+                    </tr>
+                    <tr th:if="${lines != null and !#lists.isEmpty(lines)}">
+                        <td colspan="5"><strong>Total</strong></td>
+                        <td><strong th:text="${lineBoxTotal}">0</strong></td>
+                        <td><strong th:text="${lineWeightTotal} + ' kg'">0 kg</strong></td>
+                        <td><strong th:text="'Rs. ' + ${#numbers.formatDecimal(lineAmountTotal, 1, 2)}">Rs. 0.00</strong></td>
+                        <td></td>
                     </tr>
                     </tbody>
                 </table>

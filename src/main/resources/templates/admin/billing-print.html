@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Bill ' + ${bill.billNumber}">Bill</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container">
+        <div class="admin-filter-buttons no-print" style="margin-bottom:16px;">
+            <a class="btn btn-dark" th:href="${backPath}">Back</a>
+            <button type="button" class="btn btn-primary" onclick="window.print()">Print</button>
+        </div>
+
+        <div class="manifest-sheet">
+            <div class="manifest-sheet-head">
+                <strong>EXPRESS CORPORATION OF INDIA</strong>
+                <div class="muted">Dewas Naka Indore · Ph. 07313590608</div>
+                <h2 th:text="${bill.partyBill} ? 'PARTY BILL' : 'BRANCH BILL'">BILL</h2>
+            </div>
+            <div class="manifest-meta">
+                <div><strong>Bill No:</strong> <span th:text="${bill.billNumber}">PTY-20260921-0001</span></div>
+                <div><strong>Date:</strong>
+                    <span th:text="${bill.createdAt != null ? #temporals.format(bill.createdAt, 'dd/MM/yy') : '—'}">21/09/26</span>
+                </div>
+                <div><strong>Party:</strong> <span th:text="${bill.partyDisplay}">Party</span></div>
+                <div><strong>Destination:</strong> <span th:text="${bill.branchDisplay}">Branch</span></div>
+                <div><strong>Manifest:</strong> <span th:text="${bill.manifestNumber}">MF</span></div>
+                <div><strong>Per kg:</strong>
+                    <span th:text="'Rs. ' + ${#numbers.formatDecimal(bill.perKgRate, 1, 2)}">Rs. 0.00</span>
+                </div>
+            </div>
+            <table class="manifest-print">
+                <thead>
+                <tr>
+                    <th>S.No</th>
+                    <th>Consinement</th>
+                    <th>Destination</th>
+                    <th>Boxes</th>
+                    <th>Weight</th>
+                    <th>Amount</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="line, stat : ${lines}">
+                    <td th:text="${stat.count}">1</td>
+                    <td th:text="${line.consignmentNo}">37191</td>
+                    <td th:text="${line.destinationCity}">GWALIOR</td>
+                    <td th:text="${line.numberOfBoxes}">3</td>
+                    <td th:text="${line.weightKg}">40</td>
+                    <td th:text="${line.freightCharge != null ? #numbers.formatDecimal(line.freightCharge, 1, 2) : '0.00'}">0.00</td>
+                </tr>
+                <tr>
+                    <td colspan="4"><strong>Total</strong></td>
+                    <td><strong th:text="${lineBoxTotal}">0</strong></td>
+                    <td><strong th:text="${lineWeightTotal}">0</strong></td>
+                    <td><strong th:text="${#numbers.formatDecimal(lineAmountTotal, 1, 2)}">0.00</strong></td>
+                </tr>
+                </tbody>
+            </table>
+            <p style="margin-top:14px; font-size:0.9rem;">
+                Amount per Consinement is <strong>weight × per kg</strong>.
+                Bill amount: <strong th:text="'Rs. ' + ${#numbers.formatDecimal(bill.freightAmount, 1, 2)}">Rs. 0.00</strong>
+            </p>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

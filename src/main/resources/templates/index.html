@@ -37,10 +37,10 @@
 <div class="container">
     <div class="track-widget">
         <h3>Track Your Shipment</h3>
-        <p class="hint">Enter your 10-digit docket / tracking number to see the latest status instantly.</p>
+            <p class="hint">Enter your numeric Consinement / shipment number to see the latest status instantly.</p>
         <form id="quick-track-form" class="track-form"
               th:attr="data-can-manage=${#authorization.expression('hasAnyRole(''ADMIN'',''STAFF'')')}">
-            <input type="text" id="quick-track-input" placeholder="e.g. MH1000000001" required>
+            <input type="text" id="quick-track-input" placeholder="e.g. 37191" inputmode="numeric" required>
             <button type="submit" class="btn btn-primary">Track Now</button>
         </form>
         <div id="quick-track-result"></div>

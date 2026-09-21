@@ -137,6 +137,9 @@ public class ShipmentService {
             throw new IllegalArgumentException("Consignment / tracking number is required");
         }
         String trackingId = shipment.getTrackingId().trim();
+        if (!trackingId.matches("\\d+")) {
+            throw new IllegalArgumentException("Shipment number must be numeric");
+        }
         if (shipmentDao.existsByTrackingId(trackingId)) {
             throw new IllegalArgumentException("Consignment number already used as a shipment: " + trackingId);
         }
