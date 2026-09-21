@@ -470,3 +470,15 @@ CREATE TABLE IF NOT EXISTS manifest_bills (
     KEY idx_bills_branch (branch_id),
     KEY idx_bills_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS cities (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    city_name       VARCHAR(80)  NOT NULL,
+    state           VARCHAR(80)  NOT NULL,
+    category        VARCHAR(20)  NOT NULL,
+    created_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_city_state (city_name, state),
+    KEY idx_cities_category (category),
+    KEY idx_cities_state (state)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

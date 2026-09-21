@@ -6,12 +6,26 @@ document.addEventListener("DOMContentLoaded", function () {
     var tbody = document.querySelector("#manifest-lines tbody");
     var usedSet = new Set();
     var branches = [];
+    var cities = [];
+    var localCity = "Indore";
     var openShipments = [];
     try {
         var raw = document.getElementById("branch-options");
         branches = raw ? JSON.parse(raw.textContent) : [];
     } catch (e) {
         branches = [];
+    }
+    try {
+        var cityRaw = document.getElementById("city-options");
+        cities = cityRaw ? JSON.parse(cityRaw.textContent) : [];
+    } catch (e) {
+        cities = [];
+    }
+    try {
+        var localRaw = document.getElementById("local-city");
+        localCity = localRaw ? JSON.parse(localRaw.textContent) : "Indore";
+    } catch (e) {
+        localCity = "Indore";
     }
     try {
         var openRaw = document.getElementById("open-shipments-data");
@@ -34,11 +48,55 @@ document.addEventListener("DOMContentLoaded", function () {
         return "";
     }
 
+    function cityLabelFor(name) {
+        if (!name) return "";
+        var token = String(name).toLowerCase();
+        for (var i = 0; i < cities.length; i++) {
+            if (String(cities[i].city).toLowerCase() === token) return cities[i].label || cities[i].city;
+        }
+        return name;
+    }
+
     function listHtml() {
         var html = '<li data-value="" data-label="">— Select branch —</li>';
         branches.forEach(function (b) {
             html += '<li data-value="' + String(b.id) + '" data-label="' + escapeHtml(b.label) + '">' +
                 escapeHtml(b.label) + "</li>";
+        });
+        return html;
+    }
+
+    function cityListHtml() {
+        var order = ["LOCAL", "MP", "CG", "NEARBY", "REST"];
+        var groups = {};
+        order.forEach(function (g) { groups[g] = []; });
+        var hasLocal = false;
+        cities.forEach(function (c) {
+            var cat = c.category || "REST";
+            if (!groups[cat]) groups[cat] = [];
+            if (cat === "LOCAL") hasLocal = true;
+            groups[cat].push(c);
+        });
+        if (!hasLocal && localCity) {
+            groups.LOCAL.push({
+                city: localCity,
+                label: localCity,
+                group: "Local",
+                category: "LOCAL"
+            });
+        }
+        var html = '<li data-value="" data-label="">— Select city —</li>';
+        order.forEach(function (g) {
+            var items = groups[g] || [];
+            if (!items.length) return;
+            html += '<li class="combo-group" data-group="1">' +
+                escapeHtml(items[0].group || g) + "</li>";
+            items.forEach(function (c) {
+                var value = c.city || "";
+                var label = c.label || value;
+                html += '<li data-value="' + escapeHtml(value) + '" data-label="' + escapeHtml(label) + '">' +
+                    escapeHtml(label) + "</li>";
+            });
         });
         return html;
     }
@@ -63,10 +121,27 @@ document.addEventListener("DOMContentLoaded", function () {
     function filterList(combo, query) {
         var q = (query || "").toLowerCase().trim();
         combo.querySelectorAll(".combo-list li").forEach(function (li) {
+            if (li.getAttribute("data-group")) {
+                return;
+            }
             var label = (li.getAttribute("data-label") || li.textContent || "").toLowerCase();
             var empty = !li.getAttribute("data-value");
             li.hidden = !!(!empty && q && label.indexOf(q) === -1);
         });
+        var group = null;
+        var any = false;
+        combo.querySelectorAll(".combo-list li").forEach(function (li) {
+            if (li.getAttribute("data-group")) {
+                if (group) group.hidden = !any;
+                group = li;
+                any = false;
+                return;
+            }
+            if (!li.hidden && li.getAttribute("data-value")) {
+                any = true;
+            }
+        });
+        if (group) group.hidden = !any;
     }
 
     function selectBranch(combo, value, label, moveFocus) {
@@ -91,11 +166,18 @@ document.addEventListener("DOMContentLoaded", function () {
         var search = combo.querySelector(".combo-search");
         var list = combo.querySelector(".combo-list");
         if (!hidden || !search || !list) return;
-        list.innerHTML = listHtml();
+        var cityMode = !!combo.querySelector(".dest-city");
+        if (!cityMode) {
+            list.innerHTML = listHtml();
+        }
         if (hidden.value) {
-            search.value = labelFor(hidden.value);
+            search.value = cityMode ? cityLabelFor(hidden.value) : labelFor(hidden.value);
         }
         search.addEventListener("focus", function () {
+            if (cityMode && list.getAttribute("data-filled") !== "1") {
+                list.innerHTML = cityListHtml();
+                list.setAttribute("data-filled", "1");
+            }
             closeAll(combo);
             filterList(combo, search.value);
             list.hidden = false;
@@ -114,7 +196,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         list.addEventListener("mousedown", function (ev) {
             var li = ev.target.closest("li");
-            if (!li) return;
+            if (!li || li.getAttribute("data-group")) return;
             ev.preventDefault();
             selectBranch(combo, li.getAttribute("data-value"), li.getAttribute("data-label"), true);
         });
@@ -137,9 +219,9 @@ document.addEventListener("DOMContentLoaded", function () {
             '<td><input type="hidden" name="items[' + index + '].id" value="">' +
             '<input type="hidden" class="shipment-id" name="items[' + index + '].shipmentId" value="">' +
             '<input type="text" class="cno-input nav-field" name="items[' + index + '].consignmentNo" placeholder="Blank = auto" inputmode="numeric"></td>' +
-            '<td><div class="combo">' +
-            '<input type="hidden" class="combo-value dest-branch" name="items[' + index + '].destinationBranchId" value="">' +
-            '<input type="search" class="combo-search nav-field" placeholder="Search branch…" autocomplete="off">' +
+            '<td><div class="combo city-combo">' +
+            '<input type="hidden" class="combo-value dest-city" name="items[' + index + '].destinationCity" value="">' +
+            '<input type="search" class="combo-search nav-field" placeholder="Search city…" autocomplete="off">' +
             '<ul class="combo-list" hidden></ul></div></td>' +
             '<td><input type="number" min="1" class="boxes-input nav-field" name="items[' + index + '].numberOfBoxes" placeholder="3"></td>' +
             '<td><input type="number" min="0.01" step="0.01" class="weight-input nav-field" name="items[' + index + '].weightKg" placeholder="40"></td>' +
@@ -179,7 +261,7 @@ document.addEventListener("DOMContentLoaded", function () {
     function rowHasData(tr) {
         var sid = (tr.querySelector(".shipment-id") || {}).value || "";
         var cno = (tr.querySelector(".cno-input") || {}).value || "";
-        var destSel = tr.querySelector(".dest-branch");
+        var destSel = tr.querySelector(".dest-city");
         var dest = destSel ? destSel.value : "";
         var recv = (tr.querySelector(".recv-name") || {}).value || "";
         var party = (tr.querySelector(".party-select") || {}).value || "";
@@ -215,9 +297,9 @@ document.addEventListener("DOMContentLoaded", function () {
             cno.value = shipment.trackingId || "";
             cno.readOnly = true;
         }
-        var combo = tr.querySelector(".combo");
-        if (combo && shipment.assignedBranchId) {
-            selectBranch(combo, shipment.assignedBranchId, labelFor(shipment.assignedBranchId), false);
+        var combo = tr.querySelector(".city-combo");
+        if (combo && shipment.destinationCity) {
+            selectBranch(combo, shipment.destinationCity, cityLabelFor(shipment.destinationCity), false);
         }
         var boxes = tr.querySelector(".boxes-input");
         if (boxes) boxes.value = shipment.numberOfBoxes != null ? shipment.numberOfBoxes : "";
@@ -248,7 +330,7 @@ document.addEventListener("DOMContentLoaded", function () {
             cno.readOnly = false;
             cno.value = "";
         }
-        var combo = tr.querySelector(".combo");
+        var combo = tr.querySelector(".city-combo");
         if (combo) selectBranch(combo, "", "", false);
         ["boxes-input", "weight-input", "recv-name", "recv-phone"].forEach(function (cls) {
             var el = tr.querySelector("." + cls);
@@ -265,15 +347,15 @@ document.addEventListener("DOMContentLoaded", function () {
         } catch (e) { /* ignore */ }
         var sid = (tr.querySelector(".shipment-id") || {}).value;
         if (!sid) return null;
-        var destSel = tr.querySelector(".dest-branch");
+        var destSel = tr.querySelector(".dest-city");
         var party = tr.querySelector(".party-select");
         return {
             id: Number(sid),
             trackingId: (tr.querySelector(".cno-input") || {}).value || "",
             partyId: party && party.value ? party.value : null,
             partyName: party && party.selectedOptions && party.selectedOptions[0] ? party.selectedOptions[0].text : "",
-            assignedBranchId: destSel && destSel.value ? Number(destSel.value) : null,
-            destinationCity: destSel ? labelFor(destSel.value) : "",
+            assignedBranchId: null,
+            destinationCity: destSel ? destSel.value : "",
             numberOfBoxes: (tr.querySelector(".boxes-input") || {}).value || "",
             weightKg: (tr.querySelector(".weight-input") || {}).value || "",
             receiverName: (tr.querySelector(".recv-name") || {}).value || "",

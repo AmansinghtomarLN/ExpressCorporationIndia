@@ -422,15 +422,13 @@ public class ManifestService {
     }
 
     private String resolveDestination(ManifestItemForm line, Manifest manifest) {
-        Long branchId = line.getDestinationBranchId() != null
-                ? line.getDestinationBranchId() : manifest.getDestinationBranchId();
-        if (branchId != null) {
-            return requireDestinationBranch(branchId).getCity();
-        }
         if (StringUtils.hasText(line.getDestinationCity())) {
             return line.getDestinationCity().trim();
         }
-        throw new IllegalArgumentException("Destination branch is required");
+        if (line.getDestinationBranchId() != null) {
+            return requireDestinationBranch(line.getDestinationBranchId()).getCity();
+        }
+        throw new IllegalArgumentException("Destination city is required");
     }
 
     private void refreshTotals(Long manifestId) {

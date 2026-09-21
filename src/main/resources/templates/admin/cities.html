@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Cities | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section ops-page">
+    <div class="container full-page">
+        <span class="eyebrow">Admin Console</span>
+        <h1>Cities</h1>
+        <p>Catalog used on manifest consignment destinations. Categories:
+            <strong>Local</strong> (logged-in branch city),
+            <strong>MP</strong>, <strong>CG</strong>,
+            <strong>Nearby States</strong> (Maharashtra, Gujarat, Rajasthan, Uttar Pradesh),
+            <strong>Rest of India</strong>.</p>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <form class="admin-filters" method="get" th:action="@{/admin/cities}">
+            <div class="admin-filters-row" style="grid-template-columns: 1.4fr 1fr 1fr auto;">
+                <div class="form-group">
+                    <label for="q">Search</label>
+                    <input type="text" id="q" name="q" th:value="${q}" placeholder="City or state">
+                </div>
+                <div class="form-group">
+                    <label for="state">State</label>
+                    <select id="state" name="state">
+                        <option value="">All states</option>
+                        <option th:each="s : ${states}" th:value="${s}"
+                                th:selected="${state == s}" th:text="${s}">State</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <select id="category" name="category">
+                        <option value="">All categories</option>
+                        <option value="LOCAL" th:selected="${category == 'LOCAL'}">Local</option>
+                        <option value="MP" th:selected="${category == 'MP'}">MP</option>
+                        <option value="CG" th:selected="${category == 'CG'}">CG</option>
+                        <option value="NEARBY" th:selected="${category == 'NEARBY'}">Nearby States</option>
+                        <option value="REST" th:selected="${category == 'REST'}">Rest of India</option>
+                    </select>
+                </div>
+                <div class="admin-filter-buttons">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                    <a class="btn btn-dark" th:href="@{/admin/cities}">Clear</a>
+                </div>
+            </div>
+        </form>
+
+        <div class="form-card wide" style="margin:24px 0;">
+            <h3 th:text="${editCity != null} ? 'Edit city' : 'Add city'">Add city</h3>
+            <form method="post" id="city-form"
+                  th:attr="data-editing=${editCity != null} ? '1' : '0'"
+                  th:action="${editCity != null} ? @{/admin/cities/{id}/edit(id=${editCity.id})} : @{/admin/cities}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cityName">City *</label>
+                        <input type="text" id="cityName" name="cityName" required
+                               th:value="${editCity != null ? editCity.cityName : ''}">
+                    </div>
+                    <div class="form-group">
+                        <label for="cityState">State *</label>
+                        <select id="cityState" name="state" required>
+                            <option value="">Select state</option>
+                            <option th:each="s : ${states}" th:value="${s}"
+                                    th:selected="${editCity != null and editCity.state == s}"
+                                    th:text="${s}">State</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="cityCategory">Category *</label>
+                        <select id="cityCategory" name="category" required>
+                            <option value="LOCAL" th:selected="${editCity != null and editCity.category == 'LOCAL'}">Local</option>
+                            <option value="MP" th:selected="${editCity != null and editCity.category == 'MP'}">MP</option>
+                            <option value="CG" th:selected="${editCity != null and editCity.category == 'CG'}">CG</option>
+                            <option value="NEARBY" th:selected="${editCity != null and editCity.category == 'NEARBY'}">Nearby States</option>
+                            <option value="REST" th:selected="${editCity == null or editCity.category == 'REST'}">Rest of India</option>
+                        </select>
+                    </div>
+                </div>
+                <p class="muted">State auto-suggests a category. Local in the manifest dropdown is always the working branch city.</p>
+                <div class="admin-filter-buttons">
+                    <button type="submit" class="btn btn-primary"
+                            th:text="${editCity != null} ? 'Update city' : 'Add city'">Add city</button>
+                    <a class="btn btn-dark" th:if="${editCity != null}" th:href="@{/admin/cities}">Cancel</a>
+                </div>
+            </form>
+        </div>
+
+        <div style="overflow-x:auto;">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>City</th>
+                    <th>State</th>
+                    <th>Category</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="c : ${cities}">
+                    <td th:text="${c.cityName}">Indore</td>
+                    <td th:text="${c.state}">Madhya Pradesh</td>
+                    <td th:text="${c.categoryLabel}">Local</td>
+                    <td>
+                        <a class="btn btn-sm btn-dark"
+                           th:href="@{/admin/cities(editId=${c.id}, q=${q}, state=${state}, category=${category})}">Edit</a>
+                        <form th:action="@{/admin/cities/{id}/delete(id=${c.id})}" method="post" style="display:inline;"
+                              onsubmit="return confirm('Delete this city?');">
+                            <button type="submit" class="btn btn-sm btn-dark">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div th:if="${cities == null or #lists.isEmpty(cities)}" class="alert alert-info" style="margin-top:16px;">
+            No cities match this search.
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script>
+(function () {
+    var nearby = ["Maharashtra", "Gujarat", "Rajasthan", "Uttar Pradesh"];
+    var state = document.getElementById("cityState");
+    var category = document.getElementById("cityCategory");
+    if (!state || !category) return;
+    var editing = document.getElementById("city-form")
+            && document.getElementById("city-form").getAttribute("data-editing") === "1";
+    function suggest() {
+        if (editing) return;
+        var s = state.value;
+        if (!s) return;
+        if (s === "Madhya Pradesh") category.value = "MP";
+        else if (s === "Chhattisgarh") category.value = "CG";
+        else if (nearby.indexOf(s) >= 0) category.value = "NEARBY";
+        else category.value = "REST";
+    }
+    state.addEventListener("change", function () {
+        editing = false;
+        suggest();
+    });
+})();
+</script>
+</body>
+</html>

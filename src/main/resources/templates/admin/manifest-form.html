@@ -15,8 +15,8 @@
         <p><a th:href="@{/admin/manifests}" class="muted">&larr; Back to manifests</a></p>
         <span class="eyebrow">Operations</span>
         <h1 th:text="${editing} ? 'Edit Manifest' : 'Create Manifest'">Create Manifest</h1>
-        <p>Choose a destination branch. Add open shipments, or type new consignments in the 15 default rows.
-            Leave C.No blank to allocate the next unused number for that party.</p>
+        <p>Choose a destination branch. Consignment destination is a searchable city list grouped as
+            Local, MP, CG, Nearby States, and Rest of India.</p>
 
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
@@ -130,7 +130,7 @@
                     <th>#</th>
                     <th>Party *</th>
                     <th>C.No</th>
-                    <th>Destination branch *</th>
+                        <th>Destination city *</th>
                     <th>Boxes *</th>
                     <th>Weight *</th>
                     <th>Receiver / phone *</th>
@@ -158,10 +158,10 @@
                                placeholder="Blank = auto" inputmode="numeric">
                     </td>
                     <td>
-                        <div class="combo">
-                            <input type="hidden" class="combo-value dest-branch"
-                                   th:field="*{items[__${iter.index}__].destinationBranchId}">
-                            <input type="search" class="combo-search nav-field" placeholder="Search branch…"
+                        <div class="combo city-combo">
+                            <input type="hidden" class="combo-value dest-city"
+                                   th:field="*{items[__${iter.index}__].destinationCity}">
+                            <input type="search" class="combo-search nav-field" placeholder="Search city…"
                                    autocomplete="off">
                             <ul class="combo-list" hidden></ul>
                         </div>
@@ -192,6 +192,8 @@
 
 <div th:replace="~{fragments/footer :: footer}"></div>
 <script type="application/json" id="branch-options" th:utext="${branchOptionsJson}">[]</script>
+<script type="application/json" id="city-options" th:utext="${cityOptionsJson}">[]</script>
+<script type="application/json" id="local-city" th:utext="${localCityJson}">""</script>
 <script type="application/json" id="open-shipments-data" th:utext="${openShipmentsJson}">[]</script>
 <script src="/js/manifest-form.js"></script>
 </body>

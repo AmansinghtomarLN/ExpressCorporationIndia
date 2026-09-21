@@ -7,6 +7,7 @@ import com.mahavircourier.model.ManifestItem;
 import com.mahavircourier.model.Shipment;
 import com.mahavircourier.service.AuditService;
 import com.mahavircourier.service.BranchService;
+import com.mahavircourier.service.CityService;
 import com.mahavircourier.service.CustomUserDetails;
 import com.mahavircourier.service.ManifestBillService;
 import com.mahavircourier.service.ManifestService;
@@ -34,6 +35,7 @@ public class AdminManifestController {
     private final ManifestBillService manifestBillService;
     private final PartyService partyService;
     private final BranchService branchService;
+    private final CityService cityService;
     private final ShipmentService shipmentService;
     private final AuditService auditService;
     private final WorkspaceService workspaceService;
@@ -42,6 +44,7 @@ public class AdminManifestController {
                                    ManifestBillService manifestBillService,
                                    PartyService partyService,
                                    BranchService branchService,
+                                   CityService cityService,
                                    ShipmentService shipmentService,
                                    AuditService auditService,
                                    WorkspaceService workspaceService) {
@@ -49,6 +52,7 @@ public class AdminManifestController {
         this.manifestBillService = manifestBillService;
         this.partyService = partyService;
         this.branchService = branchService;
+        this.cityService = cityService;
         this.shipmentService = shipmentService;
         this.auditService = auditService;
         this.workspaceService = workspaceService;
@@ -257,11 +261,6 @@ public class AdminManifestController {
             line.setShipmentId(item.getShipmentId());
             line.setConsignmentNo(item.getConsignmentNo());
             line.setDestinationCity(item.getDestinationCity());
-            branchService.findAll().stream()
-                    .filter(b -> item.getDestinationCity() != null
-                            && item.getDestinationCity().equalsIgnoreCase(b.getCity()))
-                    .findFirst()
-                    .ifPresent(b -> line.setDestinationBranchId(b.getId()));
             line.setPartyId(item.getPartyId());
             line.setNumberOfBoxes(item.getNumberOfBoxes());
             line.setWeightKg(item.getWeightKg());
@@ -277,6 +276,14 @@ public class AdminManifestController {
         model.addAttribute("parties", partyService.findEnabled());
         model.addAttribute("branches", branchService.findAll());
         model.addAttribute("branchOptionsJson", branchOptionsJson());
+        String localCity = WorkspaceService.DEFAULT_CITY;
+        try {
+            localCity = workspaceService.resolveCurrent(AdminAuth.requirePrincipal().getUser()).getCity();
+        } catch (RuntimeException ignored) {
+            // keep Indore default
+        }
+        model.addAttribute("cityOptionsJson", cityService.manifestOptionsJson(localCity));
+        model.addAttribute("localCityJson", "\"" + jsonEscape(localCity) + "\"");
         model.addAttribute("openShipmentsJson", openShipmentsJson());
     }
 

@@ -444,6 +444,19 @@ table.data-table th { background: var(--gray-100); font-weight: 700; }
 .combo-list li:hover {
     background: var(--gray-100, #f3f4f6);
 }
+.combo-list li.combo-group {
+    font-weight: 700;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--gray-600, #4b5563);
+    background: var(--gray-100, #f3f4f6);
+    cursor: default;
+    pointer-events: none;
+}
+.city-combo .combo-list {
+    max-height: 280px;
+}
 
 .kpi-grid {
     display: grid;
