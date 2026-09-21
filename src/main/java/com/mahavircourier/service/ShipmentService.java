@@ -81,7 +81,7 @@ public class ShipmentService {
         shipment.setCodAmount(form.getCodAmount() != null ? form.getCodAmount() : BigDecimal.ZERO);
         applyFreight(shipment);
         return persistNewShipment(shipment, shipment.getOriginCity(),
-                "Booked to " + branch.getCity() + " — waiting on in-progress manifest");
+                "Booked to " + branch.getCity() + " — open until added to a manifest");
     }
 
     @Transactional
@@ -124,7 +124,11 @@ public class ShipmentService {
         shipment.setExpectedDelivery(form.getExpectedDelivery());
         applyFreight(shipment);
         return persistNewShipment(shipment, shipment.getOriginCity(),
-                "Booked to " + branch.getCity() + " — waiting on in-progress manifest");
+                "Booked to " + branch.getCity() + " — open until added to a manifest");
+    }
+
+    public List<Shipment> findOpenUnmanifested() {
+        return shipmentDao.findOpenUnmanifested();
     }
 
     @Transactional

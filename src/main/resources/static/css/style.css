@@ -622,6 +622,7 @@ table.manifest-lines .col-dest { width: 22%; }
 table.manifest-lines .col-boxes { width: 88px; }
 table.manifest-lines .col-weight { width: 100px; }
 table.manifest-lines .col-party { width: auto; }
+table.manifest-lines .col-actions { width: 88px; }
 table.manifest-lines .row-index {
     text-align: center;
     color: var(--gray-500);
@@ -838,6 +839,35 @@ table.manifest-lines input {
     border-color: #f1aeb5;
     color: #842029;
     opacity: 0.85;
+}
+.open-shipments {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 16px 18px;
+    margin: 0 0 20px;
+}
+.open-shipments-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+.open-shipments-head input[type="search"] {
+    width: min(320px, 100%);
+    padding: 10px 12px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    font-size: 0.92rem;
+    font-family: inherit;
+}
+#open-shipments td .btn { white-space: nowrap; }
+tr.from-open .cno-input,
+tr.from-open .party-select {
+    background: var(--gray-100);
 }
 .totals-bar {
     display: grid;

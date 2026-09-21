@@ -17,10 +17,7 @@
             <p>Your tracking ID is:</p>
             <h1 style="color:var(--primary);" th:text="${bookedShipment.trackingId}">MH1000000001</h1>
             <p>Save this number to track your shipment at any time.</p>
-            <p class="muted" th:if="${draftManifest != null}"
-               th:text="'Added to in-progress manifest ' + ${draftManifest.manifestNumber} + ' for ' + ${draftManifest.destinationBranchName != null ? draftManifest.destinationBranchName : 'the destination branch'} + '.'">
-                Added to in-progress manifest.
-            </p>
+            <p class="muted">This consignment is open. Add it to a manifest from the admin desk when you are ready to dispatch.</p>
 
             <div style="display:flex; gap:12px; justify-content:center; margin-top:18px; flex-wrap:wrap;">
                 <a th:href="@{/track(trackingId=${bookedShipment.trackingId})}" class="btn btn-primary">Track This Shipment</a>

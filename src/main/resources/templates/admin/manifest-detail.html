@@ -28,9 +28,7 @@
             </div>
             <div class="admin-filter-buttons">
                 <a class="btn btn-dark" th:if="${manifest.inProgress}"
-                   th:href="@{/admin/shipments/new(branchId=${manifest.destinationBranchId}, manifestId=${manifest.id})}">Add shipment</a>
-                <a class="btn btn-dark" th:if="${manifest.inProgress}"
-                   th:href="@{/admin/manifests/{id}/edit(id=${manifest.id})}">Update consignments</a>
+                   th:href="@{/admin/manifests/{id}/edit(id=${manifest.id})}">Add / remove consignments</a>
                 <form th:if="${manifest.inProgress}" th:action="@{/admin/manifests/{id}/finalize(id=${manifest.id})}" method="post"
                       onsubmit="return confirm('Submit this manifest? Shipments will be dispatched and party + branch bills will be created.');">
                     <button type="submit" class="btn btn-primary">Submit manifest</button>
@@ -124,7 +122,7 @@
         </div>
 
         <p class="muted" style="margin-top:16px;" th:if="${manifest.inProgress}">
-            Review this in-progress sheet. Add or update shipments, then click <strong>Submit manifest</strong>.
+            Review this in-progress sheet. Add or remove open shipments, then click <strong>Submit manifest</strong>.
         </p>
         <div th:if="${!manifest.inProgress}" style="margin-top:28px;">
             <h3>Bills from this manifest</h3>

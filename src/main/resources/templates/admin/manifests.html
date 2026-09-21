@@ -16,7 +16,7 @@
         <div class="admin-toolbar" style="align-items:flex-start;">
             <div>
                 <h1>Manifests</h1>
-                <p>Book a shipment → it opens or joins that branch’s <strong>in-progress</strong> manifest. Review, add or update consignments, then <strong>submit</strong>. Filter by branch or date.</p>
+                <p>Create a manifest, add open shipments or type consignments, then <strong>submit</strong>. Filter by branch or date.</p>
             </div>
             <div class="admin-filter-buttons">
                 <a class="btn btn-dark" th:href="@{/admin/shipments/new}">Book shipment</a>
@@ -121,7 +121,7 @@
             </tbody>
         </table>
         <div th:if="${manifests == null or #lists.isEmpty(manifests)}" class="alert alert-info" style="margin-top:16px;">
-            <span th:if="${status == 'IN_PROGRESS'}">No in-progress manifests. Book a shipment to a branch to open one.</span>
+            <span th:if="${status == 'IN_PROGRESS'}">No in-progress manifests. Create one and add open shipments.</span>
             <span th:if="${status == 'SUBMITTED' or status == 'CREATED'}">No submitted manifests yet.</span>
             <span th:if="${status == 'ALL'}">No manifests found.</span>
         </div>

@@ -14,7 +14,7 @@
         <div class="form-card wide">
             <span class="eyebrow">Booking</span>
             <h2>Book a shipment</h2>
-            <p>Choose the destination branch. The booking is added to that branch’s in-progress manifest until the desk creates the MF.</p>
+            <p>Choose the destination branch. The booking stays open until it is added to a manifest.</p>
             <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
             <form th:object="${form}" method="post" th:action="@{/book}">

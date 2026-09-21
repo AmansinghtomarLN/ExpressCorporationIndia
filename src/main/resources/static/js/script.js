@@ -42,8 +42,13 @@ document.addEventListener("DOMContentLoaded", function () {
                     });
                     html += '</div>';
                 }
-                html += '<p style="margin-top:12px;"><a class="btn btn-primary btn-sm" href="/track?trackingId=' +
-                        encodeURIComponent(s.trackingId) + '">View full tracking page</a></p>';
+                html += '<p style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;">';
+                html += '<a class="btn btn-primary btn-sm" href="/track?trackingId=' +
+                        encodeURIComponent(s.trackingId) + '">View full tracking page</a>';
+                if (quickTrackForm.getAttribute("data-can-manage") === "true" && s.id) {
+                    html += '<a class="btn btn-dark btn-sm" href="/admin/shipments/' + encodeURIComponent(s.id) + '">Manage</a>';
+                }
+                html += '</p>';
                 html += '</div>';
                 resultBox.innerHTML = html;
             })

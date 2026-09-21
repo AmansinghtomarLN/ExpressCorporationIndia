@@ -2,7 +2,6 @@ package com.mahavircourier.controller.admin;
 
 import com.mahavircourier.dto.AdminShipmentForm;
 import com.mahavircourier.dto.PageResult;
-import com.mahavircourier.model.Manifest;
 import com.mahavircourier.model.Shipment;
 import com.mahavircourier.service.AuditService;
 import com.mahavircourier.service.BranchService;
@@ -118,14 +117,12 @@ public class AdminShipmentController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
             Shipment created = shipmentService.adminCreateShipment(form, principal.getUser().getId());
-            Manifest draft = manifestService.addBookedShipmentToBranchDraft(created, manifestId);
             auditService.log(principal.getUser().getId(), principal.getUsername(),
                     "SHIPMENT_BOOK", "SHIPMENT", String.valueOf(created.getId()),
-                    "C.No " + created.getTrackingId() + " → MF " + draft.getManifestNumber());
+                    "C.No " + created.getTrackingId() + " booked");
             redirectAttributes.addFlashAttribute("successMessage",
-                    "Shipment " + created.getTrackingId() + " booked and added to in-progress manifest "
-                            + draft.getManifestNumber() + ".");
-            return "redirect:/admin/manifests/" + draft.getId();
+                    "Shipment " + created.getTrackingId() + " booked. Add it to a manifest when you create or update one.");
+            return "redirect:/admin/shipments/" + created.getId();
         } catch (IllegalArgumentException ex) {
             model.addAttribute("manifestId", manifestId);
             model.addAttribute("lockDestination", form.getDestinationBranchId() != null && manifestId != null);
@@ -189,6 +186,7 @@ public class AdminShipmentController {
                             @RequestParam String status,
                             @RequestParam String location,
                             @RequestParam(required = false) String remarks,
+                            @RequestParam(value = "returnTo", required = false) String returnTo,
                             RedirectAttributes redirectAttributes) {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
@@ -200,6 +198,11 @@ public class AdminShipmentController {
                     "Tracking updated to " + status.replace('_', ' ') + ".");
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+        if ("track".equalsIgnoreCase(returnTo)) {
+            shipmentService.findById(id).ifPresent(s ->
+                    redirectAttributes.addAttribute("trackingId", s.getTrackingId()));
+            return "redirect:/track";
         }
         return "redirect:/admin/shipments/" + id;
     }

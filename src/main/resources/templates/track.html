@@ -35,6 +35,8 @@
         </div>
 
         <div th:if="${shipment}" class="form-card wide track-hero-card" style="margin-top:24px;">
+            <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+            <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
             <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
                 <div>
                     <span class="eyebrow">Consignment</span>
@@ -50,8 +52,13 @@
                         <span th:text="${shipment.destinationCity}">Destination</span>
                     </p>
                 </div>
-                <span class="status-badge" th:classappend="'status-' + ${shipment.status}"
-                      th:text="${#strings.replace(shipment.status,'_',' ')}">STATUS</span>
+                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:10px;">
+                    <span class="status-badge" th:classappend="'status-' + ${shipment.status}"
+                          th:text="${#strings.replace(shipment.status,'_',' ')}">STATUS</span>
+                    <a class="btn btn-primary btn-sm"
+                       sec:authorize="hasAnyRole('ADMIN','STAFF')"
+                       th:href="@{/admin/shipments/{id}(id=${shipment.id})}">Manage</a>
+                </div>
             </div>
 
             <div class="form-row" style="margin-top:22px;">
@@ -90,6 +97,36 @@
                 <div th:if="${#lists.isEmpty(shipment.events)}">
                     <p>No tracking updates yet. Please check back soon.</p>
                 </div>
+            </div>
+
+            <div class="form-card" style="margin:28px 0 0; max-width:none;"
+                 sec:authorize="hasAnyRole('ADMIN','STAFF')">
+                <h3>Change status</h3>
+                <p class="muted">Staff only. Customers see the journey above, not this form.</p>
+                <form th:action="@{/admin/shipments/{id}/update(id=${shipment.id})}" method="post">
+                    <input type="hidden" name="returnTo" value="track">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="status">Next status</label>
+                            <select id="status" name="status" required>
+                                <option th:each="st : ${statuses}"
+                                        th:value="${st}"
+                                        th:selected="${st == shipment.status}"
+                                        th:text="${#strings.replace(st,'_',' ')}">STATUS</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="location">Location</label>
+                            <input type="text" id="location" name="location" required
+                                   th:placeholder="${shipment.destinationCity}">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="remarks">Remarks (optional)</label>
+                        <textarea id="remarks" name="remarks" rows="2" placeholder="Note for the tracking timeline"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update status</button>
+                </form>
             </div>
         </div>
     </div>

@@ -384,4 +384,21 @@ public class ShipmentDao {
     public void updateStatus(Long shipmentId, String status) {
         jdbcTemplate.update("UPDATE shipments SET status = ? WHERE id = ?", status, shipmentId);
     }
+
+    /**
+     * Booked consignments that are not on any manifest yet.
+     */
+    public List<Shipment> findOpenUnmanifested() {
+        return jdbcTemplate.query(
+                "SELECT s.*, p.party_name, b.branch_name AS assigned_branch_name FROM shipments s " +
+                        "LEFT JOIN parties p ON p.id = s.party_id " +
+                        "LEFT JOIN branches b ON b.id = s.assigned_branch_id " +
+                        "WHERE s.manifest_id IS NULL AND s.status NOT IN ('CANCELLED','DELIVERED','RTO') " +
+                        "ORDER BY s.created_at DESC",
+                SHIPMENT_ROW_MAPPER);
+    }
+
+    public void clearManifestId(Long shipmentId) {
+        jdbcTemplate.update("UPDATE shipments SET manifest_id = NULL WHERE id = ?", shipmentId);
+    }
 }

@@ -15,7 +15,7 @@
         <p><a th:href="@{/admin/manifests}" class="muted">&larr; Back to manifests</a></p>
         <span class="eyebrow">Operations</span>
         <h1 th:text="${editing} ? 'Edit Manifest' : 'Create Manifest'">Create Manifest</h1>
-        <p>Choose a destination branch, then add one or more consignments.
+        <p>Choose a destination branch. Add open shipments, or type new consignments in the 15 default rows.
             Leave C.No blank to allocate the next unused number for that party.</p>
 
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
@@ -81,6 +81,33 @@
                 <div><span class="muted">Total weight</span><strong id="total-weight">0</strong></div>
             </div>
 
+            <div class="open-shipments" id="open-shipments-panel">
+                <div class="open-shipments-head">
+                    <div>
+                        <h3 style="margin:0;">Open shipments</h3>
+                        <p class="muted" style="margin:4px 0 0;">Booked consignments not yet on a manifest. Add or remove them here.</p>
+                    </div>
+                    <input type="search" id="open-shipment-filter" placeholder="Search C.No, party, destination…" autocomplete="off">
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="data-table compact-table" id="open-shipments">
+                        <thead>
+                        <tr>
+                            <th>C.No</th>
+                            <th>Party</th>
+                            <th>Destination</th>
+                            <th>Boxes</th>
+                            <th>Weight</th>
+                            <th>Receiver</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <p class="muted" id="open-shipments-empty" hidden>No open shipments. Book a shipment first, then add it here.</p>
+            </div>
+
             <div class="admin-toolbar">
                 <h3 style="margin:0;">Consignments</h3>
                 <div class="admin-filter-buttons">
@@ -96,6 +123,7 @@
                     <col class="col-boxes">
                     <col class="col-weight">
                     <col class="col-recv">
+                    <col class="col-actions">
                 </colgroup>
                 <thead>
                 <tr>
@@ -106,14 +134,15 @@
                     <th>Boxes *</th>
                     <th>Weight *</th>
                     <th>Receiver / phone *</th>
+                    <th></th>
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="item, iter : *{items}">
+                <tr th:each="item, iter : *{items}" th:classappend="${item.shipmentId != null} ? ' from-open'">
                     <td class="row-index" th:text="${iter.count}">1</td>
                     <td>
-                        <select class="party-select" th:field="*{items[__${iter.index}__].partyId}"
-                                th:disabled="${item.id != null}">
+                        <select class="party-select nav-field" th:field="*{items[__${iter.index}__].partyId}"
+                                th:disabled="${item.id != null or item.shipmentId != null}">
                             <option value="">— Party —</option>
                             <option th:each="p : ${parties}"
                                     th:value="${p.id}"
@@ -122,30 +151,34 @@
                     </td>
                     <td>
                         <input type="hidden" th:field="*{items[__${iter.index}__].id}">
-                        <input type="hidden" th:if="${item.id != null}" th:field="*{items[__${iter.index}__].partyId}">
-                        <input type="text" class="cno-input" th:field="*{items[__${iter.index}__].consignmentNo}"
-                               th:readonly="${item.id != null}"
+                        <input type="hidden" class="shipment-id" th:field="*{items[__${iter.index}__].shipmentId}">
+                        <input type="hidden" th:if="${item.id != null or item.shipmentId != null}" th:field="*{items[__${iter.index}__].partyId}">
+                        <input type="text" class="cno-input nav-field" th:field="*{items[__${iter.index}__].consignmentNo}"
+                               th:readonly="${item.id != null or item.shipmentId != null}"
                                placeholder="Blank = auto" inputmode="numeric">
                     </td>
                     <td>
                         <div class="combo">
                             <input type="hidden" class="combo-value dest-branch"
                                    th:field="*{items[__${iter.index}__].destinationBranchId}">
-                            <input type="search" class="combo-search" placeholder="Search branch…"
+                            <input type="search" class="combo-search nav-field" placeholder="Search branch…"
                                    autocomplete="off">
                             <ul class="combo-list" hidden></ul>
                         </div>
                     </td>
-                    <td><input type="number" min="1" class="boxes-input" th:field="*{items[__${iter.index}__].numberOfBoxes}" placeholder="3"></td>
-                    <td><input type="number" min="0.01" step="0.01" class="weight-input" th:field="*{items[__${iter.index}__].weightKg}" placeholder="40"></td>
+                    <td><input type="number" min="1" class="boxes-input nav-field" th:field="*{items[__${iter.index}__].numberOfBoxes}" placeholder="3"></td>
+                    <td><input type="number" min="0.01" step="0.01" class="weight-input nav-field" th:field="*{items[__${iter.index}__].weightKg}" placeholder="40"></td>
                     <td class="cell-stack">
-                        <input type="text" th:field="*{items[__${iter.index}__].receiverName}" placeholder="Receiver name">
-                        <input type="text" th:field="*{items[__${iter.index}__].receiverPhone}" placeholder="Phone (optional)">
+                        <input type="text" class="recv-name nav-field" th:field="*{items[__${iter.index}__].receiverName}" placeholder="Receiver name">
+                        <input type="text" class="recv-phone nav-field" th:field="*{items[__${iter.index}__].receiverPhone}" placeholder="Phone (optional)">
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-dark btn-remove-row">Remove</button>
                     </td>
                 </tr>
                 </tbody>
             </table>
-            <p class="muted" style="margin-top:8px;">Empty rows are ignored. Leave C.No blank to generate and allocate one for the row’s party.</p>
+            <p class="muted" style="margin-top:8px;">Empty rows are ignored. Leave C.No blank to generate and allocate one for the row’s party. Enter moves to the next field.</p>
             <div class="admin-filter-buttons" style="margin-top:18px;">
                     <button type="submit" class="btn btn-dark"
                             th:text="${editing} ? 'Save in-progress changes' : 'Save as in progress'">
@@ -159,6 +192,7 @@
 
 <div th:replace="~{fragments/footer :: footer}"></div>
 <script type="application/json" id="branch-options" th:utext="${branchOptionsJson}">[]</script>
+<script type="application/json" id="open-shipments-data" th:utext="${openShipmentsJson}">[]</script>
 <script src="/js/manifest-form.js"></script>
 </body>
 </html>

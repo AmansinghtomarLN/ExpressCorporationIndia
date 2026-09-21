@@ -2,6 +2,10 @@ package com.mahavircourier.controller;
 
 import com.mahavircourier.model.Shipment;
 import com.mahavircourier.service.ShipmentService;
+import com.mahavircourier.service.StatusTransitions;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
@@ -27,6 +31,12 @@ public class TrackingController {
                              Model model) {
         model.addAttribute("trackingId", trackingId);
 
+        boolean canManage = isAdminOrStaff();
+        model.addAttribute("canManage", canManage);
+        if (canManage) {
+            model.addAttribute("statuses", StatusTransitions.ALL_STATUSES);
+        }
+
         if (StringUtils.hasText(trackingId)) {
             Optional<Shipment> shipmentOpt = shipmentService.trackByTrackingId(trackingId);
             if (shipmentOpt.isPresent()) {
@@ -36,6 +46,16 @@ public class TrackingController {
             }
         }
         return "track";
+    }
+
+    private static boolean isAdminOrStaff() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return false;
+        }
+        return auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(a -> "ROLE_ADMIN".equals(a) || "ROLE_STAFF".equals(a));
     }
 
     /** JSON API for AJAX tracking (used by the homepage quick-track widget). */

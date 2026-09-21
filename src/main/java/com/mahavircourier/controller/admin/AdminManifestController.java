@@ -4,12 +4,14 @@ import com.mahavircourier.dto.ManifestForm;
 import com.mahavircourier.dto.ManifestItemForm;
 import com.mahavircourier.model.Manifest;
 import com.mahavircourier.model.ManifestItem;
+import com.mahavircourier.model.Shipment;
 import com.mahavircourier.service.AuditService;
 import com.mahavircourier.service.BranchService;
 import com.mahavircourier.service.CustomUserDetails;
 import com.mahavircourier.service.ManifestBillService;
 import com.mahavircourier.service.ManifestService;
 import com.mahavircourier.service.PartyService;
+import com.mahavircourier.service.ShipmentService;
 import com.mahavircourier.service.WorkspaceService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
@@ -26,12 +28,13 @@ import java.util.Map;
 @RequestMapping("/admin/manifests")
 public class AdminManifestController {
 
-    private static final int BLANK_ROWS = 1;
+    private static final int BLANK_ROWS = 15;
 
     private final ManifestService manifestService;
     private final ManifestBillService manifestBillService;
     private final PartyService partyService;
     private final BranchService branchService;
+    private final ShipmentService shipmentService;
     private final AuditService auditService;
     private final WorkspaceService workspaceService;
 
@@ -39,12 +42,14 @@ public class AdminManifestController {
                                    ManifestBillService manifestBillService,
                                    PartyService partyService,
                                    BranchService branchService,
+                                   ShipmentService shipmentService,
                                    AuditService auditService,
                                    WorkspaceService workspaceService) {
         this.manifestService = manifestService;
         this.manifestBillService = manifestBillService;
         this.partyService = partyService;
         this.branchService = branchService;
+        this.shipmentService = shipmentService;
         this.auditService = auditService;
         this.workspaceService = workspaceService;
     }
@@ -249,6 +254,7 @@ public class AdminManifestController {
         for (ManifestItem item : manifest.getItems()) {
             ManifestItemForm line = new ManifestItemForm();
             line.setId(item.getId());
+            line.setShipmentId(item.getShipmentId());
             line.setConsignmentNo(item.getConsignmentNo());
             line.setDestinationCity(item.getDestinationCity());
             branchService.findAll().stream()
@@ -263,7 +269,7 @@ public class AdminManifestController {
             line.setReceiverPhone(item.getReceiverPhone());
             form.getItems().add(line);
         }
-        form.ensureMinRows(form.getItems().size() + 1);
+        form.ensureMinRows(Math.max(BLANK_ROWS, form.getItems().size()));
         return form;
     }
 
@@ -271,6 +277,29 @@ public class AdminManifestController {
         model.addAttribute("parties", partyService.findEnabled());
         model.addAttribute("branches", branchService.findAll());
         model.addAttribute("branchOptionsJson", branchOptionsJson());
+        model.addAttribute("openShipmentsJson", openShipmentsJson());
+    }
+
+    private String openShipmentsJson() {
+        StringBuilder json = new StringBuilder("[");
+        var shipments = shipmentService.findOpenUnmanifested();
+        for (int i = 0; i < shipments.size(); i++) {
+            Shipment s = shipments.get(i);
+            if (i > 0) {
+                json.append(',');
+            }
+            json.append("{\"id\":").append(s.getId())
+                    .append(",\"trackingId\":\"").append(jsonEscape(s.getTrackingId())).append("\"")
+                    .append(",\"partyId\":").append(s.getPartyId() == null ? "null" : s.getPartyId())
+                    .append(",\"partyName\":\"").append(jsonEscape(s.getPartyName() != null ? s.getPartyName() : s.getSenderName())).append("\"")
+                    .append(",\"assignedBranchId\":").append(s.getAssignedBranchId() == null ? "null" : s.getAssignedBranchId())
+                    .append(",\"destinationCity\":\"").append(jsonEscape(s.getDestinationCity())).append("\"")
+                    .append(",\"numberOfBoxes\":").append(s.getNumberOfBoxes() == null ? 1 : s.getNumberOfBoxes())
+                    .append(",\"weightKg\":").append(s.getWeightKg() != null ? s.getWeightKg().toPlainString() : "0")
+                    .append(",\"receiverName\":\"").append(jsonEscape(s.getReceiverName())).append("\"")
+                    .append(",\"receiverPhone\":\"").append(jsonEscape(s.getReceiverPhone())).append("\"}");
+        }
+        return json.append(']').toString();
     }
 
     private String branchOptionsJson() {

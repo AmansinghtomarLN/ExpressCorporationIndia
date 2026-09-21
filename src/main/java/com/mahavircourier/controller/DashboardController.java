@@ -1,11 +1,9 @@
 package com.mahavircourier.controller;
 
 import com.mahavircourier.dto.BookingForm;
-import com.mahavircourier.model.Manifest;
 import com.mahavircourier.model.Shipment;
 import com.mahavircourier.service.BranchService;
 import com.mahavircourier.service.CustomUserDetails;
-import com.mahavircourier.service.ManifestService;
 import com.mahavircourier.service.ShipmentService;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,14 +19,11 @@ public class DashboardController {
 
     private final ShipmentService shipmentService;
     private final BranchService branchService;
-    private final ManifestService manifestService;
 
     public DashboardController(ShipmentService shipmentService,
-                               BranchService branchService,
-                               ManifestService manifestService) {
+                               BranchService branchService) {
         this.shipmentService = shipmentService;
         this.branchService = branchService;
-        this.manifestService = manifestService;
     }
 
     @GetMapping("/dashboard")
@@ -56,9 +51,7 @@ public class DashboardController {
         }
         try {
             Shipment booked = shipmentService.bookShipment(form, principal.getUser().getId());
-            Manifest draft = manifestService.addBookedShipmentToBranchDraft(booked);
             model.addAttribute("bookedShipment", booked);
-            model.addAttribute("draftManifest", draft);
             return "book-success";
         } catch (IllegalArgumentException ex) {
             model.addAttribute("errorMessage", ex.getMessage());
