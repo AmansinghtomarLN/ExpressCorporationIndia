@@ -17,7 +17,9 @@
         <div class="admin-toolbar" style="align-items:flex-start;">
             <div>
                 <h1 th:text="${title}">Bill</h1>
-                <p>Charge is <strong>weight × per kg</strong>. Edit the rates or totals below and save.</p>
+                <p>Each consignment is <strong>billable kg × its city per kg</strong>.
+                    A tagged party’s minimum kg replaces a lower actual weight.
+                    Editing weight or per kg below and saving replaces that with one weight × per kg for the whole bill.</p>
             </div>
             <div class="admin-filter-buttons">
                 <a class="btn btn-primary" th:href="${printPath}">Print</a>
@@ -72,8 +74,10 @@
                 <div class="form-group">
                     <label>Amount (Rs.)</label>
                     <input type="text" id="freightAmount" readonly
+                           th:attr="data-flat=${bill.flatPerKg}"
                            th:value="${#numbers.formatDecimal(bill.freightAmount, 1, 2)}">
-                    <p class="muted">Weight × per kg. Updates as you edit; not typed in.</p>
+                    <p class="muted" th:if="${bill.flatPerKg}">Weight × per kg. Updates as you edit; not typed in.</p>
+                    <p class="muted" th:unless="${bill.flatPerKg}">This total uses city rates and minimum kg. Changing weight or per kg switches the bill to a single weight × per kg.</p>
                 </div>
                 <div class="form-group">
                     <label for="status">Payment status</label>
@@ -118,7 +122,12 @@
                         <td th:text="${line.partyName != null ? line.partyName : '—'}">Party</td>
                         <td th:text="${line.destinationCity}">City</td>
                         <td th:text="${line.numberOfBoxes}">3</td>
-                        <td th:text="${line.weightKg} + ' kg'">40 kg</td>
+                        <td>
+                            <span th:text="${line.weightKg} + ' kg'">40 kg</span>
+                            <span class="muted"
+                                  th:if="${line.billableWeightKg != null and line.weightKg != null and line.billableWeightKg > line.weightKg}"
+                                  th:text="|billed ${line.billableWeightKg} kg|">billed 5 kg</span>
+                        </td>
                         <td th:text="${line.freightCharge != null ? ('Rs. ' + #numbers.formatDecimal(line.freightCharge, 1, 2)) : '—'}">Rs. 0.00</td>
                         <td th:text="${line.receiverName}">Receiver</td>
                     </tr>
@@ -157,7 +166,9 @@
     }
     weight.addEventListener("input", recalc);
     rate.addEventListener("input", recalc);
-    recalc();
+    if (amount.getAttribute("data-flat") === "true") {
+        recalc();
+    }
 })();
 </script>
 </body>

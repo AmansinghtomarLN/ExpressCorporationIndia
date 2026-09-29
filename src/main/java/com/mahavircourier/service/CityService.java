@@ -41,6 +41,10 @@ public class CityService {
         return cityDao.findById(id);
     }
 
+    public java.util.Optional<City> findByName(String cityName) {
+        return cityDao.findByNameIgnoreCase(cityName);
+    }
+
     @Transactional
     public City create(City incoming) {
         City city = normalize(incoming, null);

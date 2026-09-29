@@ -17,11 +17,14 @@
             <div>
                 <h1>Rate setup</h1>
                 <p>Submitting a manifest creates <strong>two bills</strong>: a party bill and a branch bill.
-                    Charge is only <strong>weight × per kg</strong>.
-                    Party rates are optional — if blank, the destination branch per-kg rate is used.</p>
+                    Charge is <strong>billable kg × per kg</strong>.
+                    Set a default per kg for a party, then override it per destination city.
+                    Tag a party for a minimum rate if a short consignment should still be billed at a minimum kg.
+                    Example: ₹8 per kg and a 5 kg minimum — 3 kg is billed as 5 × 8 = ₹40, not ₹24.</p>
             </div>
             <div class="admin-filter-buttons">
-                <a class="btn btn-primary" th:href="@{/admin/billing/parties}">Party bills</a>
+                <a class="btn btn-primary" th:href="@{/admin/party-rates}">Party rates</a>
+                <a class="btn btn-dark" th:href="@{/admin/billing/parties}">Party bills</a>
                 <a class="btn btn-dark" th:href="@{/admin/billing/branches}">Branch bills</a>
             </div>
         </div>
@@ -65,29 +68,48 @@
             </form>
         </div>
 
-        <div class="form-card wide" style="margin-top:24px;">
-            <h3>Optional rates by party</h3>
-            <p class="muted">Leave blank to bill the party at the destination branch’s per-kg rate.</p>
+        <div class="form-card wide" id="party-rates" style="margin-top:24px;">
+            <h3>Rates by party</h3>
+            <p class="muted">Default per kg applies to every city that does not have its own rate below.
+                Leave per kg blank to use the destination branch rate.
+                Minimum kg is available only for parties tagged during party setup.</p>
             <div style="overflow-x:auto;">
                 <table class="data-table">
                     <thead>
                     <tr>
                         <th>Party</th>
-                        <th>City</th>
-                        <th>Per kg (Rs.)</th>
+                        <th>Home city</th>
+                        <th>Minimum rate</th>
+                        <th>Default per kg (Rs.)</th>
+                        <th>Minimum kg</th>
                         <th></th>
                     </tr>
                     </thead>
                     <tbody>
                     <tr th:each="p : ${parties}">
-                        <td th:text="${p.partyName}">Party</td>
+                        <td>
+                            <a th:href="@{/admin/party-rates(partyId=${p.id})}" th:text="${p.partyName}">Party</a>
+                        </td>
                         <td th:text="${p.city}">City</td>
-                        <td colspan="2">
+                        <td>
+                            <span class="status-badge"
+                                  th:classappend="${p.minRateEligible} ? ' status-DELIVERED' : ' status-CANCELLED'"
+                                  th:text="${p.minRateEligible} ? 'TAGGED' : 'NOT TAGGED'">TAGGED</span>
+                        </td>
+                        <td colspan="3">
                             <form method="post" th:action="@{/admin/billing/party-rates/{id}(id=${p.id})}"
                                   class="admin-filter-buttons" style="align-items:center;">
                                 <input type="number" step="0.01" min="0" name="perKgRate"
-                                       th:value="${p.perKgRate}" placeholder="Branch" style="width:110px;">
+                                       th:value="${p.perKgRate}" placeholder="Branch" style="width:110px;"
+                                       aria-label="Default per kg">
+                                <input type="number" step="0.01" min="0" name="minWeightKg"
+                                       th:if="${p.minRateEligible}"
+                                       th:value="${p.minWeightKg}" placeholder="No minimum" style="width:120px;"
+                                       aria-label="Minimum kg">
+                                <input type="text" th:unless="${p.minRateEligible}" value="Tag party first" disabled
+                                       style="width:140px;" aria-label="Minimum kg unavailable">
                                 <button type="submit" class="btn btn-sm btn-dark">Save</button>
+                                <a class="btn btn-sm btn-primary" th:href="@{/admin/party-rates(partyId=${p.id})}">Cities</a>
                             </form>
                         </td>
                     </tr>
@@ -99,9 +121,118 @@
             </div>
         </div>
 
+        <div class="form-card wide" id="party-city-rates" style="margin-top:24px;">
+            <h3>Party rates by city</h3>
+            <p class="muted">Use <a th:href="@{/admin/party-rates(partyId=${selectedParty != null ? selectedParty.id : null})}">Party rates</a>
+                to pick a party, turn the minimum rate on or off, and set destination cities from Indore in one place.
+                This section still saves a single city if you need a quick change.
+                Pick a party, then set the per-kg rate for each destination city you bill.
+                A city rate replaces the party default for consignments to that city.
+                If the party is tagged, you can also set a minimum kg for that city. Leave minimum kg blank to use the party minimum.</p>
+
+            <form method="get" th:action="@{/admin/billing#party-city-rates}" class="form-row" style="align-items:end;">
+                <div class="form-group">
+                    <label for="partyId">Party</label>
+                    <select id="partyId" name="partyId" onchange="this.form.submit()">
+                        <option value="">— Select party —</option>
+                        <option th:each="p : ${parties}" th:value="${p.id}"
+                                th:selected="${selectedParty != null and selectedParty.id == p.id}"
+                                th:text="${p.partyName + ' — ' + p.city}">Party</option>
+                    </select>
+                </div>
+            </form>
+
+            <div th:if="${selectedParty == null}" class="alert alert-info">
+                Select a party to add or update rates for each destination city.
+            </div>
+
+            <div th:if="${selectedParty != null}">
+                <p>
+                    <strong th:text="${selectedParty.partyName}">Party</strong>
+                    <span class="meta-chip" th:if="${selectedParty.minRateEligible}">Minimum rate tagged</span>
+                    <span class="meta-chip" th:unless="${selectedParty.minRateEligible}">Not tagged for minimum rate</span>
+                </p>
+                <p class="muted" th:unless="${selectedParty.minRateEligible}">
+                    Turn on “Eligible for minimum rate” while editing this party before a minimum kg can be saved.
+                </p>
+
+                <form method="post" th:action="@{/admin/billing/party-city-rates}" style="margin-top:12px;">
+                    <input type="hidden" name="partyId" th:value="${selectedParty.id}">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="cityName">Destination city *</label>
+                            <input type="text" id="cityName" name="cityName" list="city-list" required
+                                   placeholder="Search city" autocomplete="off">
+                            <datalist id="city-list">
+                                <option th:each="c : ${cities}" th:value="${c.cityName}" th:text="${c.label}">City</option>
+                            </datalist>
+                        </div>
+                        <div class="form-group">
+                            <label for="cityPerKg">Per kg (Rs.) *</label>
+                            <input type="number" id="cityPerKg" name="perKgRate" step="0.01" min="0" required
+                                   placeholder="8.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="cityMinKg">Minimum kg</label>
+                            <input type="number" id="cityMinKg" name="minWeightKg" step="0.01" min="0"
+                                   placeholder="Party minimum"
+                                   th:disabled="${!selectedParty.minRateEligible}">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save city rate</button>
+                </form>
+
+                <div style="overflow-x:auto; margin-top:18px;">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th>City</th>
+                            <th>Per kg (Rs.)</th>
+                            <th>Minimum kg</th>
+                            <th></th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="r : ${cityRates}">
+                            <td th:text="${r.cityName}">Indore</td>
+                            <td colspan="3">
+                                <form method="post" th:action="@{/admin/billing/party-city-rates}"
+                                      class="admin-filter-buttons" style="align-items:center;">
+                                    <input type="hidden" name="partyId" th:value="${selectedParty.id}">
+                                    <input type="hidden" name="cityName" th:value="${r.cityName}">
+                                    <input type="number" step="0.01" min="0" name="perKgRate" required
+                                           th:value="${r.perKgRate}" style="width:110px;" aria-label="Per kg">
+                                    <input type="number" step="0.01" min="0" name="minWeightKg"
+                                           th:if="${selectedParty.minRateEligible}"
+                                           th:value="${r.minWeightKg}" placeholder="Party minimum" style="width:140px;"
+                                           aria-label="Minimum kg">
+                                    <input type="text" th:unless="${selectedParty.minRateEligible}" value="—" disabled
+                                           style="width:80px;">
+                                    <button type="submit" class="btn btn-sm btn-dark">Update</button>
+                                </form>
+                                <form th:action="@{/admin/billing/party-city-rates/{id}/delete(id=${r.id})}"
+                                      method="post" style="display:inline;"
+                                      onsubmit="return confirm('Remove this city rate?');">
+                                    <input type="hidden" name="partyId" th:value="${selectedParty.id}">
+                                    <button type="submit" class="btn btn-sm btn-primary">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div th:if="${cityRates == null or #lists.isEmpty(cityRates)}" class="alert alert-info" style="margin-top:16px;">
+                    No city rates yet. This party is billed at its default per kg, or the branch rate when that is blank.
+                </div>
+            </div>
+        </div>
+
         <div class="form-card wide" style="margin-top:24px;">
             <h3>Rates by branch</h3>
-            <p class="muted">These rates create the branch bill when a manifest to that destination is submitted.</p>
+            <p class="muted">This is the fallback per kg rate for a destination branch.
+                Rates from a base branch to each other branch are set on
+                <a th:href="@{/admin/branch-rates}">Branch rates</a>
+                and are used on the branch bill when a manifest is submitted.</p>
             <div style="overflow-x:auto;">
                 <table class="data-table">
                     <thead>

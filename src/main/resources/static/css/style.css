@@ -917,7 +917,62 @@ tr.from-open .party-select {
     padding: 18px 18px 14px;
 }
 .party-card h3 { margin: 0 0 6px; }
+.party-card.is-selected { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary); }
+.rate-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 20px;
+    align-items: start;
+    margin-top: 8px;
+}
+.rate-side { position: sticky; top: 12px; margin: 0; }
+.rate-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 12px 0; }
+.rate-filter-grid, .rate-apply-row, .rate-search-row {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr auto;
+    gap: 14px;
+    align-items: end;
+}
+.rate-apply-row { grid-template-columns: 1fr 1fr auto; }
+.rate-search-row {
+    grid-template-columns: 1.6fr 0.8fr;
+}
+.rate-filter-grid .form-group,
+.rate-apply-row .form-group,
+.rate-search-row .form-group { margin-bottom: 0; }
+.city-matches {
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    background: var(--white);
+    max-height: 280px;
+    overflow: auto;
+    margin-top: 8px;
+}
+.city-match {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 12px;
+    border: 0;
+    border-bottom: 1px solid var(--gray-200);
+    background: var(--white);
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+}
+.city-match:hover { background: var(--gray-100); }
+#city-rate-table input[type="number"] { width: 140px; padding: 8px 10px; }
+.status-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: start;
+}
+.status-split .form-card { margin: 0; }
 @media (max-width: 980px) {
     .ops-split { grid-template-columns: 1fr; }
     .cno-panel { position: static; }
+    .rate-layout, .rate-search-row, .rate-filter-grid, .rate-apply-row, .status-split { grid-template-columns: 1fr; }
+    .rate-side { position: static; }
 }

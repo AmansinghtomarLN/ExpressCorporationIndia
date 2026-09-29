@@ -2,9 +2,11 @@ package com.mahavircourier.controller.admin;
 
 import com.mahavircourier.dto.FreightQuote;
 import com.mahavircourier.model.BillingTariff;
+import com.mahavircourier.model.Party;
 import com.mahavircourier.service.AuditService;
 import com.mahavircourier.service.BranchCategory;
 import com.mahavircourier.service.BranchService;
+import com.mahavircourier.service.CityService;
 import com.mahavircourier.service.CustomUserDetails;
 import com.mahavircourier.service.PartyService;
 import com.mahavircourier.service.RateCardService;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Controller
 @RequestMapping("/admin/billing")
@@ -22,20 +25,23 @@ public class AdminBillingController {
     private final RateCardService rateCardService;
     private final BranchService branchService;
     private final PartyService partyService;
+    private final CityService cityService;
     private final AuditService auditService;
 
     public AdminBillingController(RateCardService rateCardService,
                                   BranchService branchService,
                                   PartyService partyService,
+                                  CityService cityService,
                                   AuditService auditService) {
         this.rateCardService = rateCardService;
         this.branchService = branchService;
         this.partyService = partyService;
+        this.cityService = cityService;
         this.auditService = auditService;
     }
 
     @GetMapping
-    public String page(Model model) {
+    public String page(@RequestParam(value = "partyId", required = false) Long partyId, Model model) {
         model.addAttribute("tariffs", rateCardService.findTariffs());
         model.addAttribute("domestic", rateCardService.findTariff(BranchCategory.DOMESTIC)
                 .orElseGet(() -> blank(BranchCategory.DOMESTIC)));
@@ -43,6 +49,10 @@ public class AdminBillingController {
                 .orElseGet(() -> blank(BranchCategory.NATIONAL)));
         model.addAttribute("branches", branchService.findAll());
         model.addAttribute("parties", partyService.findEnabled());
+        model.addAttribute("cities", cityService.findAll());
+        Party selected = partyId == null ? null : partyService.findById(partyId).orElse(null);
+        model.addAttribute("selectedParty", selected);
+        model.addAttribute("cityRates", selected == null ? List.of() : partyService.findCityRates(selected.getId()));
         return "admin/billing";
     }
 
@@ -50,19 +60,57 @@ public class AdminBillingController {
     public String savePartyRates(@PathVariable Long id,
                                  @RequestParam(required = false) BigDecimal perKgRate,
                                  @RequestParam(required = false) BigDecimal perBoxRate,
+                                 @RequestParam(required = false) BigDecimal minWeightKg,
                                  RedirectAttributes redirectAttributes) {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
-            partyService.saveRates(id, perKgRate, perBoxRate);
+            partyService.saveRates(id, perKgRate, perBoxRate, minWeightKg);
             auditService.log(principal.getUser().getId(), principal.getUsername(),
                     "PARTY_RATES_UPDATE", "PARTY", String.valueOf(id),
-                    "per kg=" + perKgRate);
+                    "per kg=" + perKgRate + ", min kg=" + minWeightKg);
             redirectAttributes.addFlashAttribute("successMessage",
-                    "Party rates saved. Party bills on the next submitted manifest will use these prices.");
+                    "Party rates saved. The next submitted manifest will bill this party with these prices.");
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
         }
-        return "redirect:/admin/billing";
+        return "redirect:/admin/billing?partyId=" + id;
+    }
+
+    @PostMapping("/party-city-rates")
+    public String saveCityRate(@RequestParam Long partyId,
+                               @RequestParam String cityName,
+                               @RequestParam BigDecimal perKgRate,
+                               @RequestParam(required = false) BigDecimal minWeightKg,
+                               RedirectAttributes redirectAttributes) {
+        CustomUserDetails principal = AdminAuth.requirePrincipal();
+        try {
+            partyService.saveCityRate(partyId, cityName, perKgRate, minWeightKg);
+            auditService.log(principal.getUser().getId(), principal.getUsername(),
+                    "PARTY_CITY_RATE_SAVE", "PARTY", String.valueOf(partyId),
+                    cityName + " per kg=" + perKgRate + ", min kg=" + minWeightKg);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "City rate saved for " + cityName.trim() + ".");
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+        return "redirect:/admin/billing?partyId=" + partyId + "#party-city-rates";
+    }
+
+    @PostMapping("/party-city-rates/{id}/delete")
+    public String deleteCityRate(@PathVariable Long id,
+                                 @RequestParam Long partyId,
+                                 RedirectAttributes redirectAttributes) {
+        CustomUserDetails principal = AdminAuth.requirePrincipal();
+        try {
+            partyService.deleteCityRate(partyId, id);
+            auditService.log(principal.getUser().getId(), principal.getUsername(),
+                    "PARTY_CITY_RATE_DELETE", "PARTY", String.valueOf(partyId),
+                    "Deleted city rate " + id);
+            redirectAttributes.addFlashAttribute("successMessage", "City rate removed.");
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        }
+        return "redirect:/admin/billing?partyId=" + partyId + "#party-city-rates";
     }
 
     @PostMapping("/{lane}")

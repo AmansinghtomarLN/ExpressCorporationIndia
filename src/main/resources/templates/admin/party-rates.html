@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Party rates | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container full-page">
+        <span class="eyebrow">From <span th:text="${baseCity}">Indore</span></span>
+        <div class="admin-toolbar" style="align-items:flex-start;">
+            <div>
+                <h1>Party rates</h1>
+                <p>Choose a party and a group. Every city in that group is listed so you can type its per kg rate.
+                    One rate can also be applied to the whole group.
+                    Cities left blank stay unset and use the party default, or the branch rate when that is blank.</p>
+            </div>
+            <a class="btn btn-dark" th:href="@{/admin/party-rates/status(partyId=${selectedParty != null ? selectedParty.id : null})}">Rate status</a>
+        </div>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <form class="admin-filters" method="get" th:action="@{/admin/party-rates}" id="rate-filters">
+            <div class="rate-filter-grid">
+                <div class="form-group">
+                    <label for="partyId">Party</label>
+                    <select id="partyId" name="partyId" onchange="this.form.submit()">
+                        <option value="">Select party</option>
+                        <option th:each="p : ${parties}" th:value="${p.id}"
+                                th:selected="${selectedParty != null and selectedParty.id == p.id}"
+                                th:text="${p.partyName + ' — ' + p.city}">Party</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="group">Group</label>
+                    <select id="group" name="group" onchange="this.form.submit()"
+                            th:disabled="${selectedParty == null}">
+                        <option value="">Select group</option>
+                        <option th:each="g : ${groups}" th:value="${g}" th:selected="${group == g}"
+                                th:text="${T(com.mahavircourier.service.CityCategory).displayNameForDropdown(g)}">Group</option>
+                    </select>
+                </div>
+            </div>
+        </form>
+
+        <div th:if="${selectedParty == null}" class="alert alert-info">
+            Select a party, then a group, to set city rates.
+        </div>
+
+        <div th:if="${selectedParty != null}" class="form-card full" style="margin-bottom:16px;">
+            <div class="open-shipments-head">
+                <div>
+                    <h3 th:text="${selectedParty.partyName}" style="margin:0;">Party</h3>
+                    <p class="muted" style="margin:6px 0 0;">
+                        Minimum rate decides whether a short consignment is billed at a minimum kg.
+                        The default per kg is used only for cities that do not have their own rate.
+                    </p>
+                </div>
+                <form method="post" th:action="@{/admin/party-rates/minimum}" class="rate-tools" style="margin:0;">
+                    <input type="hidden" name="partyId" th:value="${selectedParty.id}">
+                    <input type="hidden" name="group" th:value="${group}">
+                    <button type="submit" name="follow" value="true" class="btn btn-sm"
+                            th:classappend="${selectedParty.minRateEligible} ? ' btn-primary' : ' btn-dark'">
+                        Follow minimum rate
+                    </button>
+                    <button type="submit" name="follow" value="false" class="btn btn-sm btn-dark"
+                            th:disabled="${!selectedParty.minRateEligible}"
+                            onclick="return confirm('Remove the minimum rate for this party?');">
+                        Remove minimum rate
+                    </button>
+                </form>
+            </div>
+            <form method="post" th:action="@{/admin/party-rates/base}" class="rate-search-row">
+                <input type="hidden" name="partyId" th:value="${selectedParty.id}">
+                <input type="hidden" name="group" th:value="${group}">
+                <div class="form-group">
+                    <label for="base-per-kg">Default per kg (Rs.)</label>
+                    <input type="number" id="base-per-kg" name="perKgRate" step="0.01" min="0"
+                           th:value="${selectedParty.perKgRate}" placeholder="Branch rate">
+                </div>
+                <div class="form-group">
+                    <label for="base-min-kg">Minimum kg</label>
+                    <input type="number" id="base-min-kg" name="minWeightKg" step="0.01" min="0"
+                           th:if="${selectedParty.minRateEligible}"
+                           th:value="${selectedParty.minWeightKg}" placeholder="No minimum">
+                    <input type="text" th:unless="${selectedParty.minRateEligible}"
+                           value="Turn on Follow minimum rate" disabled>
+                </div>
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn btn-dark">Save default</button>
+                </div>
+            </form>
+        </div>
+
+        <div th:if="${selectedParty != null and group == null}" class="alert alert-info">
+            Choose a group to list its cities.
+        </div>
+
+        <div class="form-card full" th:if="${selectedParty != null and group != null}">
+            <div class="open-shipments-head">
+                <div>
+                    <h3 style="margin:0;" th:text="${groupLabel}">MP</h3>
+                    <p class="muted" style="margin:6px 0 0;">
+                        <span th:text="${setCount}">0</span> set ·
+                        <span th:text="${missingCount}">0</span> not set up ·
+                        <span th:text="${#lists.size(groupCities)}">0</span> cities
+                    </p>
+                </div>
+            </div>
+
+            <form method="post" id="group-rate-form" th:action="@{/admin/party-rates/group}"
+                  th:attr="data-count=${#lists.size(groupCities)},data-label=${groupLabel}">
+                <input type="hidden" name="partyId" th:value="${selectedParty.id}">
+                <input type="hidden" name="group" th:value="${group}">
+                <div class="rate-apply-row">
+                    <div class="form-group">
+                        <label for="group-rate">One rate for this group (Rs. per kg)</label>
+                        <input type="number" id="group-rate" name="perKgRate" step="0.01" min="0" required
+                               placeholder="8.00">
+                    </div>
+                    <div class="form-group" th:if="${selectedParty.minRateEligible}">
+                        <label for="group-min">Minimum kg for this group</label>
+                        <input type="number" id="group-min" name="minWeightKg" step="0.01" min="0"
+                               placeholder="Optional">
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button type="submit" class="btn btn-primary">Apply to all cities in this group</button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="rate-search-row" style="margin-top:8px;">
+                <div class="form-group">
+                    <label for="city-search">Search city or state</label>
+                    <input type="search" id="city-search" placeholder="Bhopal or Madhya Pradesh" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="state-filter">State</label>
+                    <select id="state-filter">
+                        <option value="">All states</option>
+                        <option th:each="s : ${states}" th:value="${s}" th:text="${s}">State</option>
+                    </select>
+                </div>
+            </div>
+            <p class="muted" id="visible-count"></p>
+
+            <form method="post" id="city-rate-form" th:action="@{/admin/party-rates/cities}">
+                <input type="hidden" name="partyId" th:value="${selectedParty.id}">
+                <input type="hidden" name="group" th:value="${group}">
+                <div id="remove-fields"></div>
+                <div style="overflow-x:auto;">
+                    <table class="data-table" id="city-rate-table">
+                        <thead>
+                        <tr>
+                            <th>City</th>
+                            <th>State</th>
+                            <th>Status</th>
+                            <th>Per kg (Rs.)</th>
+                            <th th:if="${selectedParty.minRateEligible}">Minimum kg</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="c : ${groupCities}"
+                            th:with="rate=${ratesByCity.get(#strings.toLowerCase(c.cityName))}"
+                            th:attr="data-city=${c.cityName},data-state=${c.state}">
+                            <td>
+                                <strong th:text="${c.cityName}">Bhopal</strong>
+                                <input type="hidden" name="cityName" th:value="${c.cityName}">
+                                <input type="hidden" class="rate-id" th:if="${rate != null}" th:value="${rate.id}">
+                            </td>
+                            <td th:text="${c.state}">Madhya Pradesh</td>
+                            <td>
+                                <span class="status-badge"
+                                      th:classappend="${rate != null} ? ' status-DELIVERED' : ' status-CANCELLED'"
+                                      th:text="${rate != null} ? 'Set' : 'Not set'">Not set</span>
+                            </td>
+                            <td>
+                                <input type="number" class="per-kg" name="perKgRate" step="0.01" min="0"
+                                       th:value="${rate != null ? rate.perKgRate : ''}" placeholder="Not set">
+                            </td>
+                            <td th:if="${selectedParty.minRateEligible}">
+                                <input type="number" class="min-kg" name="minWeightKg" step="0.01" min="0"
+                                       th:value="${rate != null ? rate.minWeightKg : ''}" placeholder="Party minimum">
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="rate-tools">
+                    <button type="submit" class="btn btn-primary">Save city rates</button>
+                    <span class="muted">Clear a rate and save to mark that city as not set up.</span>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script th:if="${selectedParty != null and group != null}">
+(function () {
+    var search = document.getElementById("city-search");
+    var stateFilter = document.getElementById("state-filter");
+    var rows = Array.prototype.slice.call(document.querySelectorAll("#city-rate-table tbody tr"));
+    var visible = document.getElementById("visible-count");
+    var form = document.getElementById("city-rate-form");
+    var removeFields = document.getElementById("remove-fields");
+
+    function applyFilter() {
+        var q = search.value.trim().toLowerCase();
+        var state = stateFilter.value;
+        var shown = 0;
+        rows.forEach(function (row) {
+            var city = (row.getAttribute("data-city") || "").toLowerCase();
+            var rowState = row.getAttribute("data-state") || "";
+            var matchesText = !q || city.indexOf(q) !== -1 || rowState.toLowerCase().indexOf(q) !== -1;
+            var matchesState = !state || rowState === state;
+            var hide = !(matchesText && matchesState);
+            row.hidden = hide;
+            if (!hide) {
+                shown++;
+            }
+        });
+        visible.textContent = shown + " of " + rows.length + " cities shown";
+    }
+
+    search.addEventListener("input", applyFilter);
+    stateFilter.addEventListener("change", applyFilter);
+    search.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+        }
+    });
+    applyFilter();
+
+    document.getElementById("group-rate-form").addEventListener("submit", function (event) {
+        var rate = document.getElementById("group-rate").value;
+        var count = this.getAttribute("data-count");
+        var label = this.getAttribute("data-label");
+        if (!confirm("Set ₹" + rate + " per kg on all " + count + " cities in " + label + "?")) {
+            event.preventDefault();
+        }
+    });
+
+    form.addEventListener("submit", function () {
+        removeFields.innerHTML = "";
+        var removed = {};
+        rows.forEach(function (row) {
+            var perKg = row.querySelector(".per-kg");
+            var idInput = row.querySelector(".rate-id");
+            if (perKg && !perKg.value && idInput && idInput.value && !removed[idInput.value]) {
+                removed[idInput.value] = true;
+                var input = document.createElement("input");
+                input.type = "hidden";
+                input.name = "removeId";
+                input.value = idInput.value;
+                removeFields.appendChild(input);
+            }
+        });
+    });
+})();
+</script>
+</body>
+</html>

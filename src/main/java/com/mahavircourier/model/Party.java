@@ -20,6 +20,8 @@ public class Party {
     private String notes;
     private BigDecimal perKgRate;
     private BigDecimal perBoxRate;
+    private boolean minRateEligible;
+    private BigDecimal minWeightKg;
     private boolean enabled = true;
     private LocalDateTime createdAt;
 
@@ -129,6 +131,22 @@ public class Party {
 
     public void setPerBoxRate(BigDecimal perBoxRate) {
         this.perBoxRate = perBoxRate;
+    }
+
+    public boolean isMinRateEligible() {
+        return minRateEligible;
+    }
+
+    public void setMinRateEligible(boolean minRateEligible) {
+        this.minRateEligible = minRateEligible;
+    }
+
+    public BigDecimal getMinWeightKg() {
+        return minWeightKg;
+    }
+
+    public void setMinWeightKg(BigDecimal minWeightKg) {
+        this.minWeightKg = minWeightKg;
     }
 
     public boolean hasCustomRates() {

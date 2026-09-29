@@ -97,10 +97,20 @@
                            th:value="${editParty != null ? editParty.address : ''}">
                 </div>
                 <div class="form-group">
-                    <label for="perKgRate">Party per kg (optional)</label>
+                    <label for="perKgRate">Default per kg (optional)</label>
                     <input type="number" id="perKgRate" name="perKgRate" step="0.01" min="0"
                            th:value="${editParty != null ? editParty.perKgRate : ''}"
                            placeholder="Leave blank to use branch rates">
+                    <p class="muted">City-wise rates are set under Rates. This value is the fallback.</p>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="minRateEligible" value="true"
+                               th:checked="${editParty != null and editParty.minRateEligible}">
+                        Eligible for minimum rate
+                    </label>
+                    <input type="hidden" name="_minRateEligible" value="on">
+                    <p class="muted">Tag this party if consignments should never be billed below a minimum kg. Set that minimum under Rates.</p>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -132,6 +142,7 @@
                 <p style="margin:10px 0;">
                     <span class="meta-chip" th:text="${p.rangeCount} + ' range(s)'">1 range</span>
                     <span class="meta-chip" th:text="${p.manifestCount} + ' manifest(s)'">0 manifests</span>
+                    <span class="meta-chip" th:if="${p.minRateEligible}">Min rate</span>
                 </p>
                 <span class="status-badge"
                       th:classappend="${p.enabled} ? ' status-DELIVERED' : ' status-CANCELLED'"
@@ -166,7 +177,10 @@
                     <td th:text="${p.phone}">Phone</td>
                     <td th:text="${p.city}">City</td>
                     <td th:text="${p.gstin != null ? p.gstin : '—'}">GSTIN</td>
-                    <td th:text="${p.perKgRate != null ? 'Rs. ' + #numbers.formatDecimal(p.perKgRate, 1, 2) : 'Branch'}">Branch</td>
+                    <td>
+                        <span th:text="${p.perKgRate != null ? 'Rs. ' + #numbers.formatDecimal(p.perKgRate, 1, 2) : 'Branch'}">Branch</span>
+                        <span class="meta-chip" th:if="${p.minRateEligible}">Min rate</span>
+                    </td>
                     <td th:text="${p.rangeCount}">0</td>
                     <td th:text="${p.manifestCount}">0</td>
                     <td>

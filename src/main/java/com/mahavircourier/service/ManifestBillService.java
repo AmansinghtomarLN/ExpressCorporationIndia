@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -122,18 +123,49 @@ public class ManifestBillService {
         }
 
         Long destBranchId = resolveDestinationBranchId(manifest, items);
-        Map<Long, LineTotals> byParty = groupByParty(manifest, items);
+        Map<Long, List<ManifestItem>> byParty = groupItemsByParty(manifest, items);
         if (byParty.isEmpty()) {
             throw new IllegalArgumentException("Cannot create a party bill without a sending party");
         }
 
         List<ManifestBill> bills = new ArrayList<>();
-        for (Map.Entry<Long, LineTotals> entry : byParty.entrySet()) {
+        for (Map.Entry<Long, List<ManifestItem>> entry : byParty.entrySet()) {
             Party party = partyDao.findById(entry.getKey())
                     .orElseThrow(() -> new IllegalArgumentException("Party not found"));
-            LineTotals totals = entry.getValue();
-            FreightQuote quote = rateCardService.quoteForParty(
-                    party, destBranchId, manifest.getBillingLane(), totals.weight, totals.boxes);
+            List<ManifestItem> partyItems = entry.getValue();
+            LineTotals totals = new LineTotals();
+            BigDecimal amount = BigDecimal.ZERO;
+            BigDecimal commonRate = null;
+            boolean mixedRates = false;
+            boolean minimumApplied = false;
+            for (ManifestItem item : partyItems) {
+                totals.add(item);
+                FreightQuote lineQuote = rateCardService.quoteForPartyCity(
+                        party, item.getDestinationCity(), manifest.getBillingLane(),
+                        item.getWeightKg(), item.getNumberOfBoxes());
+                amount = amount.add(lineQuote.getAmount());
+                if (item.getWeightKg() != null && lineQuote.getBillableWeightKg() != null
+                        && lineQuote.getBillableWeightKg().compareTo(item.getWeightKg()) > 0) {
+                    minimumApplied = true;
+                }
+                if (commonRate == null) {
+                    commonRate = lineQuote.getPerKgRate();
+                } else if (lineQuote.getPerKgRate() != null
+                        && commonRate.compareTo(lineQuote.getPerKgRate()) != 0) {
+                    mixedRates = true;
+                }
+            }
+            FreightQuote quote = new FreightQuote();
+            quote.setPerKgRate(commonRate != null ? commonRate : BigDecimal.ZERO);
+            quote.setAmount(amount.setScale(2, RoundingMode.HALF_UP));
+            String notes = "Party bill for " + party.getPartyName()
+                    + " on MF " + manifest.getManifestNumber();
+            if (minimumApplied || mixedRates) {
+                notes += ". Billed per city rate; minimum kg applied.";
+            }
+            if (notes.length() > 255) {
+                notes = notes.substring(0, 252) + "...";
+            }
             bills.add(upsert(buildBill(
                     ManifestBill.TYPE_PARTY,
                     manifest,
@@ -141,14 +173,32 @@ public class ManifestBillService {
                     destBranchId,
                     totals,
                     quote,
-                    "Party bill for " + party.getPartyName()
-                            + " on MF " + manifest.getManifestNumber())));
+                    notes)));
         }
 
         LineTotals branchTotals = sumAll(items);
-        FreightQuote branchQuote = destBranchId != null
-                ? rateCardService.quoteBranch(destBranchId, branchTotals.weight, branchTotals.boxes)
-                : rateCardService.quote(null, manifest.getBillingLane(), branchTotals.weight, branchTotals.boxes);
+        Long originBranchId = originBranchId(manifest);
+        BigDecimal branchAmount = BigDecimal.ZERO;
+        BigDecimal branchRate = null;
+        boolean mixedBranchRates = false;
+        for (ManifestItem item : items) {
+            Long itemDest = destinationBranchId(item, destBranchId);
+            FreightQuote lineQuote = rateCardService.quoteBranchLane(
+                    originBranchId, itemDest, item.getWeightKg(), item.getNumberOfBoxes());
+            branchAmount = branchAmount.add(lineQuote.getAmount());
+            if (branchRate == null) {
+                branchRate = lineQuote.getPerKgRate();
+            } else if (lineQuote.getPerKgRate() != null && branchRate.compareTo(lineQuote.getPerKgRate()) != 0) {
+                mixedBranchRates = true;
+            }
+        }
+        FreightQuote branchQuote = new FreightQuote();
+        branchQuote.setPerKgRate(branchRate != null ? branchRate : BigDecimal.ZERO);
+        branchQuote.setAmount(branchAmount.setScale(2, RoundingMode.HALF_UP));
+        String branchNotes = "Branch bill for MF " + manifest.getManifestNumber();
+        if (mixedBranchRates) {
+            branchNotes += ". Billed from the origin branch to each destination branch.";
+        }
         Long branchPartyId = byParty.size() == 1 ? byParty.keySet().iterator().next() : null;
         bills.add(upsert(buildBill(
                 ManifestBill.TYPE_BRANCH,
@@ -157,7 +207,7 @@ public class ManifestBillService {
                 destBranchId,
                 branchTotals,
                 branchQuote,
-                "Branch bill for MF " + manifest.getManifestNumber())));
+                branchNotes)));
         return bills;
     }
 
@@ -183,8 +233,8 @@ public class ManifestBillService {
     public List<ManifestItem> linesFor(ManifestBill bill) {
         List<ManifestItem> items = manifestItemDao.findByManifestId(bill.getManifestId());
         List<ManifestItem> result = items;
+        Manifest manifest = manifestDao.findById(bill.getManifestId()).orElse(null);
         if (bill.isPartyBill() && bill.getPartyId() != null) {
-            Manifest manifest = manifestDao.findById(bill.getManifestId()).orElse(null);
             result = new ArrayList<>();
             for (ManifestItem item : items) {
                 Long partyId = resolvePartyId(manifest, item);
@@ -193,7 +243,7 @@ public class ManifestBillService {
                 }
             }
         }
-        applyLineAmounts(result, bill);
+        applyLineAmounts(result, bill, manifest);
         return result;
     }
 
@@ -280,14 +330,14 @@ public class ManifestBillService {
         return bill;
     }
 
-    private Map<Long, LineTotals> groupByParty(Manifest manifest, List<ManifestItem> items) {
-        Map<Long, LineTotals> byParty = new LinkedHashMap<>();
+    private Map<Long, List<ManifestItem>> groupItemsByParty(Manifest manifest, List<ManifestItem> items) {
+        Map<Long, List<ManifestItem>> byParty = new LinkedHashMap<>();
         for (ManifestItem item : items) {
             Long partyId = resolvePartyId(manifest, item);
             if (partyId == null) {
                 continue;
             }
-            byParty.computeIfAbsent(partyId, id -> new LineTotals()).add(item);
+            byParty.computeIfAbsent(partyId, id -> new ArrayList<>()).add(item);
         }
         return byParty;
     }
@@ -318,12 +368,90 @@ public class ManifestBillService {
         throw new IllegalArgumentException("Cannot create a branch bill without a destination branch");
     }
 
-    private void applyLineAmounts(List<ManifestItem> items, ManifestBill bill) {
+    private void applyLineAmounts(List<ManifestItem> items, ManifestBill bill, Manifest manifest) {
+        if (bill.isPartyBill() && bill.getPartyId() != null && manifest != null) {
+            Party party = partyDao.findById(bill.getPartyId()).orElse(null);
+            if (party != null && applyQuotedPartyLines(items, bill, manifest, party)) {
+                return;
+            }
+        }
+        if (!bill.isPartyBill() && manifest != null && applyQuotedBranchLines(items, bill, manifest)) {
+            return;
+        }
         BigDecimal rate = bill.getPerKgRate() != null ? bill.getPerKgRate() : BigDecimal.ZERO;
         for (ManifestItem item : items) {
+            item.setBillableWeightKg(item.getWeightKg());
             item.setFreightCharge(rateCardService.computeFreight(
                     item.getWeightKg(), item.getNumberOfBoxes(), rate, BigDecimal.ZERO));
         }
+    }
+
+    /**
+     * Uses live city rates when they still add up to the stored bill.
+     * A manual weight × per kg edit keeps the single rate instead.
+     */
+    private boolean applyQuotedPartyLines(List<ManifestItem> items, ManifestBill bill,
+                                          Manifest manifest, Party party) {
+        List<FreightQuote> quotes = new ArrayList<>();
+        BigDecimal quoted = BigDecimal.ZERO;
+        for (ManifestItem item : items) {
+            FreightQuote line = rateCardService.quoteForPartyCity(
+                    party, item.getDestinationCity(), manifest.getBillingLane(),
+                    item.getWeightKg(), item.getNumberOfBoxes());
+            quotes.add(line);
+            quoted = quoted.add(line.getAmount());
+        }
+        BigDecimal stored = bill.getFreightAmount() != null ? bill.getFreightAmount() : BigDecimal.ZERO;
+        if (quoted.setScale(2, RoundingMode.HALF_UP).compareTo(stored.setScale(2, RoundingMode.HALF_UP)) != 0) {
+            return false;
+        }
+        for (int i = 0; i < items.size(); i++) {
+            ManifestItem item = items.get(i);
+            FreightQuote line = quotes.get(i);
+            item.setBillableWeightKg(line.getBillableWeightKg());
+            item.setFreightCharge(line.getAmount());
+        }
+        return true;
+    }
+
+    private boolean applyQuotedBranchLines(List<ManifestItem> items, ManifestBill bill, Manifest manifest) {
+        Long originBranchId = originBranchId(manifest);
+        List<FreightQuote> quotes = new ArrayList<>();
+        BigDecimal quoted = BigDecimal.ZERO;
+        for (ManifestItem item : items) {
+            FreightQuote line = rateCardService.quoteBranchLane(
+                    originBranchId, destinationBranchId(item, bill.getBranchId()),
+                    item.getWeightKg(), item.getNumberOfBoxes());
+            quotes.add(line);
+            quoted = quoted.add(line.getAmount());
+        }
+        BigDecimal stored = bill.getFreightAmount() != null ? bill.getFreightAmount() : BigDecimal.ZERO;
+        if (quoted.setScale(2, RoundingMode.HALF_UP).compareTo(stored.setScale(2, RoundingMode.HALF_UP)) != 0) {
+            return false;
+        }
+        for (int i = 0; i < items.size(); i++) {
+            ManifestItem item = items.get(i);
+            item.setBillableWeightKg(item.getWeightKg());
+            item.setFreightCharge(quotes.get(i).getAmount());
+        }
+        return true;
+    }
+
+    private Long originBranchId(Manifest manifest) {
+        if (manifest == null || !StringUtils.hasText(manifest.getOriginCity())) {
+            return null;
+        }
+        return branchDao.findByCityIgnoreCase(manifest.getOriginCity().trim()).map(b -> b.getId()).orElse(null);
+    }
+
+    private Long destinationBranchId(ManifestItem item, Long fallback) {
+        if (item != null && StringUtils.hasText(item.getDestinationCity())) {
+            Optional<Long> found = branchDao.findByCityIgnoreCase(item.getDestinationCity().trim()).map(b -> b.getId());
+            if (found.isPresent()) {
+                return found.get();
+            }
+        }
+        return fallback;
     }
 
     private LineTotals sumAll(List<ManifestItem> items) {

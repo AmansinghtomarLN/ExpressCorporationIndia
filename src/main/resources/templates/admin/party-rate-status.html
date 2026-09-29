@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Rate status | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container full-page">
+        <span class="eyebrow">Party rates</span>
+        <div class="admin-toolbar" style="align-items:flex-start;">
+            <div>
+                <h1>Rate status</h1>
+                <p>Cities with a saved per kg rate, and cities that still have no rate.
+                    A city that is not set up uses the party default, or the destination branch rate.</p>
+            </div>
+            <a class="btn btn-dark"
+               th:href="@{/admin/party-rates(partyId=${selectedParty != null ? selectedParty.id : null})}">Set rates</a>
+        </div>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <div class="form-card full" style="margin-bottom:16px;">
+            <h3>All parties</h3>
+            <div style="overflow-x:auto;">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>Party</th>
+                        <th>Home city</th>
+                        <th>Rates set</th>
+                        <th>Not set up</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="row : ${coverage}">
+                        <td th:text="${row.partyName}">Party</td>
+                        <td th:text="${row.city}">Indore</td>
+                        <td><span class="status-badge status-DELIVERED" th:text="${row.set}">0</span></td>
+                        <td><span class="status-badge status-CANCELLED" th:text="${row.missing}">0</span></td>
+                        <td>
+                            <a class="btn btn-sm btn-dark"
+                               th:href="@{/admin/party-rates/status(partyId=${row.partyId})}">Open</a>
+                            <a class="btn btn-sm btn-primary"
+                               th:href="@{/admin/party-rates(partyId=${row.partyId})}">Set rates</a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <form class="admin-filters" method="get" th:action="@{/admin/party-rates/status}" th:if="${selectedParty != null}">
+            <div class="rate-filter-grid">
+                <div class="form-group">
+                    <label for="partyId">Party</label>
+                    <select id="partyId" name="partyId" onchange="this.form.submit()">
+                        <option th:each="p : ${parties}" th:value="${p.id}"
+                                th:selected="${selectedParty.id == p.id}"
+                                th:text="${p.partyName + ' — ' + p.city}">Party</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="status-group">Group</label>
+                    <select id="status-group">
+                        <option value="">All groups</option>
+                        <option th:each="g : ${groups}" th:value="${g}"
+                                th:text="${T(com.mahavircourier.service.CityCategory).displayName(g)}">Group</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="status-search">Search city or state</label>
+                    <input type="search" id="status-search" placeholder="Raipur or Chhattisgarh" autocomplete="off">
+                </div>
+            </div>
+        </form>
+
+        <div th:if="${selectedParty != null}" class="party-card-grid" style="margin-top:0;">
+            <div class="party-card" th:each="g : ${groupCoverage}">
+                <h3 th:text="${g.label}">MP</h3>
+                <p><span class="status-badge status-DELIVERED" th:text="${g.set + ' set'}">0 set</span></p>
+                <p><span class="status-badge status-CANCELLED" th:text="${g.missing + ' not set'}">0 not set</span></p>
+            </div>
+        </div>
+
+        <div class="status-split" th:if="${selectedParty != null}">
+            <div class="form-card full">
+                <h3>Rates set <span class="muted" id="set-count"></span></h3>
+                <div style="overflow-x:auto; max-height:640px;">
+                    <table class="data-table" id="set-table">
+                        <thead>
+                        <tr>
+                            <th>City</th>
+                            <th>State</th>
+                            <th>Group</th>
+                            <th>Per kg</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="row : ${setRows}"
+                            th:attr="data-city=${row.cityName},data-state=${row.state},data-group=${row.group}">
+                            <td th:text="${row.cityName}">Bhopal</td>
+                            <td th:text="${row.state}">Madhya Pradesh</td>
+                            <td th:text="${row.groupLabel}">MP</td>
+                            <td th:text="|₹${row.perKgRate}|">₹8</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="muted" id="set-empty" th:if="${#lists.isEmpty(setRows)}">No city rates saved for this party yet.</p>
+            </div>
+
+            <div class="form-card full">
+                <h3>Not set up yet <span class="muted" id="missing-count"></span></h3>
+                <div style="overflow-x:auto; max-height:640px;">
+                    <table class="data-table" id="missing-table">
+                        <thead>
+                        <tr>
+                            <th>City</th>
+                            <th>State</th>
+                            <th>Group</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="row : ${missingRows}"
+                            th:attr="data-city=${row.cityName},data-state=${row.state},data-group=${row.group}">
+                            <td th:text="${row.cityName}">Bhopal</td>
+                            <td th:text="${row.state}">Madhya Pradesh</td>
+                            <td th:text="${row.groupLabel}">MP</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="muted" id="missing-empty" hidden>Every city in this view has a rate.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script th:if="${selectedParty != null}">
+(function () {
+    var search = document.getElementById("status-search");
+    var group = document.getElementById("status-group");
+
+    function filterTable(tableId, countId, emptyId) {
+        var q = search.value.trim().toLowerCase();
+        var selected = group.value;
+        var rows = document.querySelectorAll("#" + tableId + " tbody tr");
+        var shown = 0;
+        rows.forEach(function (row) {
+            var city = (row.getAttribute("data-city") || "").toLowerCase();
+            var state = (row.getAttribute("data-state") || "").toLowerCase();
+            var rowGroup = row.getAttribute("data-group") || "";
+            var matchesText = !q || city.indexOf(q) !== -1 || state.indexOf(q) !== -1;
+            var matchesGroup = !selected || rowGroup === selected;
+            var hide = !(matchesText && matchesGroup);
+            row.hidden = hide;
+            if (!hide) {
+                shown++;
+            }
+        });
+        var count = document.getElementById(countId);
+        if (count) {
+            count.textContent = "(" + shown + ")";
+        }
+        var empty = document.getElementById(emptyId);
+        if (empty) {
+            empty.hidden = shown !== 0;
+        }
+    }
+
+    function apply() {
+        filterTable("set-table", "set-count", "set-empty");
+        filterTable("missing-table", "missing-count", "missing-empty");
+    }
+
+    search.addEventListener("input", apply);
+    group.addEventListener("change", apply);
+    search.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+        }
+    });
+    apply();
+})();
+</script>
+</body>
+</html>

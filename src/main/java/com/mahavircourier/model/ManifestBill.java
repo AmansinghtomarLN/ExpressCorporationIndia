@@ -1,6 +1,7 @@
 package com.mahavircourier.model;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 
 public class ManifestBill {
@@ -41,6 +42,18 @@ public class ManifestBill {
 
     public boolean isPartyBill() {
         return TYPE_PARTY.equalsIgnoreCase(billType);
+    }
+
+    /**
+     * True when the stored amount is exactly total weight times the single per-kg rate.
+     * City rates and a minimum kg make the amount differ from that flat product.
+     */
+    public boolean isFlatPerKg() {
+        if (weightKg == null || perKgRate == null || freightAmount == null) {
+            return true;
+        }
+        BigDecimal flat = weightKg.multiply(perKgRate).setScale(2, RoundingMode.HALF_UP);
+        return flat.compareTo(freightAmount.setScale(2, RoundingMode.HALF_UP)) == 0;
     }
 
     public String getTypeLabel() {

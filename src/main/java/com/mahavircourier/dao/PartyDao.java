@@ -44,6 +44,12 @@ public class PartyDao {
         } catch (Exception ignored) {
             // optional rate columns
         }
+        try {
+            p.setMinRateEligible(rs.getBoolean("min_rate_eligible"));
+            p.setMinWeightKg(rs.getBigDecimal("min_weight_kg"));
+        } catch (Exception ignored) {
+            // optional minimum-rate columns
+        }
         Timestamp created = rs.getTimestamp("created_at");
         if (created != null) {
             p.setCreatedAt(created.toLocalDateTime());
@@ -107,8 +113,9 @@ public class PartyDao {
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(
                     "INSERT INTO parties (party_name, contact_person, phone, email, gstin, address, " +
-                            "city, state, pincode, notes, enabled, per_kg_rate, per_box_rate) " +
-                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            "city, state, pincode, notes, enabled, per_kg_rate, per_box_rate, " +
+                            "min_rate_eligible, min_weight_kg) " +
+                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, party.getPartyName());
             ps.setString(2, party.getContactPerson());
@@ -123,6 +130,8 @@ public class PartyDao {
             ps.setBoolean(11, party.isEnabled());
             ps.setBigDecimal(12, party.getPerKgRate());
             ps.setBigDecimal(13, party.getPerBoxRate());
+            ps.setBoolean(14, party.isMinRateEligible());
+            ps.setBigDecimal(15, party.getMinWeightKg());
             return ps;
         }, keyHolder);
         Number key = keyHolder.getKey();
@@ -133,7 +142,7 @@ public class PartyDao {
         jdbcTemplate.update(
                 "UPDATE parties SET party_name = ?, contact_person = ?, phone = ?, email = ?, gstin = ?, " +
                         "address = ?, city = ?, state = ?, pincode = ?, notes = ?, enabled = ?, " +
-                        "per_kg_rate = ?, per_box_rate = ? WHERE id = ?",
+                        "per_kg_rate = ?, per_box_rate = ?, min_rate_eligible = ?, min_weight_kg = ? WHERE id = ?",
                 party.getPartyName(),
                 party.getContactPerson(),
                 party.getPhone(),
@@ -147,6 +156,8 @@ public class PartyDao {
                 party.isEnabled(),
                 party.getPerKgRate(),
                 party.getPerBoxRate(),
+                party.isMinRateEligible(),
+                party.getMinWeightKg(),
                 party.getId());
     }
 

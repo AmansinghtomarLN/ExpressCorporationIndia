@@ -32,7 +32,9 @@
                 <div><strong>Destination:</strong> <span th:text="${bill.branchDisplay}">Branch</span></div>
                 <div><strong>Manifest:</strong> <span th:text="${bill.manifestNumber}">MF</span></div>
                 <div><strong>Per kg:</strong>
-                    <span th:text="'Rs. ' + ${#numbers.formatDecimal(bill.perKgRate, 1, 2)}">Rs. 0.00</span>
+                    <span th:if="${bill.flatPerKg}"
+                          th:text="'Rs. ' + ${#numbers.formatDecimal(bill.perKgRate, 1, 2)}">Rs. 0.00</span>
+                    <span th:unless="${bill.flatPerKg}">City rates / minimum kg</span>
                 </div>
             </div>
             <table class="manifest-print">
@@ -52,7 +54,12 @@
                     <td th:text="${line.consignmentNo}">37191</td>
                     <td th:text="${line.destinationCity}">GWALIOR</td>
                     <td th:text="${line.numberOfBoxes}">3</td>
-                    <td th:text="${line.weightKg}">40</td>
+                    <td>
+                        <span th:text="${line.weightKg}">40</span>
+                        <span class="muted"
+                              th:if="${line.billableWeightKg != null and line.weightKg != null and line.billableWeightKg > line.weightKg}"
+                              th:text="| (billed ${line.billableWeightKg})|"> (billed 5)</span>
+                    </td>
                     <td th:text="${line.freightCharge != null ? #numbers.formatDecimal(line.freightCharge, 1, 2) : '0.00'}">0.00</td>
                 </tr>
                 <tr>
@@ -64,7 +71,8 @@
                 </tbody>
             </table>
             <p style="margin-top:14px; font-size:0.9rem;">
-                Amount per Consinement is <strong>weight × per kg</strong>.
+                Amount per consignment is <strong>billable kg × per kg</strong>.
+                Billable kg is the actual weight, or the minimum kg when that is higher.
                 Bill amount: <strong th:text="'Rs. ' + ${#numbers.formatDecimal(bill.freightAmount, 1, 2)}">Rs. 0.00</strong>
             </p>
         </div>

@@ -20,6 +20,7 @@
                 <p class="muted" th:text="${party.city + (party.state != null ? ', ' + party.state : '')}">City</p>
             </div>
             <div class="admin-filter-buttons">
+                <a class="btn btn-dark" th:href="@{/admin/party-rates(partyId=${party.id})}">City rates</a>
                 <a class="btn btn-dark" th:href="@{/admin/billing/parties(partyId=${party.id})}">Party bills</a>
                 <a class="btn btn-primary" th:href="@{/admin/manifests/new(partyId=${party.id})}">New Manifest</a>
             </div>
@@ -76,9 +77,21 @@
                     <input type="text" name="address" th:value="${party.address}">
                 </div>
                 <div class="form-group">
-                    <label>Party per kg (optional)</label>
+                    <label>Default per kg (optional)</label>
                     <input type="number" name="perKgRate" step="0.01" min="0"
                            th:value="${party.perKgRate}" placeholder="Leave blank to use branch rates">
+                    <p class="muted">City rates from Indore, and whether this party follows a minimum rate, are set on
+                        <a th:href="@{/admin/party-rates(partyId=${party.id})}">Party rates</a>.</p>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="minRateEligible" value="true"
+                               th:checked="${party.minRateEligible}">
+                        Eligible for minimum rate
+                    </label>
+                    <input type="hidden" name="_minRateEligible" value="on">
+                    <p class="muted" th:if="${party.minWeightKg != null}"
+                       th:text="|Current minimum is ${party.minWeightKg} kg.|">Minimum</p>
                 </div>
                 <div class="form-row">
                     <div class="form-group">

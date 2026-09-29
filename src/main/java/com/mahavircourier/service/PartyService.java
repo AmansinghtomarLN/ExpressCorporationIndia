@@ -4,11 +4,13 @@ import com.mahavircourier.dao.ConsignmentRangeDao;
 import com.mahavircourier.dao.CnoSettingsDao;
 import com.mahavircourier.dao.ManifestDao;
 import com.mahavircourier.dao.ManifestItemDao;
+import com.mahavircourier.dao.PartyCityRateDao;
 import com.mahavircourier.dao.PartyDao;
 import com.mahavircourier.dao.ShipmentDao;
 import com.mahavircourier.dto.ConsignmentPool;
 import com.mahavircourier.model.ConsignmentRange;
 import com.mahavircourier.model.Party;
+import com.mahavircourier.model.PartyCityRate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -29,19 +31,25 @@ public class PartyService {
     private final ManifestItemDao manifestItemDao;
     private final ShipmentDao shipmentDao;
     private final CnoSettingsDao cnoSettingsDao;
+    private final PartyCityRateDao partyCityRateDao;
+    private final CityService cityService;
 
     public PartyService(PartyDao partyDao,
                         ConsignmentRangeDao consignmentRangeDao,
                         ManifestDao manifestDao,
                         ManifestItemDao manifestItemDao,
                         ShipmentDao shipmentDao,
-                        CnoSettingsDao cnoSettingsDao) {
+                        CnoSettingsDao cnoSettingsDao,
+                        PartyCityRateDao partyCityRateDao,
+                        CityService cityService) {
         this.partyDao = partyDao;
         this.consignmentRangeDao = consignmentRangeDao;
         this.manifestDao = manifestDao;
         this.manifestItemDao = manifestItemDao;
         this.shipmentDao = shipmentDao;
         this.cnoSettingsDao = cnoSettingsDao;
+        this.partyCityRateDao = partyCityRateDao;
+        this.cityService = cityService;
     }
 
     public List<Party> search(String query) {
@@ -67,8 +75,48 @@ public class PartyService {
         return party;
     }
 
+    public List<PartyCityRate> findCityRates(Long partyId) {
+        return partyCityRateDao.findByPartyId(partyId);
+    }
+
+    public java.util.Map<Long, Integer> countCityRatesByParty() {
+        return partyCityRateDao.countByParty();
+    }
+
     @Transactional
-    public void saveRates(Long id, BigDecimal perKgRate, BigDecimal perBoxRate) {
+    public int applyGroupRate(Long partyId, String category, BigDecimal perKgRate, BigDecimal minWeightKg) {
+        Party party = partyDao.findById(partyId)
+                .orElseThrow(() -> new IllegalArgumentException("Party not found"));
+        if (perKgRate == null) {
+            throw new IllegalArgumentException("Per kg rate is required");
+        }
+        if (perKgRate.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Per kg rate cannot be negative");
+        }
+        String group = CityCategory.normalize(category);
+        List<com.mahavircourier.model.City> cities = cityService.search(null, null, group);
+        if (cities.isEmpty()) {
+            throw new IllegalArgumentException("No cities in " + CityCategory.displayName(group));
+        }
+        boolean updateMinimum = minWeightKg != null;
+        BigDecimal minimum = updateMinimum ? normalizeMinimum(party, minWeightKg) : null;
+        for (com.mahavircourier.model.City city : cities) {
+            PartyCityRate rate = new PartyCityRate();
+            rate.setPartyId(party.getId());
+            rate.setCityName(city.getCityName());
+            rate.setPerKgRate(perKgRate);
+            rate.setMinWeightKg(minimum);
+            if (updateMinimum) {
+                partyCityRateDao.upsert(rate);
+            } else {
+                partyCityRateDao.upsertPerKg(rate);
+            }
+        }
+        return cities.size();
+    }
+
+    @Transactional
+    public void saveRates(Long id, BigDecimal perKgRate, BigDecimal perBoxRate, BigDecimal minWeightKg) {
         Party party = partyDao.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Party not found"));
         if (perKgRate != null && perKgRate.compareTo(BigDecimal.ZERO) < 0) {
@@ -78,16 +126,102 @@ public class PartyService {
             throw new IllegalArgumentException("Per box rate cannot be negative");
         }
         party.setPerKgRate(perKgRate);
-        party.setPerBoxRate(perBoxRate);
+        if (perBoxRate != null) {
+            party.setPerBoxRate(perBoxRate);
+        }
+        party.setMinWeightKg(normalizeMinimum(party, minWeightKg));
         partyDao.update(party);
     }
 
     @Transactional
+    public void setMinimumRate(Long id, boolean follow) {
+        Party party = partyDao.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Party not found"));
+        party.setMinRateEligible(follow);
+        if (!follow) {
+            party.setMinWeightKg(null);
+            partyCityRateDao.clearMinimums(id);
+        }
+        partyDao.update(party);
+    }
+
+    @Transactional
+    public int saveCityRates(Long partyId,
+                             List<Long> removeIds,
+                             List<String> cityNames,
+                             List<BigDecimal> perKgRates,
+                             List<BigDecimal> minWeights) {
+        if (removeIds != null) {
+            for (Long rateId : removeIds) {
+                if (rateId != null) {
+                    deleteCityRate(partyId, rateId);
+                }
+            }
+        }
+        if (cityNames == null || cityNames.isEmpty()) {
+            return 0;
+        }
+        int saved = 0;
+        for (int i = 0; i < cityNames.size(); i++) {
+            String cityName = cityNames.get(i);
+            BigDecimal perKgRate = perKgRates != null && i < perKgRates.size() ? perKgRates.get(i) : null;
+            BigDecimal minWeightKg = minWeights != null && i < minWeights.size() ? minWeights.get(i) : null;
+            if (!StringUtils.hasText(cityName) || perKgRate == null) {
+                continue;
+            }
+            saveCityRate(partyId, cityName, perKgRate, minWeightKg);
+            saved++;
+        }
+        return saved;
+    }
+
+    @Transactional
+    public void saveCityRate(Long partyId, String cityName, BigDecimal perKgRate, BigDecimal minWeightKg) {
+        Party party = partyDao.findById(partyId)
+                .orElseThrow(() -> new IllegalArgumentException("Party not found"));
+        if (!StringUtils.hasText(cityName)) {
+            throw new IllegalArgumentException("City is required");
+        }
+        if (perKgRate == null) {
+            throw new IllegalArgumentException("Per kg rate is required");
+        }
+        if (perKgRate.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Per kg rate cannot be negative");
+        }
+        String city = cityService.findByName(cityName)
+                .map(known -> known.getCityName())
+                .orElse(cityName.trim());
+        PartyCityRate rate = new PartyCityRate();
+        rate.setPartyId(party.getId());
+        rate.setCityName(city);
+        rate.setPerKgRate(perKgRate);
+        rate.setMinWeightKg(normalizeMinimum(party, minWeightKg));
+        partyCityRateDao.upsert(rate);
+    }
+
+    @Transactional
+    public void deleteCityRate(Long partyId, Long rateId) {
+        PartyCityRate rate = partyCityRateDao.findById(rateId)
+                .orElseThrow(() -> new IllegalArgumentException("City rate not found"));
+        if (!rate.getPartyId().equals(partyId)) {
+            throw new IllegalArgumentException("City rate does not belong to this party");
+        }
+        partyCityRateDao.deleteById(rateId);
+    }
+
+    @Transactional
     public void update(Party party) {
-        if (party.getId() == null || partyDao.findById(party.getId()).isEmpty()) {
+        Party existing = party.getId() == null ? null : partyDao.findById(party.getId()).orElse(null);
+        if (existing == null) {
             throw new IllegalArgumentException("Party not found");
         }
         normalize(party);
+        party.setPerBoxRate(existing.getPerBoxRate());
+        party.setMinWeightKg(existing.getMinWeightKg());
+        if (!party.isMinRateEligible()) {
+            party.setMinWeightKg(null);
+            partyCityRateDao.clearMinimums(party.getId());
+        }
         validate(party);
         partyDao.update(party);
     }
@@ -329,6 +463,30 @@ public class PartyService {
         if (party.getPerBoxRate() != null && party.getPerBoxRate().compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Per box rate cannot be negative");
         }
+        if (party.getMinWeightKg() != null && party.getMinWeightKg().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Minimum kg cannot be negative");
+        }
+        if (party.getMinWeightKg() != null && !party.isMinRateEligible()) {
+            throw new IllegalArgumentException(
+                    "Tag this party for a minimum rate before setting a minimum kg");
+        }
+    }
+
+    private BigDecimal normalizeMinimum(Party party, BigDecimal minWeightKg) {
+        if (minWeightKg == null) {
+            return null;
+        }
+        if (minWeightKg.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Minimum kg cannot be negative");
+        }
+        if (!party.isMinRateEligible()) {
+            throw new IllegalArgumentException(
+                    "Tag this party for a minimum rate when creating or editing the party, then set the minimum kg here");
+        }
+        if (minWeightKg.compareTo(BigDecimal.ZERO) == 0) {
+            return null;
+        }
+        return minWeightKg;
     }
 
     private String trimRequired(String value, String label) {

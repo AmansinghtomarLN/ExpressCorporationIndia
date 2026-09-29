@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Branch rates | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section">
+    <div class="container full-page">
+        <span class="eyebrow">Branch billing</span>
+        <div class="admin-toolbar" style="align-items:flex-start;">
+            <div>
+                <h1>Branch rates</h1>
+                <p>Choose the base branch the shipment leaves from. Then set the per kg rate to each other branch.
+                    A branch bill uses that rate. If a destination has no rate from this base, it keeps that branch’s own per kg rate.</p>
+            </div>
+        </div>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <form class="admin-filters" method="get" th:action="@{/admin/branch-rates}">
+            <div class="rate-filter-grid">
+                <div class="form-group">
+                    <label for="originId">Base branch</label>
+                    <select id="originId" name="originId" onchange="this.form.submit()">
+                        <option value="">Select base branch</option>
+                        <option th:each="b : ${branches}" th:value="${b.id}"
+                                th:selected="${origin != null and origin.id == b.id}"
+                                th:text="${b.city + ' — ' + b.branchName}">Branch</option>
+                    </select>
+                </div>
+            </div>
+        </form>
+
+        <div class="form-card full" style="margin-bottom:16px;" th:if="${origin == null}">
+            <h3>From each base branch</h3>
+            <div style="overflow-x:auto;">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>Base branch</th>
+                        <th>City</th>
+                        <th>Rates set</th>
+                        <th>Not set up</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="row : ${coverage}">
+                        <td th:text="${row.branchName}">Branch</td>
+                        <td th:text="${row.city}">City</td>
+                        <td><span class="status-badge status-DELIVERED" th:text="${row.set}">0</span></td>
+                        <td><span class="status-badge status-CANCELLED" th:text="${row.missing}">0</span></td>
+                        <td>
+                            <a class="btn btn-sm btn-primary"
+                               th:href="@{/admin/branch-rates(originId=${row.branchId})}">Set rates</a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div th:if="${origin == null}" class="alert alert-info">
+            Select a base branch to set rates to the other branches.
+        </div>
+
+        <div class="form-card full" th:if="${origin != null}">
+            <div class="open-shipments-head">
+                <div>
+                    <h3 style="margin:0;" th:text="${origin.city + ' — ' + origin.branchName}">Indore</h3>
+                    <p class="muted" style="margin:6px 0 0;">
+                        <span th:text="${setCount}">0</span> set ·
+                        <span th:text="${missingCount}">0</span> not set up ·
+                        <span th:text="${#lists.size(destinations)}">0</span> other branches
+                    </p>
+                </div>
+                <a class="btn btn-dark" th:href="@{/admin/branch-rates}">All base branches</a>
+            </div>
+
+            <form method="post" id="apply-form" th:action="@{/admin/branch-rates/apply}"
+                  th:attr="data-count=${#lists.size(destinations)},data-label=${origin.branchName}">
+                <input type="hidden" name="originId" th:value="${origin.id}">
+                <div class="rate-apply-row">
+                    <div class="form-group">
+                        <label for="group-rate">One rate to every other branch (Rs. per kg)</label>
+                        <input type="number" id="group-rate" name="perKgRate" step="0.01" min="0" required
+                               placeholder="8.00">
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button type="submit" class="btn btn-primary">Apply to all other branches</button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="form-group" style="margin-top:12px;">
+                <label for="branch-search">Search branch or city</label>
+                <input type="search" id="branch-search" placeholder="Bhopal or ECI" autocomplete="off">
+            </div>
+            <p class="muted" id="visible-count"></p>
+
+            <form method="post" id="lane-form" th:action="@{/admin/branch-rates/save}">
+                <input type="hidden" name="originId" th:value="${origin.id}">
+                <div id="remove-fields"></div>
+                <div style="overflow-x:auto;">
+                    <table class="data-table" id="lane-table">
+                        <thead>
+                        <tr>
+                            <th>Destination branch</th>
+                            <th>City</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>Per kg (Rs.)</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="b : ${destinations}"
+                            th:with="rate=${ratesByDest.get(b.id)}"
+                            th:attr="data-name=${b.branchName},data-city=${b.city}">
+                            <td>
+                                <strong th:text="${b.branchName}">Branch</strong>
+                                <input type="hidden" name="destBranchId" th:value="${b.id}">
+                                <input type="hidden" class="rate-id" th:if="${rate != null}" th:value="${rate.id}">
+                            </td>
+                            <td th:text="${b.city}">City</td>
+                            <td th:text="${b.branchCategory == 'NATIONAL' ? 'National' : 'Domestic'}">Domestic</td>
+                            <td>
+                                <span class="status-badge"
+                                      th:classappend="${rate != null} ? ' status-DELIVERED' : ' status-CANCELLED'"
+                                      th:text="${rate != null} ? 'Set' : 'Not set'">Not set</span>
+                            </td>
+                            <td>
+                                <input type="number" class="per-kg" name="perKgRate" step="0.01" min="0"
+                                       th:value="${rate != null ? rate.perKgRate : ''}"
+                                       th:placeholder="|Branch ₹${b.perKgRate}|">
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="rate-tools">
+                    <button type="submit" class="btn btn-primary">Save branch rates</button>
+                    <span class="muted">Clear a rate and save to use that branch’s own per kg rate again.</span>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+<script th:if="${origin != null}">
+(function () {
+    var search = document.getElementById("branch-search");
+    var rows = Array.prototype.slice.call(document.querySelectorAll("#lane-table tbody tr"));
+    var visible = document.getElementById("visible-count");
+    var form = document.getElementById("lane-form");
+    var removeFields = document.getElementById("remove-fields");
+
+    function applyFilter() {
+        var q = search.value.trim().toLowerCase();
+        var shown = 0;
+        rows.forEach(function (row) {
+            var name = (row.getAttribute("data-name") || "").toLowerCase();
+            var city = (row.getAttribute("data-city") || "").toLowerCase();
+            var hide = q && name.indexOf(q) === -1 && city.indexOf(q) === -1;
+            row.hidden = hide;
+            if (!hide) {
+                shown++;
+            }
+        });
+        visible.textContent = shown + " of " + rows.length + " branches shown";
+    }
+
+    search.addEventListener("input", applyFilter);
+    search.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+        }
+    });
+    applyFilter();
+
+    document.getElementById("apply-form").addEventListener("submit", function (event) {
+        var rate = document.getElementById("group-rate").value;
+        var count = this.getAttribute("data-count");
+        var label = this.getAttribute("data-label");
+        if (!confirm("Set ₹" + rate + " per kg from " + label + " to all " + count + " other branches?")) {
+            event.preventDefault();
+        }
+    });
+
+    form.addEventListener("submit", function () {
+        removeFields.innerHTML = "";
+        var removed = {};
+        rows.forEach(function (row) {
+            var perKg = row.querySelector(".per-kg");
+            var idInput = row.querySelector(".rate-id");
+            if (perKg && !perKg.value && idInput && idInput.value && !removed[idInput.value]) {
+                removed[idInput.value] = true;
+                var input = document.createElement("input");
+                input.type = "hidden";
+                input.name = "removeId";
+                input.value = idInput.value;
+                removeFields.appendChild(input);
+            }
+        });
+    });
+})();
+</script>
+</body>
+</html>

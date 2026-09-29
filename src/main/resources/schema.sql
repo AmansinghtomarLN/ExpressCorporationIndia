@@ -441,6 +441,36 @@ PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 SET @sql := (
   SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE parties ADD COLUMN min_rate_eligible TINYINT(1) NOT NULL DEFAULT 0',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'parties' AND COLUMN_NAME = 'min_rate_eligible'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE parties ADD COLUMN min_weight_kg DECIMAL(8,2) NULL',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'parties' AND COLUMN_NAME = 'min_weight_kg'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+CREATE TABLE IF NOT EXISTS party_city_rates (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    party_id        BIGINT        NOT NULL,
+    city_name       VARCHAR(80)   NOT NULL,
+    per_kg_rate     DECIMAL(10,2) NOT NULL,
+    min_weight_kg   DECIMAL(8,2)  NULL,
+    updated_at      TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_party_city_rate_party FOREIGN KEY (party_id) REFERENCES parties(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_party_city (party_id, city_name),
+    KEY idx_party_city_party (party_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
     'ALTER TABLE users ADD COLUMN current_branch_id BIGINT NULL',
     'SELECT 1')
   FROM information_schema.COLUMNS
@@ -469,6 +499,17 @@ CREATE TABLE IF NOT EXISTS manifest_bills (
     KEY idx_bills_party (party_id),
     KEY idx_bills_branch (branch_id),
     KEY idx_bills_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS branch_lane_rates (
+    id                BIGINT AUTO_INCREMENT PRIMARY KEY,
+    origin_branch_id  BIGINT        NOT NULL,
+    dest_branch_id    BIGINT        NOT NULL,
+    per_kg_rate       DECIMAL(10,2) NOT NULL,
+    updated_at        TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_lane_origin FOREIGN KEY (origin_branch_id) REFERENCES branches(id) ON DELETE CASCADE,
+    CONSTRAINT fk_lane_dest FOREIGN KEY (dest_branch_id) REFERENCES branches(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_branch_lane (origin_branch_id, dest_branch_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS cities (

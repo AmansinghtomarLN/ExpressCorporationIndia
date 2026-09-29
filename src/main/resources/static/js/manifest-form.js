@@ -494,7 +494,7 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
         if (fromEl.closest("#manifest-lines")) {
-            var addBtn = document.getElementById("add-consignment");
+            var addBtn = document.getElementById("add-one-row") || document.getElementById("add-consignment");
             if (addBtn) addBtn.click();
         }
     }
@@ -520,19 +520,32 @@ document.addEventListener("DOMContentLoaded", function () {
         focusNext(ev.target);
     });
 
-    var addBtn = document.getElementById("add-consignment");
-    if (addBtn) {
-        addBtn.addEventListener("click", function () {
-            var start = rowCount();
-            var tr = createRow(start);
+    function addRows(count) {
+        var first = null;
+        var n = count > 0 ? count : 1;
+        for (var i = 0; i < n; i++) {
+            var tr = createRow(rowCount());
             tbody.appendChild(tr);
-            wireAllCombos();
-            reindex();
-            updateTotals();
-            var first = tr.querySelector(".party-select");
-            if (first) first.focus();
+            if (!first) first = tr;
+        }
+        wireAllCombos();
+        reindex();
+        updateTotals();
+        var focusEl = first ? first.querySelector(".party-select") : null;
+        if (focusEl) focusEl.focus();
+    }
+
+    function bindAddRows(id, count) {
+        var btn = document.getElementById(id);
+        if (!btn) return;
+        btn.addEventListener("click", function () {
+            addRows(count);
         });
     }
+
+    bindAddRows("add-one-row", 1);
+    bindAddRows("add-five-rows", 5);
+    bindAddRows("add-consignment", 1);
 
     tbody.addEventListener("click", function (ev) {
         var btn = ev.target.closest(".btn-remove-row");

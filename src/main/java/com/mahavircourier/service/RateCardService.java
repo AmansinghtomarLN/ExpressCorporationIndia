@@ -2,11 +2,15 @@ package com.mahavircourier.service;
 
 import com.mahavircourier.dao.BillingTariffDao;
 import com.mahavircourier.dao.BranchDao;
+import com.mahavircourier.dao.BranchLaneRateDao;
+import com.mahavircourier.dao.PartyCityRateDao;
 import com.mahavircourier.dao.RateCardDao;
 import com.mahavircourier.dto.FreightQuote;
 import com.mahavircourier.model.BillingTariff;
 import com.mahavircourier.model.Branch;
+import com.mahavircourier.model.BranchLaneRate;
 import com.mahavircourier.model.Party;
+import com.mahavircourier.model.PartyCityRate;
 import com.mahavircourier.model.RateCard;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +19,7 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -23,13 +28,19 @@ public class RateCardService {
     private final RateCardDao rateCardDao;
     private final BillingTariffDao billingTariffDao;
     private final BranchDao branchDao;
+    private final PartyCityRateDao partyCityRateDao;
+    private final BranchLaneRateDao branchLaneRateDao;
 
     public RateCardService(RateCardDao rateCardDao,
                            BillingTariffDao billingTariffDao,
-                           BranchDao branchDao) {
+                           BranchDao branchDao,
+                           PartyCityRateDao partyCityRateDao,
+                           BranchLaneRateDao branchLaneRateDao) {
         this.rateCardDao = rateCardDao;
         this.billingTariffDao = billingTariffDao;
         this.branchDao = branchDao;
+        this.partyCityRateDao = partyCityRateDao;
+        this.branchLaneRateDao = branchLaneRateDao;
     }
 
     public List<RateCard> findAll() {
@@ -173,23 +184,168 @@ public class RateCardService {
     /**
      * Party bill rates: use the party's optional per-kg when set.
      * Otherwise fall back to the destination branch, then category tariff.
+     * A tagged party's minimum kg is applied to this weight.
      */
     public FreightQuote quoteForParty(Party party, Long destBranchId, String lane,
                                       BigDecimal weight, Integer boxes) {
-        FreightQuote fallback = destBranchId != null
-                ? quoteBranch(destBranchId, weight, boxes)
-                : quote(null, lane, weight, boxes);
-        if (party == null || !party.hasCustomRates()) {
-            return fallback;
+        String city = null;
+        if (destBranchId != null) {
+            city = branchDao.findById(destBranchId).map(Branch::getCity).orElse(null);
+        }
+        return quoteForPartyCity(party, city, lane, weight, boxes);
+    }
+
+    /**
+     * Per-consignment party price. City rate wins, then the party default per kg,
+     * then the destination branch rate. Tagged parties bill at least their minimum kg.
+     * A city row can set its own minimum kg; otherwise the party minimum is used.
+     */
+    public FreightQuote quoteForPartyCity(Party party, String destinationCity, String manifestLane,
+                                          BigDecimal weight, Integer boxes) {
+        FreightQuote base = quote(destinationCity, manifestLane, weight, boxes);
+        PartyCityRate cityRate = null;
+        if (party != null && party.getId() != null && StringUtils.hasText(destinationCity)) {
+            cityRate = partyCityRateDao.findByPartyAndCity(party.getId(), destinationCity.trim()).orElse(null);
+        }
+        BigDecimal perKg = base.getPerKgRate();
+        if (cityRate != null && cityRate.getPerKgRate() != null) {
+            perKg = cityRate.getPerKgRate();
+        } else if (party != null && party.hasCustomRates()) {
+            perKg = party.getPerKgRate();
+        }
+        BigDecimal actual = weight != null ? weight : BigDecimal.ZERO;
+        BigDecimal billable = actual;
+        BigDecimal minimum = resolveMinimumKg(party, cityRate);
+        if (minimum != null && actual.compareTo(minimum) < 0) {
+            billable = minimum;
         }
         FreightQuote quote = new FreightQuote();
-        quote.setLane(fallback.getLane());
-        quote.setBranchId(fallback.getBranchId());
-        quote.setBranchName(fallback.getBranchName());
-        quote.setBranchCity(fallback.getBranchCity());
-        quote.setPerKgRate(nvl(party.getPerKgRate()));
+        quote.setLane(base.getLane());
+        quote.setBranchId(base.getBranchId());
+        quote.setBranchName(base.getBranchName());
+        quote.setBranchCity(base.getBranchCity());
+        quote.setPerKgRate(nvl(perKg));
         quote.setPerBoxRate(BigDecimal.ZERO);
-        quote.setAmount(computeFreight(weight, boxes, quote.getPerKgRate(), quote.getPerBoxRate()));
+        quote.setBillableWeightKg(billable);
+        quote.setAmount(billable.multiply(nvl(perKg)).setScale(2, RoundingMode.HALF_UP));
+        return quote;
+    }
+
+    private BigDecimal resolveMinimumKg(Party party, PartyCityRate cityRate) {
+        if (party == null || !party.isMinRateEligible()) {
+            return null;
+        }
+        if (cityRate != null && cityRate.getMinWeightKg() != null) {
+            return cityRate.getMinWeightKg();
+        }
+        return party.getMinWeightKg();
+    }
+
+    public List<BranchLaneRate> findLanesFrom(Long originBranchId) {
+        return branchLaneRateDao.findByOrigin(originBranchId);
+    }
+
+    public Map<Long, Integer> countLanesByOrigin() {
+        return branchLaneRateDao.countByOrigin();
+    }
+
+    @Transactional
+    public int applyLaneRate(Long originBranchId, BigDecimal perKgRate) {
+        Branch origin = branchDao.findById(originBranchId)
+                .orElseThrow(() -> new IllegalArgumentException("Base branch not found"));
+        if (perKgRate == null || perKgRate.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Per kg rate cannot be negative");
+        }
+        int saved = 0;
+        for (Branch dest : branchDao.findAll()) {
+            if (dest.getId().equals(origin.getId())) {
+                continue;
+            }
+            BranchLaneRate rate = new BranchLaneRate();
+            rate.setOriginBranchId(origin.getId());
+            rate.setDestBranchId(dest.getId());
+            rate.setPerKgRate(perKgRate);
+            branchLaneRateDao.upsert(rate);
+            saved++;
+        }
+        return saved;
+    }
+
+    @Transactional
+    public int saveLaneRates(Long originBranchId, List<Long> removeIds,
+                             List<Long> destBranchIds, List<BigDecimal> perKgRates) {
+        branchDao.findById(originBranchId)
+                .orElseThrow(() -> new IllegalArgumentException("Base branch not found"));
+        if (removeIds != null) {
+            for (Long rateId : removeIds) {
+                if (rateId == null) {
+                    continue;
+                }
+                BranchLaneRate existing = branchLaneRateDao.findById(rateId)
+                        .orElseThrow(() -> new IllegalArgumentException("Branch rate not found"));
+                if (!originBranchId.equals(existing.getOriginBranchId())) {
+                    throw new IllegalArgumentException("Branch rate does not belong to this base branch");
+                }
+                branchLaneRateDao.deleteById(rateId);
+            }
+        }
+        if (destBranchIds == null || destBranchIds.isEmpty()) {
+            return 0;
+        }
+        int saved = 0;
+        for (int i = 0; i < destBranchIds.size(); i++) {
+            Long destId = destBranchIds.get(i);
+            BigDecimal perKg = perKgRates != null && i < perKgRates.size() ? perKgRates.get(i) : null;
+            if (destId == null || perKg == null) {
+                continue;
+            }
+            if (destId.equals(originBranchId)) {
+                throw new IllegalArgumentException("A branch rate is set to another branch, not back to itself");
+            }
+            if (perKg.compareTo(BigDecimal.ZERO) < 0) {
+                throw new IllegalArgumentException("Per kg rate cannot be negative");
+            }
+            if (branchDao.findById(destId).isEmpty()) {
+                throw new IllegalArgumentException("Destination branch not found");
+            }
+            BranchLaneRate rate = new BranchLaneRate();
+            rate.setOriginBranchId(originBranchId);
+            rate.setDestBranchId(destId);
+            rate.setPerKgRate(perKg);
+            branchLaneRateDao.upsert(rate);
+            saved++;
+        }
+        return saved;
+    }
+
+    /**
+     * Branch bill price from the manifest's origin branch to a destination branch.
+     * A saved lane rate wins. Otherwise the destination branch's own per kg rate is used.
+     */
+    public FreightQuote quoteBranchLane(Long originBranchId, Long destBranchId,
+                                        BigDecimal weight, Integer boxes) {
+        if (destBranchId == null) {
+            return quote(null, BranchCategory.DOMESTIC, weight, boxes);
+        }
+        Branch dest = branchDao.findById(destBranchId)
+                .orElseThrow(() -> new IllegalArgumentException("Branch not found"));
+        BigDecimal perKg = nvl(dest.getPerKgRate());
+        if (originBranchId != null && !originBranchId.equals(destBranchId)) {
+            Optional<BranchLaneRate> lane = branchLaneRateDao.findByOriginAndDest(originBranchId, destBranchId);
+            if (lane.isPresent() && lane.get().getPerKgRate() != null) {
+                perKg = lane.get().getPerKgRate();
+            }
+        }
+        FreightQuote quote = new FreightQuote();
+        quote.setBranchId(dest.getId());
+        quote.setBranchName(dest.getBranchName());
+        quote.setBranchCity(dest.getCity());
+        quote.setLane(StringUtils.hasText(dest.getBranchCategory())
+                ? dest.getBranchCategory() : BranchCategory.DOMESTIC);
+        quote.setPerKgRate(perKg);
+        quote.setPerBoxRate(BigDecimal.ZERO);
+        quote.setBillableWeightKg(weight != null ? weight : BigDecimal.ZERO);
+        quote.setAmount(nvl(weight).multiply(perKg).setScale(2, RoundingMode.HALF_UP));
         return quote;
     }
 

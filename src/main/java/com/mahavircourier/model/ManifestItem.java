@@ -17,6 +17,7 @@ public class ManifestItem {
     private Long partyId;
     private String partyName;
     private BigDecimal freightCharge;
+    private BigDecimal billableWeightKg;
     private String shipmentStatus;
     private Long invoiceId;
     private String invoiceNumber;
@@ -124,6 +125,14 @@ public class ManifestItem {
 
     public void setFreightCharge(BigDecimal freightCharge) {
         this.freightCharge = freightCharge;
+    }
+
+    public BigDecimal getBillableWeightKg() {
+        return billableWeightKg;
+    }
+
+    public void setBillableWeightKg(BigDecimal billableWeightKg) {
+        this.billableWeightKg = billableWeightKg;
     }
 
     public String getShipmentStatus() {

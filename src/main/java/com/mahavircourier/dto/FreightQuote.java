@@ -10,6 +10,7 @@ public class FreightQuote {
     private String lane;
     private BigDecimal perKgRate = BigDecimal.ZERO;
     private BigDecimal perBoxRate = BigDecimal.ZERO;
+    private BigDecimal billableWeightKg = BigDecimal.ZERO;
     private BigDecimal amount = BigDecimal.ZERO;
 
     public Long getBranchId() {
@@ -58,6 +59,14 @@ public class FreightQuote {
 
     public void setPerBoxRate(BigDecimal perBoxRate) {
         this.perBoxRate = perBoxRate;
+    }
+
+    public BigDecimal getBillableWeightKg() {
+        return billableWeightKg;
+    }
+
+    public void setBillableWeightKg(BigDecimal billableWeightKg) {
+        this.billableWeightKg = billableWeightKg;
     }
 
     public BigDecimal getAmount() {

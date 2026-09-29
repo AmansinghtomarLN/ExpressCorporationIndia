@@ -111,7 +111,8 @@
             <div class="admin-toolbar">
                 <h3 style="margin:0;">Consignments</h3>
                 <div class="admin-filter-buttons">
-                    <button type="button" class="btn btn-sm btn-primary" id="add-consignment">+ Add consignment</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="add-one-row">+1 row</button>
+                    <button type="button" class="btn btn-sm btn-primary" id="add-five-rows">+5 rows</button>
                 </div>
             </div>
             <table class="data-table manifest-lines" id="manifest-lines">
@@ -178,7 +179,7 @@
                 </tr>
                 </tbody>
             </table>
-            <p class="muted" style="margin-top:8px;">Empty rows are ignored. Leave C.No blank to generate and allocate one for the row’s party. Enter moves to the next field.</p>
+            <p class="muted" style="margin-top:8px;">Empty rows are ignored. Use +1 row or +5 rows to add blank consignments. Leave C.No blank to generate and allocate one for the row’s party. Enter moves to the next field.</p>
             <div class="admin-filter-buttons" style="margin-top:18px;">
                     <button type="submit" class="btn btn-dark"
                             th:text="${editing} ? 'Save in-progress changes' : 'Save as in progress'">
