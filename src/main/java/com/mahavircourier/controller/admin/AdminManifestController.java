@@ -5,7 +5,6 @@ import com.mahavircourier.dto.ManifestItemForm;
 import com.mahavircourier.model.Manifest;
 import com.mahavircourier.model.ManifestItem;
 import com.mahavircourier.model.Shipment;
-import com.mahavircourier.service.AuditService;
 import com.mahavircourier.service.BranchService;
 import com.mahavircourier.service.CityService;
 import com.mahavircourier.service.CustomUserDetails;
@@ -23,6 +22,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -37,7 +37,6 @@ public class AdminManifestController {
     private final BranchService branchService;
     private final CityService cityService;
     private final ShipmentService shipmentService;
-    private final AuditService auditService;
     private final WorkspaceService workspaceService;
 
     public AdminManifestController(ManifestService manifestService,
@@ -46,7 +45,6 @@ public class AdminManifestController {
                                    BranchService branchService,
                                    CityService cityService,
                                    ShipmentService shipmentService,
-                                   AuditService auditService,
                                    WorkspaceService workspaceService) {
         this.manifestService = manifestService;
         this.manifestBillService = manifestBillService;
@@ -54,7 +52,6 @@ public class AdminManifestController {
         this.branchService = branchService;
         this.cityService = cityService;
         this.shipmentService = shipmentService;
-        this.auditService = auditService;
         this.workspaceService = workspaceService;
     }
 
@@ -111,9 +108,6 @@ public class AdminManifestController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
             Manifest created = manifestService.create(form, principal.getUser().getId());
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "MANIFEST_CREATE", "MANIFEST", String.valueOf(created.getId()),
-                    "MF " + created.getManifestNumber() + " — " + created.getItems().size() + " consignments dispatched");
             redirectAttributes.addFlashAttribute("successMessage",
                     "In-progress manifest " + created.getManifestNumber() + " saved. "
                             + created.getItems().size() + " consignment(s) ready to create.");
@@ -168,9 +162,6 @@ public class AdminManifestController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
             Manifest updated = manifestService.update(id, form);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "MANIFEST_UPDATE", "MANIFEST", String.valueOf(id),
-                    "Updated MF " + updated.getManifestNumber());
             redirectAttributes.addFlashAttribute("successMessage", "Manifest updated.");
             return "redirect:/admin/manifests/" + id;
         } catch (IllegalArgumentException ex) {
@@ -189,9 +180,6 @@ public class AdminManifestController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
             Manifest created = manifestService.finalize(id);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "MANIFEST_CREATE", "MANIFEST", String.valueOf(id),
-                    "Submitted MF " + created.getManifestNumber());
             redirectAttributes.addFlashAttribute("successMessage",
                     "Manifest " + created.getManifestNumber() + " submitted. "
                             + created.getItems().size() + " shipment(s) dispatched. Party and branch bills created.");
@@ -209,8 +197,6 @@ public class AdminManifestController {
             String number = manifestService.findById(id)
                     .map(Manifest::getManifestNumber).orElse(String.valueOf(id));
             manifestService.delete(id);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "MANIFEST_DELETE", "MANIFEST", String.valueOf(id), "Deleted MF " + number);
             redirectAttributes.addFlashAttribute("successMessage", "Manifest deleted.");
             return "redirect:/admin/manifests";
         } catch (IllegalArgumentException ex) {
@@ -227,6 +213,12 @@ public class AdminManifestController {
         } catch (IllegalArgumentException ex) {
             return Map.of("ok", false, "message", ex.getMessage());
         }
+    }
+
+    @GetMapping(value = "/unmapped-cnos", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public List<Map<String, String>> unmappedCnos(@RequestParam(value = "cno", required = false) List<String> cnos) {
+        return manifestService.previewUnmapped(cnos);
     }
 
     @GetMapping(value = "/check-cno", produces = MediaType.APPLICATION_JSON_VALUE)

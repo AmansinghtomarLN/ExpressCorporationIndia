@@ -21,27 +21,56 @@
             <div class="manifest-sheet-head">
                 <strong>EXPRESS CORPORATION OF INDIA</strong>
                 <div class="muted">Dewas Naka Indore · Ph. 07313590608</div>
-                <h2 th:text="${bill.partyBill} ? 'PARTY BILL' : 'BRANCH BILL'">BILL</h2>
+                <h2 th:if="${bill.partyBill}" th:text="${bill.partyDisplay}">Party name</h2>
+                <h2 th:unless="${bill.partyBill}">BRANCH BILL</h2>
+                <div th:if="${bill.partyBill}">
+                    <strong>GST:</strong>
+                    <span th:text="${bill.partyGstin != null ? bill.partyGstin : '—'}">23AAAAA0000A1Z5</span>
+                </div>
             </div>
             <div class="manifest-meta">
                 <div><strong>Bill No:</strong> <span th:text="${bill.billNumber}">PTY-20260921-0001</span></div>
                 <div><strong>Date:</strong>
-                    <span th:text="${bill.createdAt != null ? #temporals.format(bill.createdAt, 'dd/MM/yy') : '—'}">21/09/26</span>
+                    <span th:text="${#temporals.format(billDate, 'dd/MM/yyyy')}">30/09/2026</span>
                 </div>
-                <div><strong>Party:</strong> <span th:text="${bill.partyDisplay}">Party</span></div>
+                <div th:unless="${bill.partyBill}"><strong>Party:</strong> <span th:text="${bill.partyDisplay}">Party</span></div>
                 <div><strong>Destination:</strong> <span th:text="${bill.branchDisplay}">Branch</span></div>
                 <div><strong>Manifest:</strong> <span th:text="${bill.manifestNumber}">MF</span></div>
-                <div><strong>Per kg:</strong>
-                    <span th:if="${bill.flatPerKg}"
-                          th:text="'Rs. ' + ${#numbers.formatDecimal(bill.perKgRate, 1, 2)}">Rs. 0.00</span>
-                    <span th:unless="${bill.flatPerKg}">City rates / minimum kg</span>
-                </div>
             </div>
-            <table class="manifest-print">
+            <table class="manifest-print" th:if="${bill.partyBill}">
+                <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Consignment No</th>
+                    <th>Destination</th>
+                    <th>Weight</th>
+                    <th>No of Box</th>
+                    <th>Rate</th>
+                    <th>Amount</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="line : ${lines}">
+                    <td th:text="${manifestDate != null ? #temporals.format(manifestDate, 'dd/MM/yyyy') : #temporals.format(billDate, 'dd/MM/yyyy')}">30/09/2026</td>
+                    <td th:text="${line.consignmentNo}">37191</td>
+                    <td th:text="${line.destinationCity}">GWALIOR</td>
+                    <td>
+                        <span th:text="${line.weightKg}">40</span>
+                        <span class="muted"
+                              th:if="${line.billableWeightKg != null and line.weightKg != null and line.billableWeightKg > line.weightKg}"
+                              th:text="| (billed ${line.billableWeightKg})|"> (billed 5)</span>
+                    </td>
+                    <td th:text="${line.numberOfBoxes}">3</td>
+                    <td th:text="${line.lineRate != null ? #numbers.formatDecimal(line.lineRate, 1, 2) : #numbers.formatDecimal(bill.perKgRate, 1, 2)}">8.00</td>
+                    <td th:text="${line.freightCharge != null ? #numbers.formatDecimal(line.freightCharge, 1, 2) : '0.00'}">0.00</td>
+                </tr>
+                </tbody>
+            </table>
+            <table class="manifest-print" th:unless="${bill.partyBill}">
                 <thead>
                 <tr>
                     <th>S.No</th>
-                    <th>Consinement</th>
+                    <th>Consignment</th>
                     <th>Destination</th>
                     <th>Boxes</th>
                     <th>Weight</th>
@@ -54,25 +83,40 @@
                     <td th:text="${line.consignmentNo}">37191</td>
                     <td th:text="${line.destinationCity}">GWALIOR</td>
                     <td th:text="${line.numberOfBoxes}">3</td>
-                    <td>
-                        <span th:text="${line.weightKg}">40</span>
-                        <span class="muted"
-                              th:if="${line.billableWeightKg != null and line.weightKg != null and line.billableWeightKg > line.weightKg}"
-                              th:text="| (billed ${line.billableWeightKg})|"> (billed 5)</span>
-                    </td>
+                    <td th:text="${line.weightKg}">40</td>
                     <td th:text="${line.freightCharge != null ? #numbers.formatDecimal(line.freightCharge, 1, 2) : '0.00'}">0.00</td>
-                </tr>
-                <tr>
-                    <td colspan="4"><strong>Total</strong></td>
-                    <td><strong th:text="${lineBoxTotal}">0</strong></td>
-                    <td><strong th:text="${lineWeightTotal}">0</strong></td>
-                    <td><strong th:text="${#numbers.formatDecimal(lineAmountTotal, 1, 2)}">0.00</strong></td>
                 </tr>
                 </tbody>
             </table>
-            <p style="margin-top:14px; font-size:0.9rem;">
-                Amount per consignment is <strong>billable kg × per kg</strong>.
-                Billable kg is the actual weight, or the minimum kg when that is higher.
+            <table class="manifest-print" style="margin-top:12px;" th:if="${bill.partyBill}">
+                <tbody>
+                <tr>
+                    <td colspan="5"><strong>Taxable amount</strong></td>
+                    <td colspan="2" style="text-align:right;">
+                        <strong th:text="${#numbers.formatDecimal(bill.freightAmount, 1, 2)}">0.00</strong>
+                    </td>
+                </tr>
+                <tr th:if="${bill.intraStateGst}">
+                    <td colspan="5">SGST 9%</td>
+                    <td colspan="2" style="text-align:right;" th:text="${#numbers.formatDecimal(bill.sgstAmount, 1, 2)}">0.00</td>
+                </tr>
+                <tr th:if="${bill.intraStateGst}">
+                    <td colspan="5">CGST 9%</td>
+                    <td colspan="2" style="text-align:right;" th:text="${#numbers.formatDecimal(bill.cgstAmount, 1, 2)}">0.00</td>
+                </tr>
+                <tr th:unless="${bill.intraStateGst}">
+                    <td colspan="5">IGST 18%</td>
+                    <td colspan="2" style="text-align:right;" th:text="${#numbers.formatDecimal(bill.igstAmount, 1, 2)}">0.00</td>
+                </tr>
+                <tr>
+                    <td colspan="5"><strong>Total</strong></td>
+                    <td colspan="2" style="text-align:right;">
+                        <strong th:text="${#numbers.formatDecimal(bill.grandTotal, 1, 2)}">0.00</strong>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+            <p th:unless="${bill.partyBill}" style="margin-top:14px; font-size:0.9rem;">
                 Bill amount: <strong th:text="'Rs. ' + ${#numbers.formatDecimal(bill.freightAmount, 1, 2)}">Rs. 0.00</strong>
             </p>
         </div>

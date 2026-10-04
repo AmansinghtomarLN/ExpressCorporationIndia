@@ -301,5 +301,17 @@
 </section>
 
 <div th:replace="~{fragments/footer :: footer}"></div>
+<script>
+document.querySelectorAll("form[action*='/update']").forEach(function (form) {
+    form.addEventListener("submit", function () {
+        var button = form.querySelector("button[type='submit']");
+        if (!button || button.disabled) {
+            return;
+        }
+        button.disabled = true;
+        button.textContent = "Saving…";
+    });
+});
+</script>
 </body>
 </html>

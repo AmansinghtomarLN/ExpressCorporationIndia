@@ -64,22 +64,37 @@
                     <div class="error-text" th:if="${#fields.hasErrors('receiverAddress')}" th:errors="*{receiverAddress}"></div>
                 </div>
 
-                <h4 style="margin-top:20px;">Party &amp; C.No</h4>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="partyId">Sending party *</label>
-                        <select id="partyId" th:field="*{partyId}" required>
-                            <option value="">— Select party —</option>
-                            <option th:each="p : ${parties}"
-                                    th:value="${p.id}"
-                                    th:text="${p.partyName + ' — ' + p.city}">Party</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="consignmentNo">C.No</label>
-                        <input type="text" id="consignmentNo" th:field="*{consignmentNo}"
-                               placeholder="Numeric only, or leave blank to allocate" inputmode="numeric" pattern="[0-9]*">
-                    </div>
+                <h4 style="margin-top:20px;">Booking type</h4>
+                <div class="form-group">
+                    <label>
+                        <input type="radio" name="bookingType" value="PARTY" id="booking-party"
+                               th:checked="${form.bookingType != 'PERSON'}">
+                        Party booking
+                    </label>
+                    <label style="margin-left:16px;">
+                        <input type="radio" name="bookingType" value="PERSON" id="booking-person"
+                               th:checked="${form.bookingType == 'PERSON'}">
+                        Live booking
+                    </label>
+                </div>
+                <div class="form-group" id="party-block">
+                    <label for="partyId">Party *</label>
+                    <select id="partyId" th:field="*{partyId}">
+                        <option value="">— Select party —</option>
+                        <option th:each="p : ${parties}"
+                                th:value="${p.id}"
+                                th:text="${p.partyName}"
+                                th:attr="data-name=${p.partyName},data-phone=${p.phone},data-address=${p.address},data-city=${p.city}">Party</option>
+                    </select>
+                    <p class="muted" id="party-hint">Select a party to see the next consignment numbers.</p>
+                </div>
+                <div class="form-group" id="live-block" hidden>
+                    <label for="consignmentNo">Consignment number *</label>
+                    <input type="text" id="consignmentNo" th:field="*{consignmentNo}"
+                           placeholder="Enter a number that is not assigned to a party" inputmode="numeric" pattern="[0-9]*">
+                    <p class="muted" id="live-hint" th:if="${nextLiveCno != null}">
+                        Next available Consignment Number: <span th:text="${nextLiveCno}">00000</span>
+                    </p>
                 </div>
 
                 <h4 style="margin-top:20px;">Shipment Details</h4>
@@ -161,5 +176,81 @@
 </section>
 
 <div th:replace="~{fragments/footer :: footer}"></div>
+<script>
+(function () {
+    var partyRadio = document.getElementById("booking-party");
+    var personRadio = document.getElementById("booking-person");
+    var partyBlock = document.getElementById("party-block");
+    var liveBlock = document.getElementById("live-block");
+    var partySelect = document.getElementById("partyId");
+    var cnoInput = document.getElementById("consignmentNo");
+    var partyHint = document.getElementById("party-hint");
+
+    function syncMode() {
+        var live = personRadio.checked;
+        partyBlock.hidden = live;
+        liveBlock.hidden = !live;
+        partySelect.required = !live;
+        cnoInput.required = live;
+        if (live) {
+            partySelect.value = "";
+            if (!cnoInput.value) {
+                var hint = document.getElementById("live-hint");
+                var match = hint && hint.textContent.match(/(\d+)\s*$/);
+                if (match) cnoInput.value = match[1];
+            }
+        } else {
+            cnoInput.value = "";
+        }
+    }
+
+    function loadPartyHint() {
+        if (!partySelect.value) {
+            partyHint.textContent = "Select a party to see the next consignment numbers.";
+            return;
+        }
+        partyHint.textContent = "Looking up the sequence…";
+        fetch("/admin/shipments/cno-hint?partyId=" + encodeURIComponent(partySelect.value), {
+            headers: { "Accept": "application/json" }
+        }).then(function (res) { return res.json(); }).then(function (data) {
+            partyHint.textContent = data.hint || "No sequence found.";
+        }).catch(function () {
+            partyHint.textContent = "Could not load the consignment sequence.";
+        });
+    }
+
+    function fillFromParty() {
+        var option = partySelect.options[partySelect.selectedIndex];
+        if (!option || !option.value) {
+            return;
+        }
+        var name = document.getElementById("senderName");
+        var phone = document.getElementById("senderPhone");
+        var address = document.getElementById("senderAddress");
+        var origin = document.getElementById("originCity");
+        if (option.getAttribute("data-name")) {
+            name.value = option.getAttribute("data-name");
+        }
+        if (option.getAttribute("data-phone")) {
+            phone.value = option.getAttribute("data-phone");
+        }
+        if (option.getAttribute("data-address")) {
+            address.value = option.getAttribute("data-address");
+        }
+        if (option.getAttribute("data-city") && !origin.value) {
+            origin.value = option.getAttribute("data-city");
+        }
+    }
+
+    partyRadio.addEventListener("change", syncMode);
+    personRadio.addEventListener("change", syncMode);
+    partySelect.addEventListener("change", function () {
+        fillFromParty();
+        loadPartyHint();
+    });
+    syncMode();
+    if (partySelect.value) loadPartyHint();
+})();
+</script>
 </body>
 </html>

@@ -40,6 +40,8 @@ public class AdminShipmentForm {
 
     private Long partyId;
     private String consignmentNo;
+    /** PARTY for an existing party, PERSON for a walk-in at the counter. */
+    private String bookingType = "PARTY";
 
     @NotNull(message = "Number of boxes is required")
     private Integer numberOfBoxes = 1;
@@ -135,6 +137,18 @@ public class AdminShipmentForm {
 
     public void setDestinationBranchId(Long destinationBranchId) {
         this.destinationBranchId = destinationBranchId;
+    }
+
+    public String getBookingType() {
+        return bookingType;
+    }
+
+    public void setBookingType(String bookingType) {
+        this.bookingType = bookingType;
+    }
+
+    public boolean isWalkIn() {
+        return bookingType != null && bookingType.equalsIgnoreCase("PERSON");
     }
 
     public Long getPartyId() {

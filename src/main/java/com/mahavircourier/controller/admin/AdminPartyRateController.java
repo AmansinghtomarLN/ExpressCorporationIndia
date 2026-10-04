@@ -3,7 +3,6 @@ package com.mahavircourier.controller.admin;
 import com.mahavircourier.model.City;
 import com.mahavircourier.model.Party;
 import com.mahavircourier.model.PartyCityRate;
-import com.mahavircourier.service.AuditService;
 import com.mahavircourier.service.CityCategory;
 import com.mahavircourier.service.CityService;
 import com.mahavircourier.service.CustomUserDetails;
@@ -35,14 +34,12 @@ public class AdminPartyRateController {
 
     private final PartyService partyService;
     private final CityService cityService;
-    private final AuditService auditService;
 
     public AdminPartyRateController(PartyService partyService,
-                                    CityService cityService,
-                                    AuditService auditService) {
+                                    CityService cityService
+                                    ) {
         this.partyService = partyService;
         this.cityService = cityService;
-        this.auditService = auditService;
     }
 
     @GetMapping
@@ -141,9 +138,6 @@ public class AdminPartyRateController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
             partyService.saveRates(partyId, perKgRate, null, minWeightKg);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "PARTY_RATES_UPDATE", "PARTY", String.valueOf(partyId),
-                    BASE_CITY + " base per kg=" + perKgRate + ", min kg=" + minWeightKg);
             redirectAttributes.addFlashAttribute("successMessage",
                     "Indore base rate saved. Cities without their own rate use this price.");
         } catch (IllegalArgumentException ex) {
@@ -162,9 +156,6 @@ public class AdminPartyRateController {
         try {
             int saved = partyService.applyGroupRate(partyId, group, perKgRate, minWeightKg);
             String label = CityCategory.displayName(CityCategory.normalize(group));
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "PARTY_GROUP_RATE", "PARTY", String.valueOf(partyId),
-                    label + " per kg=" + perKgRate + ", cities=" + saved);
             redirectAttributes.addFlashAttribute("successMessage",
                     "Set ₹" + perKgRate.toPlainString() + " per kg on " + saved
                             + (saved == 1 ? " city" : " cities") + " in " + label + ".");
@@ -184,9 +175,6 @@ public class AdminPartyRateController {
             Party party = partyService.findById(partyId)
                     .orElseThrow(() -> new IllegalArgumentException("Party not found"));
             partyService.setMinimumRate(partyId, follow);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "PARTY_MIN_RATE", "PARTY", String.valueOf(partyId),
-                    follow ? "Follow minimum rate" : "Remove minimum rate");
             redirectAttributes.addFlashAttribute("successMessage",
                     follow
                             ? party.getPartyName() + " now follows a minimum rate. Set the minimum kg below."
@@ -209,9 +197,6 @@ public class AdminPartyRateController {
         try {
             int saved = partyService.saveCityRates(partyId, removeId, cityName, perKgRate, minWeightKg);
             int removed = removeId == null ? 0 : (int) removeId.stream().filter(id -> id != null).count();
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "PARTY_CITY_RATES_SAVE", "PARTY", String.valueOf(partyId),
-                    "saved=" + saved + ", removed=" + removed);
             if (saved == 0 && removed == 0) {
                 redirectAttributes.addFlashAttribute("errorMessage",
                         "Add a destination city and a per kg rate, then save.");

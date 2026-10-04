@@ -119,15 +119,26 @@ public class ConsignmentRangeDao {
         return key != null ? key.longValue() : null;
     }
 
+    public void updateParty(Long id, Long partyId) {
+        jdbcTemplate.update("UPDATE consignment_ranges SET party_id = ? WHERE id = ?", partyId, id);
+    }
+
     public void deleteById(Long id) {
         jdbcTemplate.update("DELETE FROM consignment_ranges WHERE id = ?", id);
     }
 
     public long countUsedInRange(long start, long end) {
         Long count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM manifest_items WHERE consignment_no REGEXP '^[0-9]+$' " +
-                        "AND CAST(consignment_no AS UNSIGNED) BETWEEN ? AND ?",
-                Long.class, start, end);
+                "SELECT COUNT(*) FROM (" +
+                        "SELECT consignment_no AS n FROM manifest_items " +
+                        "WHERE consignment_no REGEXP '^[0-9]+$' " +
+                        "AND CAST(consignment_no AS UNSIGNED) BETWEEN ? AND ? " +
+                        "UNION " +
+                        "SELECT tracking_id FROM shipments " +
+                        "WHERE tracking_id REGEXP '^[0-9]+$' " +
+                        "AND CAST(tracking_id AS UNSIGNED) BETWEEN ? AND ?" +
+                        ") used",
+                Long.class, start, end, start, end);
         return count != null ? count : 0L;
     }
 }

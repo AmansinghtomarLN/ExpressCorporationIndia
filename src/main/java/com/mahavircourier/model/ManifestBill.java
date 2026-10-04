@@ -2,7 +2,9 @@ package com.mahavircourier.model;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.TemporalAdjusters;
 
 public class ManifestBill {
 
@@ -24,10 +26,13 @@ public class ManifestBill {
     private BigDecimal freightAmount = BigDecimal.ZERO;
     private String status = STATUS_PENDING;
     private String notes;
+    private LocalDate billDate;
+    private String billToName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     private String partyName;
+    private String partyGstin;
     private String branchName;
     private String branchCity;
     private String manifestNumber;
@@ -61,7 +66,61 @@ public class ManifestBill {
     }
 
     public String getPartyDisplay() {
-        return partyName != null && !partyName.isBlank() ? partyName : "—";
+        if (partyName != null && !partyName.isBlank()) {
+            return partyName;
+        }
+        if (billToName != null && !billToName.isBlank()) {
+            return billToName;
+        }
+        return "—";
+    }
+
+    public boolean isSenderNameBill() {
+        return partyId == null && billToName != null && !billToName.isBlank();
+    }
+
+    public boolean isIntraStateGst() {
+        return partyGstin != null && partyGstin.trim().startsWith("23");
+    }
+
+    public BigDecimal getSgstAmount() {
+        return taxPart(new BigDecimal("0.09"));
+    }
+
+    public BigDecimal getCgstAmount() {
+        return taxPart(new BigDecimal("0.09"));
+    }
+
+    public BigDecimal getIgstAmount() {
+        return taxPart(new BigDecimal("0.18"));
+    }
+
+    public BigDecimal getGrandTotal() {
+        BigDecimal base = freightAmount != null ? freightAmount : BigDecimal.ZERO;
+        if (isIntraStateGst()) {
+            return base.add(getSgstAmount()).add(getCgstAmount());
+        }
+        return base.add(getIgstAmount());
+    }
+
+    public LocalDate resolveBillDate(LocalDate manifestDate) {
+        if (billDate != null) {
+            return billDate;
+        }
+        LocalDate basis = manifestDate != null
+                ? manifestDate
+                : (createdAt != null ? createdAt.toLocalDate() : LocalDate.now());
+        return basis.with(TemporalAdjusters.lastDayOfMonth());
+    }
+
+    public static LocalDate monthEnd(LocalDate date) {
+        LocalDate basis = date != null ? date : LocalDate.now();
+        return basis.with(TemporalAdjusters.lastDayOfMonth());
+    }
+
+    private BigDecimal taxPart(BigDecimal rate) {
+        BigDecimal base = freightAmount != null ? freightAmount : BigDecimal.ZERO;
+        return base.multiply(rate).setScale(2, RoundingMode.HALF_UP);
     }
 
     public String getBranchDisplay() {
@@ -191,6 +250,30 @@ public class ManifestBill {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public LocalDate getBillDate() {
+        return billDate;
+    }
+
+    public void setBillDate(LocalDate billDate) {
+        this.billDate = billDate;
+    }
+
+    public String getBillToName() {
+        return billToName;
+    }
+
+    public void setBillToName(String billToName) {
+        this.billToName = billToName;
+    }
+
+    public String getPartyGstin() {
+        return partyGstin;
+    }
+
+    public void setPartyGstin(String partyGstin) {
+        this.partyGstin = partyGstin;
     }
 
     public String getPartyName() {

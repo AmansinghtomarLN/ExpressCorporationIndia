@@ -4,14 +4,12 @@ import com.mahavircourier.dao.BillingTariffDao;
 import com.mahavircourier.dao.BranchDao;
 import com.mahavircourier.dao.BranchLaneRateDao;
 import com.mahavircourier.dao.PartyCityRateDao;
-import com.mahavircourier.dao.RateCardDao;
 import com.mahavircourier.dto.FreightQuote;
 import com.mahavircourier.model.BillingTariff;
 import com.mahavircourier.model.Branch;
 import com.mahavircourier.model.BranchLaneRate;
 import com.mahavircourier.model.Party;
 import com.mahavircourier.model.PartyCityRate;
-import com.mahavircourier.model.RateCard;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -25,97 +23,19 @@ import java.util.Optional;
 @Service
 public class RateCardService {
 
-    private final RateCardDao rateCardDao;
     private final BillingTariffDao billingTariffDao;
     private final BranchDao branchDao;
     private final PartyCityRateDao partyCityRateDao;
     private final BranchLaneRateDao branchLaneRateDao;
 
-    public RateCardService(RateCardDao rateCardDao,
-                           BillingTariffDao billingTariffDao,
+    public RateCardService(BillingTariffDao billingTariffDao,
                            BranchDao branchDao,
                            PartyCityRateDao partyCityRateDao,
                            BranchLaneRateDao branchLaneRateDao) {
-        this.rateCardDao = rateCardDao;
         this.billingTariffDao = billingTariffDao;
         this.branchDao = branchDao;
         this.partyCityRateDao = partyCityRateDao;
         this.branchLaneRateDao = branchLaneRateDao;
-    }
-
-    public List<RateCard> findAll() {
-        return rateCardDao.findAll();
-    }
-
-    public Optional<RateCard> findById(Long id) {
-        return rateCardDao.findById(id);
-    }
-
-    @Transactional
-    public RateCard save(RateCard card) {
-        Long id = rateCardDao.save(card);
-        card.setId(id);
-        return card;
-    }
-
-    @Transactional
-    public void update(RateCard card) {
-        rateCardDao.update(card);
-    }
-
-    @Transactional
-    public void delete(Long id) {
-        rateCardDao.delete(id);
-    }
-
-    /**
-     * Calculates freight as base_rate + max(0, weight - min_weight) * per_kg_rate.
-     * Falls back to a simple default schedule when no rate card matches.
-     */
-    public BigDecimal calculateFreight(String serviceType, BigDecimal weight) {
-        BigDecimal safeWeight = weight != null ? weight : BigDecimal.ONE;
-        Optional<RateCard> cardOpt = rateCardDao.findActiveFor(serviceType, safeWeight);
-        if (cardOpt.isPresent()) {
-            RateCard card = cardOpt.get();
-            BigDecimal excess = safeWeight.subtract(card.getMinWeightKg());
-            if (excess.compareTo(BigDecimal.ZERO) < 0) {
-                excess = BigDecimal.ZERO;
-            }
-            BigDecimal perKg = card.getPerKgRate() != null ? card.getPerKgRate() : BigDecimal.ZERO;
-            return card.getBaseRate().add(excess.multiply(perKg)).setScale(2, RoundingMode.HALF_UP);
-        }
-        return defaultFreight(serviceType, safeWeight);
-    }
-
-    public List<BillingTariff> findTariffs() {
-        return billingTariffDao.findAll();
-    }
-
-    public Optional<BillingTariff> findTariff(String lane) {
-        return billingTariffDao.findByLane(lane);
-    }
-
-    @Transactional
-    public void saveTariff(BillingTariff tariff) {
-        String lane = tariff.getLaneType() != null ? tariff.getLaneType().trim().toUpperCase() : "";
-        if (!BranchCategory.DOMESTIC.equals(lane) && !BranchCategory.NATIONAL.equals(lane)) {
-            throw new IllegalArgumentException("Tariff lane must be DOMESTIC or NATIONAL");
-        }
-        tariff.setLaneType(lane);
-        tariff.setMinCharge(BigDecimal.ZERO);
-        tariff.setBaseRate(BigDecimal.ZERO);
-        tariff.setPerKgRate(nvl(tariff.getPerKgRate()));
-        tariff.setPerBoxRate(nvl(tariff.getPerBoxRate()));
-        billingTariffDao.upsert(tariff);
-        branchDao.applyRatesByCategory(lane, tariff.getPerKgRate(), tariff.getPerBoxRate());
-    }
-
-    @Transactional
-    public void saveBranchRates(Long branchId, BigDecimal perKgRate, BigDecimal perBoxRate) {
-        if (branchDao.findById(branchId).isEmpty()) {
-            throw new IllegalArgumentException("Branch not found");
-        }
-        branchDao.updateRates(branchId, nvl(perKgRate), nvl(perBoxRate));
     }
 
     /**
@@ -375,21 +295,5 @@ public class RateCardService {
 
     private BigDecimal nvl(BigDecimal value) {
         return value != null ? value : BigDecimal.ZERO;
-    }
-
-    private BigDecimal defaultFreight(String serviceType, BigDecimal weight) {
-        BigDecimal base = switch (serviceType != null ? serviceType : "") {
-            case "DOMESTIC_EXPRESS" -> new BigDecimal("120.00");
-            case "INTERNATIONAL" -> new BigDecimal("500.00");
-            default -> new BigDecimal("80.00");
-        };
-        BigDecimal perKg = switch (serviceType != null ? serviceType : "") {
-            case "DOMESTIC_EXPRESS" -> new BigDecimal("25.00");
-            case "INTERNATIONAL" -> new BigDecimal("80.00");
-            default -> new BigDecimal("15.00");
-        };
-        BigDecimal billable = weight.max(BigDecimal.ONE);
-        return base.add(billable.subtract(BigDecimal.ONE).max(BigDecimal.ZERO).multiply(perKg))
-                .setScale(2, RoundingMode.HALF_UP);
     }
 }

@@ -1,7 +1,6 @@
 package com.mahavircourier.controller.admin;
 
 import com.mahavircourier.model.City;
-import com.mahavircourier.service.AuditService;
 import com.mahavircourier.service.CityCategory;
 import com.mahavircourier.service.CityService;
 import com.mahavircourier.service.CustomUserDetails;
@@ -20,11 +19,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class AdminCityController {
 
     private final CityService cityService;
-    private final AuditService auditService;
 
-    public AdminCityController(CityService cityService, AuditService auditService) {
+    public AdminCityController(CityService cityService) {
         this.cityService = cityService;
-        this.auditService = auditService;
     }
 
     @GetMapping
@@ -50,9 +47,6 @@ public class AdminCityController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
             City created = cityService.create(city);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "CITY_CREATE", "CITY", String.valueOf(created.getId()),
-                    created.getLabel() + " / " + created.getCategoryLabel());
             redirectAttributes.addFlashAttribute("successMessage", "City added.");
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
@@ -68,9 +62,6 @@ public class AdminCityController {
         try {
             city.setId(id);
             City updated = cityService.update(city);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "CITY_UPDATE", "CITY", String.valueOf(id),
-                    updated.getLabel() + " / " + updated.getCategoryLabel());
             redirectAttributes.addFlashAttribute("successMessage", "City updated.");
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
@@ -83,8 +74,6 @@ public class AdminCityController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
             cityService.delete(id);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "CITY_DELETE", "CITY", String.valueOf(id), "Deleted city");
             redirectAttributes.addFlashAttribute("successMessage", "City deleted.");
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());

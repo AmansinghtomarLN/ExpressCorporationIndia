@@ -336,6 +336,70 @@ public class PartyService {
         return pool;
     }
 
+    /**
+     * Next number that is not inside any party range and not already booked.
+     */
+    public long nextUnassignedConsignment() {
+        return nextVacantNumber();
+    }
+
+    /**
+     * A short hint for party booking: the next free number in that party's sequence.
+     */
+    public String partySequenceHint(Long partyId) {
+        ConsignmentPool pool = buildPool(partyId);
+        String next = pool.getNextNumber();
+        if (!StringUtils.hasText(next)) {
+            return "No consignment numbers are left for this party. Assign a range on C.No mapping.";
+        }
+        List<String> preview = new ArrayList<>();
+        if (pool.getAvailable() != null) {
+            for (String candidate : pool.getAvailable()) {
+                if (preview.size() >= 8) {
+                    break;
+                }
+                preview.add(candidate);
+            }
+        }
+        String sequence = String.join(", ", preview);
+        if (pool.getRanges() == null || pool.getRanges().isEmpty()) {
+            return "No sequence is assigned yet. Next available Consignment Number: " + next;
+        }
+        if (preview.size() <= 1) {
+            return "Next available Consignment Number: " + next;
+        }
+        return "Next available Consignment Number: " + next + ". Sequence: " + sequence;
+    }
+
+    /**
+     * Live booking number: must not already belong to a party, and must not be in use.
+     * A blank request takes the next free number.
+     */
+    public String requireUnassignedConsignment(String requested) {
+        long number;
+        if (!StringUtils.hasText(requested)) {
+            number = nextVacantNumber();
+        } else {
+            Long parsed = parseConsignment(requested.trim());
+            if (parsed == null) {
+                throw new IllegalArgumentException("Consignment number must be numeric");
+            }
+            number = parsed;
+        }
+        Optional<ConsignmentRange> owner = consignmentRangeDao.findCovering(number);
+        if (owner.isPresent()) {
+            String name = owner.get().getPartyName() != null ? owner.get().getPartyName() : "a party";
+            throw new IllegalArgumentException(
+                    "C.No " + number + " is already assigned to " + name
+                            + ". Enter a number that is not assigned to any party.");
+        }
+        String token = String.valueOf(number);
+        if (shipmentDao.existsByTrackingId(token) || manifestItemDao.existsByConsignmentNo(token)) {
+            throw new IllegalArgumentException("C.No " + number + " is already used");
+        }
+        return token;
+    }
+
     public String nextUnusedConsignment(Long partyId) {
         String next = buildPool(partyId).getNextNumber();
         if (!StringUtils.hasText(next)) {
@@ -446,7 +510,7 @@ public class PartyService {
         party.setCity(trimRequired(party.getCity(), "City"));
         party.setContactPerson(trimToNull(party.getContactPerson()));
         party.setEmail(trimToNull(party.getEmail()));
-        party.setGstin(trimToNull(party.getGstin()));
+        party.setGstin(normalizeGstin(party.getGstin()));
         party.setAddress(trimToNull(party.getAddress()));
         party.setState(trimToNull(party.getState()));
         party.setPincode(trimToNull(party.getPincode()));
@@ -456,6 +520,9 @@ public class PartyService {
     private void validate(Party party) {
         if (party.getPartyName().length() < 2) {
             throw new IllegalArgumentException("Party name is too short");
+        }
+        if (!StringUtils.hasText(party.getGstin())) {
+            throw new IllegalArgumentException("GST number is required");
         }
         if (party.getPerKgRate() != null && party.getPerKgRate().compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Per kg rate cannot be negative");
@@ -487,6 +554,17 @@ public class PartyService {
             return null;
         }
         return minWeightKg;
+    }
+
+    private String normalizeGstin(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        String gstin = value.trim().toUpperCase();
+        if (!gstin.matches("[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][A-Z0-9]Z[A-Z0-9]")) {
+            throw new IllegalArgumentException("Enter a valid 15-character GST number");
+        }
+        return gstin;
     }
 
     private String trimRequired(String value, String label) {

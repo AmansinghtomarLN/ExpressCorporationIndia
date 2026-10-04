@@ -99,22 +99,6 @@ public class BranchDao {
                 branch.getId());
     }
 
-    public void applyRatesByCategory(String category, BigDecimal perKgRate, BigDecimal perBoxRate) {
-        jdbcTemplate.update(
-                "UPDATE branches SET per_kg_rate = ?, per_box_rate = ? WHERE branch_category = ?",
-                perKgRate != null ? perKgRate : BigDecimal.ZERO,
-                perBoxRate != null ? perBoxRate : BigDecimal.ZERO,
-                category);
-    }
-
-    public void updateRates(Long id, BigDecimal perKgRate, BigDecimal perBoxRate) {
-        jdbcTemplate.update(
-                "UPDATE branches SET per_kg_rate = ?, per_box_rate = ? WHERE id = ?",
-                perKgRate != null ? perKgRate : BigDecimal.ZERO,
-                perBoxRate != null ? perBoxRate : BigDecimal.ZERO,
-                id);
-    }
-
     public void deleteById(Long id) {
         jdbcTemplate.update("DELETE FROM branches WHERE id = ?", id);
     }

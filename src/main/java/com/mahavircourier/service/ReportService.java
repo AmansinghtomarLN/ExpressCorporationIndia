@@ -73,11 +73,6 @@ public class ReportService {
         report.setTotalFreight(reportDao.sumFreightBookedBetween(from, to));
         report.setTotalCod(reportDao.sumCodBookedBetween(from, to));
         report.setAvgWeight(reportDao.avgWeightBookedBetween(from, to));
-        report.setInvoiceFreight(reportDao.sumInvoiceFreightBetween(from, to));
-        report.setInvoiceCod(reportDao.sumInvoiceCodBetween(from, to));
-        report.setCollectedRevenue(reportDao.sumInvoicePaidBetween(from, to));
-        report.setUnpaidInvoiceTotal(reportDao.sumInvoiceUnpaidOpen());
-        report.setUnpaidInvoiceCount(reportDao.countUnpaidInvoices());
 
         report.setStatusBreakdown(reportDao.statusBreakdownCreatedBetween(from, to));
         report.setServiceBreakdown(reportDao.serviceBreakdownCreatedBetween(from, to));
@@ -118,12 +113,6 @@ public class ReportService {
         html.append("<li>COD booked: <b>Rs. ").append(r.getTotalCod()).append("</b></li>");
         html.append("<li>Gross booked value (freight+COD): <b>Rs. ").append(r.getGrossBookedValue()).append("</b></li>");
         html.append("<li>Avg revenue / shipment: <b>Rs. ").append(r.getAvgRevenuePerShipment()).append("</b></li>");
-        html.append("<li>Invoice freight (created in period): <b>Rs. ").append(r.getInvoiceFreight()).append("</b></li>");
-        html.append("<li>Invoice COD (created in period): <b>Rs. ").append(r.getInvoiceCod()).append("</b></li>");
-        html.append("<li>Collected revenue (PAID/COD_COLLECTED updates in period): <b>Rs. ")
-                .append(r.getCollectedRevenue()).append("</b></li>");
-        html.append("<li>Open unpaid invoices: <b>").append(r.getUnpaidInvoiceCount())
-                .append("</b> totaling <b>Rs. ").append(r.getUnpaidInvoiceTotal()).append("</b></li>");
         html.append("</ul>");
 
         html.append("<h3>Status breakdown (booked in period)</h3>").append(mapToHtml(r.getStatusBreakdown()));

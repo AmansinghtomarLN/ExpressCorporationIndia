@@ -18,14 +18,11 @@ public class ReportScheduler {
     private static final Logger log = LoggerFactory.getLogger(ReportScheduler.class);
 
     private final ReportService reportService;
-    private final AuditService auditService;
     private final AppProperties appProperties;
 
     public ReportScheduler(ReportService reportService,
-                           AuditService auditService,
-                           AppProperties appProperties) {
+                                                      AppProperties appProperties) {
         this.reportService = reportService;
-        this.auditService = auditService;
         this.appProperties = appProperties;
     }
 
@@ -35,8 +32,6 @@ public class ReportScheduler {
         LocalDate day = LocalDate.now().minusDays(1);
         PeriodReport report = reportService.buildDaily(day);
         EmailService.SendResult result = reportService.emailReport(report);
-        auditService.log(null, "scheduler", "REPORT_DAILY_EMAIL", "REPORT", day.toString(),
-                "to=" + appProperties.getReport().getEmail() + " status=" + result.status());
         log.info("Daily report scheduled send: {}", result.status());
     }
 
@@ -46,9 +41,6 @@ public class ReportScheduler {
         LocalDate lastWeek = LocalDate.now().minusWeeks(1);
         PeriodReport report = reportService.buildWeekly(lastWeek);
         EmailService.SendResult result = reportService.emailReport(report);
-        auditService.log(null, "scheduler", "REPORT_WEEKLY_EMAIL", "REPORT",
-                report.getFromDate() + ":" + report.getToDate(),
-                "to=" + appProperties.getReport().getEmail() + " status=" + result.status());
         log.info("Weekly report scheduled send: {}", result.status());
     }
 
@@ -58,9 +50,6 @@ public class ReportScheduler {
         LocalDate lastMonth = LocalDate.now().minusMonths(1);
         PeriodReport report = reportService.buildMonthly(lastMonth);
         EmailService.SendResult result = reportService.emailReport(report);
-        auditService.log(null, "scheduler", "REPORT_MONTHLY_EMAIL", "REPORT",
-                report.getFromDate() + ":" + report.getToDate(),
-                "to=" + appProperties.getReport().getEmail() + " status=" + result.status());
         log.info("Monthly report scheduled send: {}", result.status());
     }
 }

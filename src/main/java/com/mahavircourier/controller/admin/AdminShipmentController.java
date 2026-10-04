@@ -3,7 +3,6 @@ package com.mahavircourier.controller.admin;
 import com.mahavircourier.dto.AdminShipmentForm;
 import com.mahavircourier.dto.PageResult;
 import com.mahavircourier.model.Shipment;
-import com.mahavircourier.service.AuditService;
 import com.mahavircourier.service.BranchService;
 import com.mahavircourier.service.CustomUserDetails;
 import com.mahavircourier.service.ManifestService;
@@ -12,6 +11,7 @@ import com.mahavircourier.service.ShipmentService;
 import com.mahavircourier.service.WorkspaceService;
 import com.mahavircourier.service.StatusTransitions;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -26,7 +26,9 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Controller
@@ -41,20 +43,17 @@ public class AdminShipmentController {
     private final BranchService branchService;
     private final PartyService partyService;
     private final ManifestService manifestService;
-    private final AuditService auditService;
     private final WorkspaceService workspaceService;
 
     public AdminShipmentController(ShipmentService shipmentService,
                                    BranchService branchService,
                                    PartyService partyService,
                                    ManifestService manifestService,
-                                   AuditService auditService,
                                    WorkspaceService workspaceService) {
         this.shipmentService = shipmentService;
         this.branchService = branchService;
         this.partyService = partyService;
         this.manifestService = manifestService;
-        this.auditService = auditService;
         this.workspaceService = workspaceService;
     }
 
@@ -117,9 +116,6 @@ public class AdminShipmentController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
             Shipment created = shipmentService.adminCreateShipment(form, principal.getUser().getId());
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "SHIPMENT_BOOK", "SHIPMENT", String.valueOf(created.getId()),
-                    "C.No " + created.getTrackingId() + " booked");
             redirectAttributes.addFlashAttribute("successMessage",
                     "Shipment " + created.getTrackingId() + " booked. Add it to a manifest when you create or update one.");
             return "redirect:/admin/shipments/" + created.getId();
@@ -132,17 +128,41 @@ public class AdminShipmentController {
         }
     }
 
+    @GetMapping(value = "/cno-hint", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public Map<String, Object> cnoHint(@RequestParam(required = false) Long partyId) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        try {
+            if (partyId == null) {
+                long next = partyService.nextUnassignedConsignment();
+                result.put("ok", true);
+                result.put("next", String.valueOf(next));
+                result.put("hint", "Next available Consignment Number: " + next);
+                return result;
+            }
+            result.put("ok", true);
+            result.put("hint", partyService.partySequenceHint(partyId));
+        } catch (IllegalArgumentException ex) {
+            result.put("ok", false);
+            result.put("hint", ex.getMessage());
+        }
+        return result;
+    }
+
     private void populateBookingLookups(Model model) {
         model.addAttribute("branches", branchService.findAll());
         model.addAttribute("parties", partyService.findEnabled());
+        try {
+            model.addAttribute("nextLiveCno", String.valueOf(partyService.nextUnassignedConsignment()));
+        } catch (RuntimeException ex) {
+            model.addAttribute("nextLiveCno", "");
+        }
     }
 
     @GetMapping("/export.csv")
     public void exportCsv(HttpServletResponse response) throws IOException {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         String csv = shipmentService.exportCsv();
-        auditService.log(principal.getUser().getId(), principal.getUsername(),
-                "SHIPMENT_EXPORT", "SHIPMENT", null, "Exported shipments CSV");
         response.setContentType("text/csv");
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"shipments.csv\"");
@@ -160,8 +180,6 @@ public class AdminShipmentController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         List<String> lines = Arrays.asList(csvText != null ? csvText.split("\\R") : new String[0]);
         int updated = shipmentService.bulkUpdateFromCsv(lines);
-        auditService.log(principal.getUser().getId(), principal.getUsername(),
-                "SHIPMENT_BULK", "SHIPMENT", null, "Bulk updated " + updated + " rows");
         redirectAttributes.addFlashAttribute("successMessage",
                 "Bulk update complete. Updated " + updated + " shipment(s).");
         return "redirect:/admin/shipments";
@@ -190,12 +208,14 @@ public class AdminShipmentController {
                             RedirectAttributes redirectAttributes) {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
-            shipmentService.addTrackingUpdate(id, status, location, remarks);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "TRACKING_UPDATE", "SHIPMENT", String.valueOf(id),
-                    "Status -> " + status + " @ " + location);
-            redirectAttributes.addFlashAttribute("successMessage",
-                    "Tracking updated to " + status.replace('_', ' ') + ".");
+            boolean saved = shipmentService.addTrackingUpdate(id, status, location, remarks);
+            if (saved) {
+                redirectAttributes.addFlashAttribute("successMessage",
+                        "Tracking updated to " + status.replace('_', ' ') + ".");
+            } else {
+                redirectAttributes.addFlashAttribute("successMessage",
+                        "This update was already saved. A repeat of the same status, place, and remarks within 10 minutes is ignored.");
+            }
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
         }
@@ -243,8 +263,6 @@ public class AdminShipmentController {
             fields.setFreightCharge(freightCharge);
             fields.setCodAmount(codAmount);
             shipmentService.updateShipmentDetails(fields);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "SHIPMENT_EDIT", "SHIPMENT", String.valueOf(id), "Updated shipment details");
             redirectAttributes.addFlashAttribute("successMessage", "Shipment details updated.");
         } catch (Exception ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
@@ -262,9 +280,6 @@ public class AdminShipmentController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
             shipmentService.assignResources(id, assignedBranchId, assignedHub, courierName, courierPhone);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "SHIPMENT_ASSIGN", "SHIPMENT", String.valueOf(id),
-                    "Assigned branch=" + assignedBranchId + ", hub=" + assignedHub);
             redirectAttributes.addFlashAttribute("successMessage", "Resources assigned.");
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
@@ -277,8 +292,6 @@ public class AdminShipmentController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
             shipmentService.cancelShipment(id);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "SHIPMENT_CANCEL", "SHIPMENT", String.valueOf(id), "Cancelled shipment");
             redirectAttributes.addFlashAttribute("successMessage", "Shipment cancelled.");
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
@@ -296,9 +309,6 @@ public class AdminShipmentController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
             shipmentService.updateTrackingEvent(id, eventId, status, location, remarks);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "EVENT_EDIT", "TRACKING_EVENT", String.valueOf(eventId),
-                    "Edited event on shipment " + id);
             redirectAttributes.addFlashAttribute("successMessage", "Tracking event updated.");
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
@@ -313,9 +323,6 @@ public class AdminShipmentController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
             shipmentService.deleteTrackingEvent(id, eventId);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "EVENT_DELETE", "TRACKING_EVENT", String.valueOf(eventId),
-                    "Deleted event on shipment " + id);
             redirectAttributes.addFlashAttribute("successMessage", "Tracking event deleted.");
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());

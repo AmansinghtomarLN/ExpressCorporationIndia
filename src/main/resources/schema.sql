@@ -501,6 +501,24 @@ CREATE TABLE IF NOT EXISTS manifest_bills (
     KEY idx_bills_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE manifest_bills ADD COLUMN bill_date DATE NULL',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'manifest_bills' AND COLUMN_NAME = 'bill_date'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE manifest_bills ADD COLUMN bill_to_name VARCHAR(120) NULL',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'manifest_bills' AND COLUMN_NAME = 'bill_to_name'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
 CREATE TABLE IF NOT EXISTS branch_lane_rates (
     id                BIGINT AUTO_INCREMENT PRIMARY KEY,
     origin_branch_id  BIGINT        NOT NULL,

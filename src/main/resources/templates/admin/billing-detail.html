@@ -36,9 +36,10 @@
                     <input type="text" th:value="${bill.billNumber}" readonly>
                 </div>
                 <div class="form-group">
-                    <label>Date</label>
-                    <input type="text" readonly
-                           th:value="${bill.createdAt != null ? #temporals.format(bill.createdAt, 'dd MMM yyyy') : '—'}">
+                    <label for="billDate">Bill date</label>
+                    <input type="date" id="billDate" name="billDate" required
+                           th:value="${#temporals.format(billDate, 'yyyy-MM-dd')}">
+                    <p class="muted">New bills start on the last day of the manifest month. Change this date and save.</p>
                 </div>
                 <div class="form-group">
                     <label>Manifest</label>

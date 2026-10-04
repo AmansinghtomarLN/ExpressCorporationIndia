@@ -1,7 +1,6 @@
 package com.mahavircourier.controller.admin;
 
 import com.mahavircourier.model.Party;
-import com.mahavircourier.service.AuditService;
 import com.mahavircourier.service.CustomUserDetails;
 import com.mahavircourier.service.ManifestService;
 import com.mahavircourier.service.PartyService;
@@ -16,14 +15,12 @@ public class AdminPartyController {
 
     private final PartyService partyService;
     private final ManifestService manifestService;
-    private final AuditService auditService;
 
     public AdminPartyController(PartyService partyService,
-                                ManifestService manifestService,
-                                AuditService auditService) {
+                                ManifestService manifestService
+                                ) {
         this.partyService = partyService;
         this.manifestService = manifestService;
-        this.auditService = auditService;
     }
 
     @GetMapping
@@ -44,8 +41,6 @@ public class AdminPartyController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
             Party created = partyService.create(party);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "PARTY_CREATE", "PARTY", String.valueOf(created.getId()), created.getPartyName());
             redirectAttributes.addFlashAttribute("successMessage",
                     "Party created. Next assign a consignment number range.");
             return "redirect:/admin/parties/" + created.getId();
@@ -74,8 +69,6 @@ public class AdminPartyController {
         try {
             party.setId(id);
             partyService.update(party);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "PARTY_UPDATE", "PARTY", String.valueOf(id), party.getPartyName());
             redirectAttributes.addFlashAttribute("successMessage", "Party updated.");
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
@@ -89,8 +82,6 @@ public class AdminPartyController {
         try {
             String name = partyService.findById(id).map(Party::getPartyName).orElse(String.valueOf(id));
             partyService.delete(id);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "PARTY_DELETE", "PARTY", String.valueOf(id), "Deleted party " + name);
             redirectAttributes.addFlashAttribute("successMessage", "Party deleted.");
             return "redirect:/admin/parties";
         } catch (IllegalArgumentException ex) {
@@ -108,9 +99,6 @@ public class AdminPartyController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
             partyService.addRange(id, rangeStart, rangeEnd, notes);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "CNO_RANGE_CREATE", "PARTY", String.valueOf(id),
-                    rangeStart + "-" + rangeEnd);
             redirectAttributes.addFlashAttribute("successMessage",
                     "Consignment range " + rangeStart + "–" + rangeEnd + " assigned.");
         } catch (IllegalArgumentException ex) {
@@ -126,8 +114,6 @@ public class AdminPartyController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
             partyService.deleteRange(id, rangeId);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "CNO_RANGE_DELETE", "PARTY", String.valueOf(id), "Deleted range " + rangeId);
             redirectAttributes.addFlashAttribute("successMessage", "Consignment range removed.");
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());

@@ -15,8 +15,9 @@
         <p><a th:href="@{/admin/manifests}" class="muted">&larr; Back to manifests</a></p>
         <span class="eyebrow">Operations</span>
         <h1 th:text="${editing} ? 'Edit Manifest' : 'Create Manifest'">Create Manifest</h1>
-        <p>Choose a destination branch. Consignment destination is a searchable city list grouped as
-            Local, MP, CG, Nearby States, and Rest of India.</p>
+        <p>Enter the consignment number. A mapped number is billed to that party.
+            An unassigned number can be billed under the shipment sender name after you confirm.
+            Destination city is searchable. A city that is the only match is selected for you.</p>
 
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
@@ -24,6 +25,7 @@
               th:object="${form}" method="post"
               th:action="${editing} ? @{/admin/manifests/{id}(id=${form.id})} : @{/admin/manifests}">
             <input type="hidden" th:field="*{id}">
+            <input type="hidden" id="billUnmappedBySender" name="billUnmappedBySender" value="false">
 
             <div class="manifest-head">
                 <div class="form-group">
@@ -118,7 +120,6 @@
             <table class="data-table manifest-lines" id="manifest-lines">
                 <colgroup>
                     <col class="col-sno">
-                    <col class="col-party">
                     <col class="col-cno">
                     <col class="col-dest">
                     <col class="col-boxes">
@@ -129,9 +130,8 @@
                 <thead>
                 <tr>
                     <th>#</th>
-                    <th>Party *</th>
-                    <th>C.No</th>
-                        <th>Destination city *</th>
+                    <th>C.No *</th>
+                    <th>Destination city *</th>
                     <th>Boxes *</th>
                     <th>Weight *</th>
                     <th>Receiver / phone *</th>
@@ -142,21 +142,11 @@
                 <tr th:each="item, iter : *{items}" th:classappend="${item.shipmentId != null} ? ' from-open'">
                     <td class="row-index" th:text="${iter.count}">1</td>
                     <td>
-                        <select class="party-select nav-field" th:field="*{items[__${iter.index}__].partyId}"
-                                th:disabled="${item.id != null or item.shipmentId != null}">
-                            <option value="">— Party —</option>
-                            <option th:each="p : ${parties}"
-                                    th:value="${p.id}"
-                                    th:text="${p.partyName}">Party</option>
-                        </select>
-                    </td>
-                    <td>
                         <input type="hidden" th:field="*{items[__${iter.index}__].id}">
                         <input type="hidden" class="shipment-id" th:field="*{items[__${iter.index}__].shipmentId}">
-                        <input type="hidden" th:if="${item.id != null or item.shipmentId != null}" th:field="*{items[__${iter.index}__].partyId}">
                         <input type="text" class="cno-input nav-field" th:field="*{items[__${iter.index}__].consignmentNo}"
                                th:readonly="${item.id != null or item.shipmentId != null}"
-                               placeholder="Blank = auto" inputmode="numeric">
+                               placeholder="C.No" inputmode="numeric">
                     </td>
                     <td>
                         <div class="combo city-combo">
@@ -179,7 +169,7 @@
                 </tr>
                 </tbody>
             </table>
-            <p class="muted" style="margin-top:8px;">Empty rows are ignored. Use +1 row or +5 rows to add blank consignments. Leave C.No blank to generate and allocate one for the row’s party. Enter moves to the next field.</p>
+            <p class="muted" style="margin-top:8px;">Empty rows are ignored. A consignment assigned on C.No mapping is billed to that party. An unassigned number asks for confirmation and, if you continue, is billed under the shipment sender name. Enter moves to the next field.</p>
             <div class="admin-filter-buttons" style="margin-top:18px;">
                     <button type="submit" class="btn btn-dark"
                             th:text="${editing} ? 'Save in-progress changes' : 'Save as in progress'">

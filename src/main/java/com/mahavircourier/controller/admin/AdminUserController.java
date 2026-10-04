@@ -1,7 +1,6 @@
 package com.mahavircourier.controller.admin;
 
 import com.mahavircourier.model.User;
-import com.mahavircourier.service.AuditService;
 import com.mahavircourier.service.CustomUserDetails;
 import com.mahavircourier.service.UserService;
 import org.springframework.stereotype.Controller;
@@ -14,11 +13,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class AdminUserController {
 
     private final UserService userService;
-    private final AuditService auditService;
 
-    public AdminUserController(UserService userService, AuditService auditService) {
+    public AdminUserController(UserService userService) {
         this.userService = userService;
-        this.auditService = auditService;
     }
 
     @GetMapping
@@ -39,9 +36,6 @@ public class AdminUserController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
             User created = userService.createUser(fullName, email, phone, password, role);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "USER_CREATE", "USER", String.valueOf(created.getId()),
-                    "Created user " + created.getEmail() + " as " + created.getRole());
             redirectAttributes.addFlashAttribute("successMessage", "User created.");
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
@@ -55,8 +49,6 @@ public class AdminUserController {
                              RedirectAttributes redirectAttributes) {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         userService.setEnabled(id, enabled);
-        auditService.log(principal.getUser().getId(), principal.getUsername(),
-                "USER_ENABLED", "USER", String.valueOf(id), "enabled=" + enabled);
         redirectAttributes.addFlashAttribute("successMessage",
                 enabled ? "User enabled." : "User disabled.");
         return "redirect:/admin/users";
@@ -69,8 +61,6 @@ public class AdminUserController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
             userService.setRole(id, role);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "USER_ROLE", "USER", String.valueOf(id), "role=" + role);
             redirectAttributes.addFlashAttribute("successMessage", "Role updated.");
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
@@ -85,8 +75,6 @@ public class AdminUserController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
             userService.resetPassword(id, password);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "USER_PASSWORD_RESET", "USER", String.valueOf(id), "Password reset");
             redirectAttributes.addFlashAttribute("successMessage", "Password reset.");
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
@@ -101,8 +89,6 @@ public class AdminUserController {
             User target = userService.findById(id).orElse(null);
             String email = target != null ? target.getEmail() : String.valueOf(id);
             userService.deleteUser(id, principal.getUser().getId());
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "USER_DELETE", "USER", String.valueOf(id), "Deleted user " + email);
             redirectAttributes.addFlashAttribute("successMessage", "User deleted.");
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());

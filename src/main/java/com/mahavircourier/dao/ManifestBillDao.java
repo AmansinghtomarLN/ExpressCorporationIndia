@@ -23,7 +23,8 @@ import java.util.Optional;
 public class ManifestBillDao {
 
     private static final String SELECT =
-            "SELECT b.*, m.manifest_number, p.party_name, br.branch_name, br.city AS branch_city " +
+            "SELECT b.*, m.manifest_number, p.party_name, p.gstin AS party_gstin, " +
+                    "br.branch_name, br.city AS branch_city " +
                     "FROM manifest_bills b " +
                     "LEFT JOIN manifests m ON m.id = b.manifest_id " +
                     "LEFT JOIN parties p ON p.id = b.party_id " +
@@ -52,6 +53,19 @@ public class ManifestBillDao {
         bill.setFreightAmount(rs.getBigDecimal("freight_amount"));
         bill.setStatus(rs.getString("status"));
         bill.setNotes(rs.getString("notes"));
+        try {
+            Date billDate = rs.getDate("bill_date");
+            if (billDate != null) {
+                bill.setBillDate(billDate.toLocalDate());
+            }
+        } catch (Exception ignored) {
+            // column added on startup
+        }
+        try {
+            bill.setBillToName(rs.getString("bill_to_name"));
+        } catch (Exception ignored) {
+            // column added on startup
+        }
         Timestamp created = rs.getTimestamp("created_at");
         if (created != null) {
             bill.setCreatedAt(created.toLocalDateTime());
@@ -63,6 +77,7 @@ public class ManifestBillDao {
         try {
             bill.setManifestNumber(rs.getString("manifest_number"));
             bill.setPartyName(rs.getString("party_name"));
+            bill.setPartyGstin(rs.getString("party_gstin"));
             bill.setBranchName(rs.getString("branch_name"));
             bill.setBranchCity(rs.getString("branch_city"));
         } catch (Exception ignored) {
@@ -128,8 +143,8 @@ public class ManifestBillDao {
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(
                     "INSERT INTO manifest_bills (bill_number, bill_type, manifest_id, party_id, branch_id, " +
-                            "weight_kg, number_of_boxes, per_kg_rate, per_box_rate, freight_amount, status, notes) " +
-                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                            "weight_kg, number_of_boxes, per_kg_rate, per_box_rate, freight_amount, status, notes, bill_date, bill_to_name) " +
+                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, bill.getBillNumber());
             ps.setString(2, bill.getBillType());
@@ -151,6 +166,16 @@ public class ManifestBillDao {
             ps.setBigDecimal(10, bill.getFreightAmount() != null ? bill.getFreightAmount() : BigDecimal.ZERO);
             ps.setString(11, bill.getStatus() != null ? bill.getStatus() : ManifestBill.STATUS_PENDING);
             ps.setString(12, bill.getNotes());
+            if (bill.getBillDate() != null) {
+                ps.setDate(13, Date.valueOf(bill.getBillDate()));
+            } else {
+                ps.setNull(13, Types.DATE);
+            }
+            if (bill.getBillToName() != null) {
+                ps.setString(14, bill.getBillToName());
+            } else {
+                ps.setNull(14, Types.VARCHAR);
+            }
             return ps;
         }, keyHolder);
         Number key = keyHolder.getKey();
@@ -164,7 +189,7 @@ public class ManifestBillDao {
     public void updateAmounts(ManifestBill bill) {
         jdbcTemplate.update(
                 "UPDATE manifest_bills SET weight_kg = ?, number_of_boxes = ?, per_kg_rate = ?, " +
-                        "per_box_rate = ?, freight_amount = ?, notes = ?, status = ? WHERE id = ?",
+                        "per_box_rate = ?, freight_amount = ?, notes = ?, status = ?, bill_date = ?, bill_to_name = ? WHERE id = ?",
                 bill.getWeightKg() != null ? bill.getWeightKg() : BigDecimal.ZERO,
                 bill.getNumberOfBoxes(),
                 bill.getPerKgRate() != null ? bill.getPerKgRate() : BigDecimal.ZERO,
@@ -172,6 +197,8 @@ public class ManifestBillDao {
                 bill.getFreightAmount() != null ? bill.getFreightAmount() : BigDecimal.ZERO,
                 bill.getNotes(),
                 bill.getStatus() != null ? bill.getStatus() : ManifestBill.STATUS_PENDING,
+                bill.getBillDate() != null ? Date.valueOf(bill.getBillDate()) : null,
+                bill.getBillToName(),
                 bill.getId());
     }
 
@@ -185,7 +212,8 @@ public class ManifestBillDao {
         }
     }
 
-    public Optional<ManifestBill> findExisting(Long manifestId, String billType, Long partyId, Long branchId) {
+    public Optional<ManifestBill> findExisting(Long manifestId, String billType, Long partyId, Long branchId,
+                                               String billToName) {
         StringBuilder sql = new StringBuilder(SELECT + " WHERE b.manifest_id = ? AND b.bill_type = ?");
         List<Object> params = new ArrayList<>();
         params.add(manifestId);
@@ -195,6 +223,10 @@ public class ManifestBillDao {
             params.add(partyId);
         } else {
             sql.append(" AND b.party_id IS NULL");
+            if (billToName != null && !billToName.isBlank()) {
+                sql.append(" AND bill_to_name = ?");
+                params.add(billToName);
+            }
         }
         if (branchId != null) {
             sql.append(" AND b.branch_id = ?");

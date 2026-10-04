@@ -86,9 +86,10 @@
                                th:value="${editParty != null ? editParty.pincode : ''}">
                     </div>
                     <div class="form-group">
-                        <label for="gstin">GSTIN</label>
-                        <input type="text" id="gstin" name="gstin"
-                               th:value="${editParty != null ? editParty.gstin : ''}">
+                        <label for="gstin">GST number *</label>
+                        <input type="text" id="gstin" name="gstin" required maxlength="15"
+                               th:value="${editParty != null ? editParty.gstin : ''}"
+                               placeholder="15-character GSTIN">
                     </div>
                 </div>
                 <div class="form-group">
@@ -101,7 +102,7 @@
                     <input type="number" id="perKgRate" name="perKgRate" step="0.01" min="0"
                            th:value="${editParty != null ? editParty.perKgRate : ''}"
                            placeholder="Leave blank to use branch rates">
-                    <p class="muted">City-wise rates are set under Rates. This value is the fallback.</p>
+                    <p class="muted">City-wise rates are set under Party rates. This value is the fallback.</p>
                 </div>
                 <div class="form-group">
                     <label>
@@ -110,7 +111,7 @@
                         Eligible for minimum rate
                     </label>
                     <input type="hidden" name="_minRateEligible" value="on">
-                    <p class="muted">Tag this party if consignments should never be billed below a minimum kg. Set that minimum under Rates.</p>
+                    <p class="muted">Tag this party if consignments should never be billed below a minimum kg. Set that minimum under Party rates.</p>
                 </div>
                 <div class="form-row">
                     <div class="form-group">

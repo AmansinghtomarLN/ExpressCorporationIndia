@@ -20,7 +20,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -141,7 +143,7 @@ public class ManifestService {
 
         int serial = 1;
         for (ManifestItemForm line : lines) {
-            addOrAttachLine(manifest, party, line, serial++, bookedByUserId);
+            addOrAttachLine(manifest, party, line, serial++, bookedByUserId, form.isBillUnmappedBySender());
         }
         return findById(manifestId).orElse(manifest);
     }
@@ -227,7 +229,7 @@ public class ManifestService {
                             existing.getBillingLane());
                 }
             } else {
-                addOrAttachLine(existing, party, line, serial++, null);
+                addOrAttachLine(existing, party, line, serial++, null, form.isBillUnmappedBySender());
             }
         }
         refreshTotals(id);
@@ -306,22 +308,72 @@ public class ManifestService {
         int serial = manifestItemDao.nextSerial(id);
         for (ManifestItemForm line : lines) {
             if (line.getId() == null) {
-                addOrAttachLine(existing, party, line, serial++, bookedByUserId);
+                addOrAttachLine(existing, party, line, serial++, bookedByUserId, form.isBillUnmappedBySender());
             }
         }
         refreshTotals(id);
         return findById(id).orElse(existing);
     }
 
-    private void addOrAttachLine(Manifest manifest, Party party, ManifestItemForm line, int serial, Long bookedByUserId) {
+    public List<Map<String, String>> previewUnmapped(List<String> cnos) {
+        List<Map<String, String>> rows = new ArrayList<>();
+        if (cnos == null) {
+            return rows;
+        }
+        Set<String> seen = new HashSet<>();
+        for (String raw : cnos) {
+            String cno = normalizeConsignment(raw);
+            if (!StringUtils.hasText(cno) || !seen.add(cno)) {
+                continue;
+            }
+            Long number = PartyService.parseConsignment(cno);
+            if (number == null || partyService.findOwner(number).isPresent()) {
+                continue;
+            }
+            Map<String, String> row = new LinkedHashMap<>();
+            row.put("cno", String.valueOf(number));
+            Optional<Shipment> shipment = shipmentDao.findByTrackingId(String.valueOf(number));
+            if (shipment.isEmpty()) {
+                shipment = shipmentDao.findByTrackingId(cno);
+            }
+            String sender = shipment.map(Shipment::getSenderName).orElse("");
+            row.put("senderName", sender == null ? "" : sender.trim());
+            rows.add(row);
+        }
+        return rows;
+    }
+
+    private void addOrAttachLine(Manifest manifest, Party party, ManifestItemForm line, int serial,
+                                 Long bookedByUserId, boolean billUnmappedBySender) {
         if (line.getShipmentId() != null) {
-            attachOpenShipment(manifest, line, serial);
+            attachOpenShipment(manifest, line, serial, billUnmappedBySender);
             return;
+        }
+        String cno = normalizeConsignment(line.getConsignmentNo());
+        if (StringUtils.hasText(cno)) {
+            Long number = PartyService.parseConsignment(cno);
+            boolean mapped = number != null && partyService.findOwner(number).isPresent();
+            if (!mapped) {
+                Optional<Shipment> existing = shipmentDao.findByTrackingId(cno);
+                if (existing.isEmpty() && number != null) {
+                    existing = shipmentDao.findByTrackingId(String.valueOf(number));
+                }
+                if (existing.isPresent()) {
+                    line.setShipmentId(existing.get().getId());
+                    attachOpenShipment(manifest, line, serial, billUnmappedBySender);
+                    return;
+                }
+                if (billUnmappedBySender) {
+                    throw new IllegalArgumentException(
+                            "C.No " + cno + " is not booked. Book the shipment so the sender name is known, "
+                                    + "or assign it on C.No mapping.");
+                }
+            }
         }
         addDraftLine(manifest, party, line, serial, bookedByUserId);
     }
 
-    private void attachOpenShipment(Manifest manifest, ManifestItemForm line, int serial) {
+    private void attachOpenShipment(Manifest manifest, ManifestItemForm line, int serial, boolean billUnmappedBySender) {
         Shipment shipment = shipmentDao.findById(line.getShipmentId())
                 .orElseThrow(() -> new IllegalArgumentException("Open shipment not found"));
         if ("CANCELLED".equalsIgnoreCase(shipment.getStatus())) {
@@ -338,8 +390,21 @@ public class ManifestService {
         if (!StringUtils.hasText(line.getConsignmentNo())) {
             line.setConsignmentNo(shipment.getTrackingId());
         }
-        if (line.getPartyId() == null) {
+        Long number = PartyService.parseConsignment(shipment.getTrackingId());
+        if (number != null) {
+            Optional<com.mahavircourier.model.ConsignmentRange> owner = partyService.findOwner(number);
+            if (owner.isPresent()) {
+                shipment.setPartyId(owner.get().getPartyId());
+                line.setPartyId(owner.get().getPartyId());
+            } else if (shipment.getPartyId() == null) {
+                acceptSenderBill(shipment, line, billUnmappedBySender);
+            } else {
+                line.setPartyId(shipment.getPartyId());
+            }
+        } else if (shipment.getPartyId() != null) {
             line.setPartyId(shipment.getPartyId());
+        } else {
+            acceptSenderBill(shipment, line, billUnmappedBySender);
         }
         if (line.getDestinationBranchId() == null && shipment.getAssignedBranchId() != null) {
             line.setDestinationBranchId(shipment.getAssignedBranchId());
@@ -369,6 +434,21 @@ public class ManifestService {
         shipmentDao.update(shipment);
     }
 
+    private void acceptSenderBill(Shipment shipment, ManifestItemForm line, boolean billUnmappedBySender) {
+        if (!billUnmappedBySender) {
+            throw new IllegalArgumentException(
+                    "C.No " + shipment.getTrackingId()
+                            + " is not assigned to a party. Assign it on C.No mapping, then add it to the manifest.");
+        }
+        if (!StringUtils.hasText(shipment.getSenderName())) {
+            throw new IllegalArgumentException(
+                    "C.No " + shipment.getTrackingId()
+                            + " has no sender name. Book the shipment with a sender, or assign the C.No to a party.");
+        }
+        shipment.setPartyId(null);
+        line.setPartyId(null);
+    }
+
     private void detachLine(ManifestItem item) {
         if (item.getShipmentId() != null) {
             shipmentDao.clearManifestId(item.getShipmentId());
@@ -377,7 +457,7 @@ public class ManifestService {
     }
 
     private void addDraftLine(Manifest manifest, Party party, ManifestItemForm line, int serial, Long bookedByUserId) {
-        Party lineParty = resolveLineParty(line, party);
+        Party lineParty = resolveLineParty(line);
         String cno = partyService.resolveForBooking(lineParty.getId(), line.getConsignmentNo());
         line.setPartyId(lineParty.getId());
         line.setConsignmentNo(cno);
@@ -504,23 +584,21 @@ public class ManifestService {
         }
     }
 
-    private Party resolveLineParty(ManifestItemForm line, Party headerParty) {
-        if (line.getPartyId() != null) {
-            return requireEnabledParty(line.getPartyId());
+    private Party resolveLineParty(ManifestItemForm line) {
+        if (!StringUtils.hasText(line.getConsignmentNo())) {
+            throw new IllegalArgumentException(
+                    "Enter the consignment number. The party is taken from the C.No mapping.");
         }
-        if (StringUtils.hasText(line.getConsignmentNo())) {
-            Long number = PartyService.parseConsignment(line.getConsignmentNo().trim());
-            if (number != null) {
-                Optional<com.mahavircourier.model.ConsignmentRange> owner = partyService.findOwner(number);
-                if (owner.isPresent()) {
-                    return requireEnabledParty(owner.get().getPartyId());
-                }
-            }
+        Long number = PartyService.parseConsignment(line.getConsignmentNo().trim());
+        if (number == null) {
+            throw new IllegalArgumentException("Consignment number must be numeric");
         }
-        if (headerParty != null) {
-            return headerParty;
+        Optional<com.mahavircourier.model.ConsignmentRange> owner = partyService.findOwner(number);
+        if (owner.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "C.No " + number + " is not assigned to a party. Assign it on C.No mapping, then add it here.");
         }
-        throw new IllegalArgumentException("Select a party on this row to allocate a C.No");
+        return requireEnabledParty(owner.get().getPartyId());
     }
 
     private void validateNewConsignment(Long partyId, String consignmentNo, Long excludeItemId) {

@@ -1,7 +1,6 @@
 package com.mahavircourier.service;
 
 import com.mahavircourier.config.AppProperties;
-import com.mahavircourier.dao.InvoiceDao;
 import com.mahavircourier.dao.ShipmentDao;
 import com.mahavircourier.dto.MonitoringSnapshot;
 import com.mahavircourier.service.notify.EmailService;
@@ -21,26 +20,21 @@ public class MonitorService {
 
     private final JdbcTemplate jdbcTemplate;
     private final ShipmentDao shipmentDao;
-    private final InvoiceDao invoiceDao;
     private final NotificationService notificationService;
     private final EmailService emailService;
     private final AppProperties appProperties;
-    private final AuditService auditService;
 
     public MonitorService(JdbcTemplate jdbcTemplate,
                           ShipmentDao shipmentDao,
-                          InvoiceDao invoiceDao,
                           NotificationService notificationService,
                           EmailService emailService,
-                          AppProperties appProperties,
-                          AuditService auditService) {
+                          AppProperties appProperties
+                          ) {
         this.jdbcTemplate = jdbcTemplate;
         this.shipmentDao = shipmentDao;
-        this.invoiceDao = invoiceDao;
         this.notificationService = notificationService;
         this.emailService = emailService;
         this.appProperties = appProperties;
-        this.auditService = auditService;
     }
 
     public MonitoringSnapshot snapshot() {
@@ -49,7 +43,6 @@ public class MonitorService {
         snap.setMailConfigured(emailService.isMailConfigured());
         snap.setSmsConfigured(appProperties.getSms().getTwilio().isConfigured());
         snap.setDelayedShipments(shipmentDao.countDelayed());
-        snap.setUnpaidInvoices(invoiceDao.countByStatus("UNPAID"));
         snap.setFailedNotifications(notificationService.countFailed());
         snap.setTotalShipments(shipmentDao.countAll());
         snap.setInTransit(shipmentDao.countByStatus("IN_TRANSIT") + shipmentDao.countByStatus("AT_HUB"));
@@ -74,8 +67,6 @@ public class MonitorService {
                 appProperties.getMonitor().getAlertEmail(),
                 "[ALERT] " + appProperties.getCompanyName() + " monitoring",
                 body.toString());
-        auditService.log(null, "monitor", "MONITOR_ALERT_EMAIL", "MONITOR", null,
-                "alerts=" + snap.getActiveAlerts().size() + " status=" + result.status());
         log.warn("Monitoring alerts fired ({}): email={}", snap.getActiveAlerts().size(), result.status());
     }
 
@@ -86,9 +77,6 @@ public class MonitorService {
         }
         if (snap.getDelayedShipments() >= appProperties.getMonitor().getDelayedThreshold()) {
             alerts.add("Delayed shipments: " + snap.getDelayedShipments());
-        }
-        if (snap.getUnpaidInvoices() >= appProperties.getMonitor().getUnpaidCodThreshold()) {
-            alerts.add("Unpaid invoices: " + snap.getUnpaidInvoices());
         }
         if (snap.getFailedNotifications() >= appProperties.getMonitor().getFailedNotifyThreshold()) {
             alerts.add("Failed notifications: " + snap.getFailedNotifications());

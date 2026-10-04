@@ -19,6 +19,7 @@ public class ManifestForm {
     private String billingLane = "AUTO";
     private Long destinationBranchId;
     private String remarks;
+    private boolean billUnmappedBySender;
     private List<ManifestItemForm> items = new ArrayList<>();
 
     public static ManifestForm blank(int rows) {
@@ -116,6 +117,14 @@ public class ManifestForm {
 
     public void setRemarks(String remarks) {
         this.remarks = remarks;
+    }
+
+    public boolean isBillUnmappedBySender() {
+        return billUnmappedBySender;
+    }
+
+    public void setBillUnmappedBySender(boolean billUnmappedBySender) {
+        this.billUnmappedBySender = billUnmappedBySender;
     }
 
     public List<ManifestItemForm> getItems() {

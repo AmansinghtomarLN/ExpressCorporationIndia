@@ -29,7 +29,6 @@ public class ShipmentService {
     private final ShipmentDao shipmentDao;
     private final TrackingEventDao trackingEventDao;
     private final RateCardService rateCardService;
-    private final InvoiceService invoiceService;
     private final NotificationService notificationService;
     private final ContactService contactService;
     private final BranchService branchService;
@@ -38,7 +37,6 @@ public class ShipmentService {
     public ShipmentService(ShipmentDao shipmentDao,
                            TrackingEventDao trackingEventDao,
                            RateCardService rateCardService,
-                           InvoiceService invoiceService,
                            NotificationService notificationService,
                            ContactService contactService,
                            BranchService branchService,
@@ -46,7 +44,6 @@ public class ShipmentService {
         this.shipmentDao = shipmentDao;
         this.trackingEventDao = trackingEventDao;
         this.rateCardService = rateCardService;
-        this.invoiceService = invoiceService;
         this.notificationService = notificationService;
         this.contactService = contactService;
         this.branchService = branchService;
@@ -87,9 +84,13 @@ public class ShipmentService {
     @Transactional
     public Shipment adminCreateShipment(AdminShipmentForm form, Long bookedByUserId) {
         Branch branch = requireBranch(form.getDestinationBranchId());
-        if (form.getPartyId() == null) {
-            throw new IllegalArgumentException("Select the sending party so a C.No can be assigned");
+        if (form.isWalkIn()) {
+            return bookWalkIn(form, branch, bookedByUserId);
         }
+        if (form.getPartyId() == null) {
+            throw new IllegalArgumentException("Select the sending party, or choose Live booking");
+        }
+        form.setConsignmentNo(null);
         Party party = partyService.findById(form.getPartyId())
                 .orElseThrow(() -> new IllegalArgumentException("Party not found"));
         String cno = partyService.resolveForBooking(party.getId(), form.getConsignmentNo());
@@ -125,6 +126,34 @@ public class ShipmentService {
         applyFreight(shipment);
         return persistNewShipment(shipment, shipment.getOriginCity(),
                 "Booked to " + branch.getCity() + " — open until added to a manifest");
+    }
+
+    private Shipment bookWalkIn(AdminShipmentForm form, Branch branch, Long bookedByUserId) {
+        Shipment shipment = new Shipment();
+        shipment.setTrackingId(partyService.requireUnassignedConsignment(form.getConsignmentNo()));
+        shipment.setSenderName(form.getSenderName().trim());
+        shipment.setSenderPhone(form.getSenderPhone().trim());
+        shipment.setSenderAddress(form.getSenderAddress().trim());
+        shipment.setReceiverName(form.getReceiverName().trim());
+        shipment.setReceiverPhone(form.getReceiverPhone().trim());
+        shipment.setReceiverAddress(StringUtils.hasText(form.getReceiverAddress())
+                ? form.getReceiverAddress().trim() : branch.getCity());
+        shipment.setOriginCity(form.getOriginCity().trim());
+        applyDestinationBranch(shipment, branch);
+        shipment.setWeightKg(form.getWeightKg());
+        shipment.setNumberOfBoxes(form.getNumberOfBoxes() != null && form.getNumberOfBoxes() > 0
+                ? form.getNumberOfBoxes() : 1);
+        shipment.setServiceType(form.getServiceType());
+        shipment.setStatus("BOOKED");
+        shipment.setBookedByUserId(bookedByUserId);
+        shipment.setAssignedHub(form.getAssignedHub());
+        shipment.setCourierName(form.getCourierName());
+        shipment.setCourierPhone(form.getCourierPhone());
+        shipment.setCodAmount(form.getCodAmount() != null ? form.getCodAmount() : BigDecimal.ZERO);
+        shipment.setExpectedDelivery(form.getExpectedDelivery());
+        applyFreight(shipment);
+        return persistNewShipment(shipment, shipment.getOriginCity(),
+                "Live booking — open until added to a manifest. Assign this C.No to a party before billing.");
     }
 
     public List<Shipment> findOpenUnmanifested() {
@@ -217,7 +246,6 @@ public class ShipmentService {
         existing.setAssignedBranchId(quote.getBranchId());
         existing.setFreightCharge(quote.getAmount());
         shipmentDao.update(existing);
-        invoiceService.syncFromShipment(existing);
     }
 
     /**
@@ -337,7 +365,7 @@ public class ShipmentService {
      * current status accordingly.
      */
     @Transactional
-    public void addTrackingUpdate(Long shipmentId, String status, String location, String remarks) {
+    public boolean addTrackingUpdate(Long shipmentId, String status, String location, String remarks) {
         if (!StringUtils.hasText(location)) {
             throw new IllegalArgumentException("Location is required");
         }
@@ -349,6 +377,9 @@ public class ShipmentService {
         Shipment shipment = shipmentDao.findById(shipmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Shipment not found"));
         StatusTransitions.validate(shipment.getStatus(), normalizedStatus);
+        if (isDuplicateTrackingUpdate(shipmentId, normalizedStatus, location.trim(), remarks)) {
+            return false;
+        }
 
         TrackingEvent event = new TrackingEvent();
         event.setShipmentId(shipmentId);
@@ -360,6 +391,28 @@ public class ShipmentService {
 
         shipment.setStatus(normalizedStatus);
         notificationService.notifyStatusChange(shipment, normalizedStatus);
+        return true;
+    }
+
+    /**
+     * A retried save (double click or a network retry) must not add the same
+     * journey step again.
+     */
+    private boolean isDuplicateTrackingUpdate(Long shipmentId, String status, String location, String remarks) {
+        List<TrackingEvent> events = trackingEventDao.findByShipmentId(shipmentId);
+        if (events.isEmpty()) {
+            return false;
+        }
+        TrackingEvent latest = events.get(events.size() - 1);
+        if (latest.getEventTime() == null
+                || latest.getEventTime().isBefore(java.time.LocalDateTime.now().minusMinutes(10))) {
+            return false;
+        }
+        String latestRemarks = latest.getRemarks() == null ? "" : latest.getRemarks().trim();
+        String incomingRemarks = remarks == null ? "" : remarks.trim();
+        return status.equalsIgnoreCase(latest.getStatus())
+                && location.equalsIgnoreCase(latest.getLocation() == null ? "" : latest.getLocation().trim())
+                && latestRemarks.equalsIgnoreCase(incomingRemarks);
     }
 
     @Transactional
@@ -442,7 +495,6 @@ public class ShipmentService {
         stats.setCancelled(shipmentDao.countByStatus("CANCELLED"));
         stats.setDelayed(shipmentDao.countDelayed());
         stats.setUnreadContacts(contactService.countUnread());
-        stats.setUnpaidInvoices(invoiceService.countUnpaid());
         return stats;
     }
 
@@ -458,7 +510,6 @@ public class ShipmentService {
         stats.setCancelled(shipmentDao.countByStatusCreatedBetween("CANCELLED", from, to));
         stats.setDelayed(shipmentDao.countDelayedCreatedBetween(from, to));
         stats.setUnreadContacts(contactService.countUnreadBetween(from, to));
-        stats.setUnpaidInvoices(invoiceService.countUnpaid());
         return stats;
     }
 

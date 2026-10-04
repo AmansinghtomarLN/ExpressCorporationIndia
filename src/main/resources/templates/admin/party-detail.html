@@ -68,8 +68,9 @@
                         <input type="text" name="pincode" th:value="${party.pincode}">
                     </div>
                     <div class="form-group">
-                        <label>GSTIN</label>
-                        <input type="text" name="gstin" th:value="${party.gstin}">
+                        <label>GST number *</label>
+                        <input type="text" name="gstin" required maxlength="15" th:value="${party.gstin}"
+                               placeholder="15-character GSTIN">
                     </div>
                 </div>
                 <div class="form-group">

@@ -2,7 +2,6 @@ package com.mahavircourier.controller.admin;
 
 import com.mahavircourier.model.ManifestBill;
 import com.mahavircourier.model.ManifestItem;
-import com.mahavircourier.service.AuditService;
 import com.mahavircourier.service.BranchService;
 import com.mahavircourier.service.CustomUserDetails;
 import com.mahavircourier.service.ManifestBillService;
@@ -28,16 +27,14 @@ public class AdminManifestBillController {
     private final ManifestBillService manifestBillService;
     private final PartyService partyService;
     private final BranchService branchService;
-    private final AuditService auditService;
 
     public AdminManifestBillController(ManifestBillService manifestBillService,
                                        PartyService partyService,
-                                       BranchService branchService,
-                                       AuditService auditService) {
+                                       BranchService branchService
+                                       ) {
         this.manifestBillService = manifestBillService;
         this.partyService = partyService;
         this.branchService = branchService;
-        this.auditService = auditService;
     }
 
     @GetMapping("/parties")
@@ -82,8 +79,11 @@ public class AdminManifestBillController {
                                 @RequestParam(required = false) BigDecimal perKgRate,
                                 @RequestParam(required = false) String notes,
                                 @RequestParam(required = false) String status,
+                                @RequestParam(required = false)
+                                @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate billDate,
                                 RedirectAttributes redirectAttributes) {
-        return saveBill(id, weightKg, perKgRate, notes, status, "/admin/billing/parties/" + id, redirectAttributes);
+        return saveBill(id, weightKg, perKgRate, notes, status, billDate,
+                "/admin/billing/parties/" + id, redirectAttributes);
     }
 
     @GetMapping("/branches/{id}")
@@ -102,8 +102,11 @@ public class AdminManifestBillController {
                                  @RequestParam(required = false) BigDecimal perKgRate,
                                  @RequestParam(required = false) String notes,
                                  @RequestParam(required = false) String status,
+                                 @RequestParam(required = false)
+                                 @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate billDate,
                                  RedirectAttributes redirectAttributes) {
-        return saveBill(id, weightKg, perKgRate, notes, status, "/admin/billing/branches/" + id, redirectAttributes);
+        return saveBill(id, weightKg, perKgRate, notes, status, billDate,
+                "/admin/billing/branches/" + id, redirectAttributes);
     }
 
     @PostMapping("/parties/{id}/received")
@@ -163,22 +166,22 @@ public class AdminManifestBillController {
                 lineWeightTotal = lineWeightTotal.add(line.getWeightKg());
             }
         }
+        LocalDate manifestDate = manifestBillService.manifestDateFor(bill.getManifestId());
         model.addAttribute("bill", bill);
         model.addAttribute("lines", lines);
-        model.addAttribute("manifestDate", manifestBillService.manifestDateFor(bill.getManifestId()));
+        model.addAttribute("manifestDate", manifestDate);
+        model.addAttribute("billDate", bill.resolveBillDate(manifestDate));
         model.addAttribute("lineAmountTotal", lineAmountTotal);
         model.addAttribute("lineBoxTotal", lineBoxTotal);
         model.addAttribute("lineWeightTotal", lineWeightTotal);
     }
 
     private String saveBill(Long id, BigDecimal weightKg, BigDecimal perKgRate, String notes,
-                            String status, String redirect, RedirectAttributes redirectAttributes) {
+                            String status, LocalDate billDate, String redirect,
+                            RedirectAttributes redirectAttributes) {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
-            manifestBillService.updateDetails(id, weightKg, perKgRate, notes, status);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "BILL_UPDATE", "MANIFEST_BILL", String.valueOf(id),
-                    "Updated bill details");
+            manifestBillService.updateDetails(id, weightKg, perKgRate, notes, status, billDate);
             redirectAttributes.addFlashAttribute("successMessage", "Bill details saved.");
         } catch (IllegalArgumentException ex) {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
@@ -196,9 +199,6 @@ public class AdminManifestBillController {
                 manifestBillService.markPending(id);
             }
             String label = received ? "RECEIVED" : "PENDING";
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "BILL_" + label, "MANIFEST_BILL", String.valueOf(id),
-                    "Marked " + label);
             redirectAttributes.addFlashAttribute("successMessage",
                     "Bill marked as " + (received ? "received" : "pending") + ".");
         } catch (IllegalArgumentException ex) {

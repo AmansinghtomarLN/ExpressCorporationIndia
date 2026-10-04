@@ -2,7 +2,6 @@ package com.mahavircourier.controller.admin;
 
 import com.mahavircourier.model.Branch;
 import com.mahavircourier.model.BranchLaneRate;
-import com.mahavircourier.service.AuditService;
 import com.mahavircourier.service.BranchService;
 import com.mahavircourier.service.CustomUserDetails;
 import com.mahavircourier.service.RateCardService;
@@ -26,14 +25,11 @@ public class AdminBranchRateController {
 
     private final BranchService branchService;
     private final RateCardService rateCardService;
-    private final AuditService auditService;
 
     public AdminBranchRateController(BranchService branchService,
-                                     RateCardService rateCardService,
-                                     AuditService auditService) {
+                                     RateCardService rateCardService) {
         this.branchService = branchService;
         this.rateCardService = rateCardService;
-        this.auditService = auditService;
     }
 
     @GetMapping
@@ -83,9 +79,6 @@ public class AdminBranchRateController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
             int saved = rateCardService.applyLaneRate(originId, perKgRate);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "BRANCH_LANE_APPLY", "BRANCH", String.valueOf(originId),
-                    "per kg=" + perKgRate + ", branches=" + saved);
             redirectAttributes.addFlashAttribute("successMessage",
                     "Set ₹" + perKgRate.toPlainString() + " per kg from this branch to "
                             + saved + (saved == 1 ? " branch." : " branches."));
@@ -105,9 +98,6 @@ public class AdminBranchRateController {
         try {
             int saved = rateCardService.saveLaneRates(originId, removeId, destBranchId, perKgRate);
             int removed = removeId == null ? 0 : (int) removeId.stream().filter(id -> id != null).count();
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "BRANCH_LANE_SAVE", "BRANCH", String.valueOf(originId),
-                    "saved=" + saved + ", removed=" + removed);
             if (saved == 0 && removed == 0) {
                 redirectAttributes.addFlashAttribute("errorMessage",
                         "Enter a per kg rate for at least one branch, then save.");

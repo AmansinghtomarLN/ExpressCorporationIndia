@@ -106,41 +106,6 @@ public class ReportDao {
         return avg != null ? avg : BigDecimal.ZERO;
     }
 
-    public BigDecimal sumInvoiceFreightBetween(LocalDate from, LocalDate toInclusive) {
-        BigDecimal sum = jdbcTemplate.queryForObject(
-                "SELECT COALESCE(SUM(freight_amount),0) FROM invoices WHERE DATE(created_at) BETWEEN ? AND ?",
-                BigDecimal.class, Date.valueOf(from), Date.valueOf(toInclusive));
-        return sum != null ? sum : BigDecimal.ZERO;
-    }
-
-    public BigDecimal sumInvoiceCodBetween(LocalDate from, LocalDate toInclusive) {
-        BigDecimal sum = jdbcTemplate.queryForObject(
-                "SELECT COALESCE(SUM(cod_amount),0) FROM invoices WHERE DATE(created_at) BETWEEN ? AND ?",
-                BigDecimal.class, Date.valueOf(from), Date.valueOf(toInclusive));
-        return sum != null ? sum : BigDecimal.ZERO;
-    }
-
-    public BigDecimal sumInvoicePaidBetween(LocalDate from, LocalDate toInclusive) {
-        BigDecimal sum = jdbcTemplate.queryForObject(
-                "SELECT COALESCE(SUM(total_amount),0) FROM invoices " +
-                        "WHERE status IN ('PAID','COD_COLLECTED') AND DATE(updated_at) BETWEEN ? AND ?",
-                BigDecimal.class, Date.valueOf(from), Date.valueOf(toInclusive));
-        return sum != null ? sum : BigDecimal.ZERO;
-    }
-
-    public BigDecimal sumInvoiceUnpaidOpen() {
-        BigDecimal sum = jdbcTemplate.queryForObject(
-                "SELECT COALESCE(SUM(total_amount),0) FROM invoices WHERE status = 'UNPAID'",
-                BigDecimal.class);
-        return sum != null ? sum : BigDecimal.ZERO;
-    }
-
-    public long countUnpaidInvoices() {
-        Long count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM invoices WHERE status = 'UNPAID'", Long.class);
-        return count != null ? count : 0L;
-    }
-
     public long countContactsBetween(LocalDate from, LocalDate toInclusive) {
         Long count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM contact_messages WHERE DATE(created_at) BETWEEN ? AND ?",

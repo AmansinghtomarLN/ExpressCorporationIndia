@@ -361,8 +361,26 @@ table.data-table th { background: var(--gray-100); font-weight: 700; }
 .admin-nav-inner {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px 4px;
-    padding: 10px 20px;
+    align-items: flex-end;
+    gap: 10px 18px;
+    padding: 8px 20px 10px;
+}
+.nav-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px;
+    padding-right: 16px;
+    border-right: 1px solid var(--gray-200);
+}
+.nav-label {
+    width: 100%;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--gray-500);
+    padding: 0 8px 2px;
 }
 .admin-nav a {
     display: inline-block;

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | C.No mapping | Express Corporation of India</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div th:replace="~{fragments/header :: header}"></div>
+<div th:replace="~{fragments/admin-nav :: adminNav}"></div>
+
+<section class="section ops-page">
+    <div class="container full-page">
+        <span class="eyebrow">Billing</span>
+        <h1>Consignment number mapping</h1>
+        <p>Assign consignment numbers to a party. Manifest billing uses this mapping, not the party chosen on the manifest.</p>
+
+        <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
+        <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <form class="form-card" method="post" th:action="@{/admin/cno-map}">
+            <h3 style="margin-top:0;">Assign numbers</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="partyId">Party *</label>
+                    <select id="partyId" name="partyId" required>
+                        <option value="">— Select party —</option>
+                        <option th:each="p : ${parties}" th:value="${p.id}" th:text="${p.partyName}">Party</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="rangeStart">From C.No *</label>
+                    <input type="number" id="rangeStart" name="rangeStart" required min="1" placeholder="37191">
+                </div>
+                <div class="form-group">
+                    <label for="rangeEnd">To C.No</label>
+                    <input type="number" id="rangeEnd" name="rangeEnd" min="1" placeholder="Same as From for one number">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="notes">Note</label>
+                <input type="text" id="notes" name="notes" placeholder="Optional">
+            </div>
+            <button type="submit" class="btn btn-primary">Assign</button>
+        </form>
+
+        <form method="get" th:action="@{/admin/cno-map}" class="admin-toolbar" style="margin-top:24px;">
+            <div class="form-group" style="margin:0; min-width:280px;">
+                <label for="q">Search</label>
+                <input type="search" id="q" name="q" th:value="${q}" placeholder="Consignment number or party">
+            </div>
+            <button type="submit" class="btn btn-dark">Search</button>
+            <a class="btn btn-dark" th:href="@{/admin/cno-map}">Clear</a>
+        </form>
+
+        <div style="overflow-x:auto; margin-top:16px;">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Consignment numbers</th>
+                    <th>Party</th>
+                    <th>Used</th>
+                    <th>Free</th>
+                    <th>Change party</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="a : ${assignments}">
+                    <td>
+                        <strong th:if="${a.rangeStart == a.rangeEnd}" th:text="${a.rangeStart}">37191</strong>
+                        <span th:unless="${a.rangeStart == a.rangeEnd}"><strong th:text="${a.rangeStart}">37191</strong>–<strong th:text="${a.rangeEnd}">37200</strong></span>
+                    </td>
+                    <td th:text="${a.partyName}">Party</td>
+                    <td th:text="${a.usedCount}">0</td>
+                    <td th:text="${a.vacantCount}">0</td>
+                    <td>
+                        <form method="post" th:action="@{/admin/cno-map/{id}/party(id=${a.id})}"
+                              style="display:flex; gap:8px; align-items:center;">
+                            <input type="hidden" name="q" th:value="${q}">
+                            <select name="partyId" required>
+                                <option th:each="p : ${parties}"
+                                        th:value="${p.id}"
+                                        th:text="${p.partyName}"
+                                        th:selected="${p.id == a.partyId}">Party</option>
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                        </form>
+                    </td>
+                    <td>
+                        <form method="post" th:action="@{/admin/cno-map/{id}/delete(id=${a.id})}"
+                              th:onsubmit="|return confirm('Remove this mapping?')|">
+                            <input type="hidden" name="q" th:value="${q}">
+                            <button type="submit" class="btn btn-sm btn-dark"
+                                    th:disabled="${a.usedCount > 0}">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${assignments == null or #lists.isEmpty(assignments)}">
+                    <td colspan="6">No consignment numbers match that search.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="muted">A used range cannot be removed. Change the party instead, and the next bill for those numbers uses the new party.</p>
+    </div>
+</section>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

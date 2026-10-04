@@ -34,11 +34,6 @@ document.addEventListener("DOMContentLoaded", function () {
         openShipments = [];
     }
 
-    function partyOptionsHtml() {
-        var first = document.querySelector("#manifest-lines .party-select");
-        return first ? first.innerHTML : '<option value="">— Party —</option>';
-    }
-
     function labelFor(id) {
         if (id == null || id === "") return "";
         var token = String(id);
@@ -183,10 +178,30 @@ document.addEventListener("DOMContentLoaded", function () {
             list.hidden = false;
         });
         search.addEventListener("input", function () {
+            if (cityMode && list.getAttribute("data-filled") !== "1") {
+                list.innerHTML = cityListHtml();
+                list.setAttribute("data-filled", "1");
+            }
             list.hidden = false;
             filterList(combo, search.value);
             if (!search.value.trim()) {
                 hidden.value = "";
+                return;
+            }
+            if (!cityMode) {
+                return;
+            }
+            var matches = visibleChoices(combo);
+            if (matches.length === 1) {
+                hidden.value = matches[0].getAttribute("data-value") || "";
+                hidden.dispatchEvent(new Event("change", { bubbles: true }));
+            } else {
+                hidden.value = "";
+            }
+        });
+        search.addEventListener("blur", function () {
+            if (cityMode && hidden.value) {
+                search.value = cityLabelFor(hidden.value);
             }
         });
         search.addEventListener("keydown", function (ev) {
@@ -202,6 +217,17 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    function visibleChoices(combo) {
+        var items = [];
+        combo.querySelectorAll(".combo-list li").forEach(function (li) {
+            if (li.getAttribute("data-group") || li.hidden || !li.getAttribute("data-value")) {
+                return;
+            }
+            items.push(li);
+        });
+        return items;
+    }
+
     function wireAllCombos() {
         document.querySelectorAll(".combo").forEach(wireCombo);
     }
@@ -214,11 +240,9 @@ document.addEventListener("DOMContentLoaded", function () {
         var tr = document.createElement("tr");
         tr.innerHTML =
             '<td class="row-index"></td>' +
-            '<td><select class="party-select nav-field" name="items[' + index + '].partyId">' +
-            partyOptionsHtml() + "</select></td>" +
             '<td><input type="hidden" name="items[' + index + '].id" value="">' +
             '<input type="hidden" class="shipment-id" name="items[' + index + '].shipmentId" value="">' +
-            '<input type="text" class="cno-input nav-field" name="items[' + index + '].consignmentNo" placeholder="Blank = auto" inputmode="numeric"></td>' +
+            '<input type="text" class="cno-input nav-field" name="items[' + index + '].consignmentNo" placeholder="C.No" inputmode="numeric"></td>' +
             '<td><div class="combo city-combo">' +
             '<input type="hidden" class="combo-value dest-city" name="items[' + index + '].destinationCity" value="">' +
             '<input type="search" class="combo-search nav-field" placeholder="Search city…" autocomplete="off">' +
@@ -264,34 +288,14 @@ document.addEventListener("DOMContentLoaded", function () {
         var destSel = tr.querySelector(".dest-city");
         var dest = destSel ? destSel.value : "";
         var recv = (tr.querySelector(".recv-name") || {}).value || "";
-        var party = (tr.querySelector(".party-select") || {}).value || "";
         var boxVal = parseFloat((tr.querySelector(".boxes-input") || {}).value || "0");
         var wtVal = parseFloat((tr.querySelector(".weight-input") || {}).value || "0");
-        return !!(sid || cno.trim() || dest.trim() || recv.trim() || party || boxVal || wtVal);
-    }
-
-    function ensureHiddenParty(tr, partyId) {
-        var cnoCell = tr.querySelector("td:nth-child(3)");
-        if (!cnoCell) return;
-        var hidden = cnoCell.querySelector('input[type="hidden"][name$=".partyId"]');
-        if (!hidden) {
-            hidden = document.createElement("input");
-            hidden.type = "hidden";
-            hidden.name = (tr.querySelector(".cno-input") || {}).name.replace(".consignmentNo", ".partyId");
-            cnoCell.appendChild(hidden);
-        }
-        hidden.value = partyId || "";
+        return !!(sid || cno.trim() || dest.trim() || recv.trim() || boxVal || wtVal);
     }
 
     function fillRowFromShipment(tr, shipment) {
         var sid = tr.querySelector(".shipment-id");
         if (sid) sid.value = shipment.id;
-        var party = tr.querySelector(".party-select");
-        if (party) {
-            party.value = shipment.partyId != null ? String(shipment.partyId) : "";
-            party.disabled = true;
-            ensureHiddenParty(tr, party.value);
-        }
         var cno = tr.querySelector(".cno-input");
         if (cno) {
             cno.value = shipment.trackingId || "";
@@ -318,13 +322,6 @@ document.addEventListener("DOMContentLoaded", function () {
         if (sid) sid.value = "";
         var idField = tr.querySelector('input[type="hidden"][name$=".id"]');
         if (idField) idField.value = "";
-        var party = tr.querySelector(".party-select");
-        if (party) {
-            party.disabled = false;
-            party.value = "";
-        }
-        var hiddenParty = tr.querySelector('input[type="hidden"][name$=".partyId"]');
-        if (hiddenParty) hiddenParty.remove();
         var cno = tr.querySelector(".cno-input");
         if (cno) {
             cno.readOnly = false;
@@ -348,12 +345,11 @@ document.addEventListener("DOMContentLoaded", function () {
         var sid = (tr.querySelector(".shipment-id") || {}).value;
         if (!sid) return null;
         var destSel = tr.querySelector(".dest-city");
-        var party = tr.querySelector(".party-select");
         return {
             id: Number(sid),
             trackingId: (tr.querySelector(".cno-input") || {}).value || "",
-            partyId: party && party.value ? party.value : null,
-            partyName: party && party.selectedOptions && party.selectedOptions[0] ? party.selectedOptions[0].text : "",
+            partyId: null,
+            partyName: "",
             assignedBranchId: null,
             destinationCity: destSel ? destSel.value : "",
             numberOfBoxes: (tr.querySelector(".boxes-input") || {}).value || "",
@@ -500,16 +496,62 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     form.addEventListener("input", updateTotals);
-    form.addEventListener("submit", function () {
+    form.addEventListener("submit", function (ev) {
         tbody.querySelectorAll(".shipment-id").forEach(function (input) {
             if (!String(input.value || "").trim()) input.disabled = true;
         });
-    });
-    form.addEventListener("change", function (ev) {
-        if (ev.target && ev.target.classList.contains("party-select") && !ev.target.disabled) {
-            var cno = ev.target.closest("tr") && ev.target.closest("tr").querySelector(".cno-input");
-            if (cno && !cno.readOnly) cno.focus();
+        if (form.getAttribute("data-sender-ok") === "1") {
+            return;
         }
+        var cnos = [];
+        tbody.querySelectorAll(".cno-input").forEach(function (input) {
+            var value = String(input.value || "").trim();
+            if (value) cnos.push(value);
+        });
+        if (!cnos.length) {
+            return;
+        }
+        ev.preventDefault();
+        var params = cnos.map(function (cno) {
+            return "cno=" + encodeURIComponent(cno);
+        }).join("&");
+        fetch("/admin/manifests/unmapped-cnos?" + params, { headers: { "Accept": "application/json" } })
+            .then(function (response) {
+                if (!response.ok) throw new Error("Could not check consignment numbers");
+                return response.json();
+            })
+            .then(function (rows) {
+                rows = rows || [];
+                var missing = rows.filter(function (row) { return !String(row.senderName || "").trim(); });
+                if (missing.length) {
+                    alert(missing.map(function (row) {
+                        return "C.No " + row.cno + " is not assigned to a party and has no sender name. "
+                            + "Book the shipment first, or assign it on C.No mapping.";
+                    }).join("\n"));
+                    return;
+                }
+                if (!rows.length) {
+                    form.setAttribute("data-sender-ok", "1");
+                    form.requestSubmit();
+                    return;
+                }
+                var message = rows.map(function (row) {
+                    return "C.No " + row.cno + " is not assigned to a party. Assign it on C.No mapping, then add it to the manifest.\n"
+                        + "Continue and bill this consignment under the sender name " + row.senderName + "?";
+                }).join("\n\n");
+                if (!window.confirm(message)) {
+                    return;
+                }
+                var flag = document.getElementById("billUnmappedBySender");
+                if (flag) flag.value = "true";
+                form.setAttribute("data-sender-ok", "1");
+                form.requestSubmit();
+            })
+            .catch(function () {
+                alert("Could not check whether these consignment numbers are assigned to a party. Try again.");
+            });
+    });
+    form.addEventListener("change", function () {
         updateTotals();
     });
     form.addEventListener("keydown", function (ev) {
@@ -531,7 +573,7 @@ document.addEventListener("DOMContentLoaded", function () {
         wireAllCombos();
         reindex();
         updateTotals();
-        var focusEl = first ? first.querySelector(".party-select") : null;
+        var focusEl = first ? first.querySelector(".cno-input") : null;
         if (focusEl) focusEl.focus();
     }
 
@@ -571,8 +613,8 @@ document.addEventListener("DOMContentLoaded", function () {
     });
     renderOpenList();
     updateTotals();
-    var firstParty = tbody.querySelector("tr:not(.from-open) .party-select");
-    if (firstParty && !firstParty.disabled && !firstParty.value) {
-        firstParty.focus();
+    var firstCno = tbody.querySelector("tr:not(.from-open) .cno-input");
+    if (firstCno && !firstCno.readOnly && !firstCno.value) {
+        firstCno.focus();
     }
 });

@@ -1,6 +1,5 @@
 package com.mahavircourier.controller.admin;
 
-import com.mahavircourier.service.AuditService;
 import com.mahavircourier.service.CustomUserDetails;
 import com.mahavircourier.service.WorkspaceService;
 import com.mahavircourier.model.Branch;
@@ -18,11 +17,9 @@ import java.net.URI;
 public class AdminWorkspaceController {
 
     private final WorkspaceService workspaceService;
-    private final AuditService auditService;
 
-    public AdminWorkspaceController(WorkspaceService workspaceService, AuditService auditService) {
+    public AdminWorkspaceController(WorkspaceService workspaceService) {
         this.workspaceService = workspaceService;
-        this.auditService = auditService;
     }
 
     @PostMapping("/branch")
@@ -32,9 +29,6 @@ public class AdminWorkspaceController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         try {
             Branch branch = workspaceService.setCurrent(principal.getUser().getId(), branchId);
-            auditService.log(principal.getUser().getId(), principal.getUsername(),
-                    "WORKSPACE_BRANCH", "USER", String.valueOf(principal.getUser().getId()),
-                    "Working from " + branch.getCity() + " — " + branch.getBranchName());
             redirectAttributes.addFlashAttribute("successMessage",
                     "Working from " + branch.getCity() + " — " + branch.getBranchName());
         } catch (IllegalArgumentException ex) {

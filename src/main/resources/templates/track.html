@@ -125,7 +125,7 @@
                         <label for="remarks">Remarks (optional)</label>
                         <textarea id="remarks" name="remarks" rows="2" placeholder="Note for the tracking timeline"></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary">Update status</button>
+                    <button type="submit" class="btn btn-primary track-submit">Update status</button>
                 </form>
             </div>
         </div>
@@ -133,5 +133,17 @@
 </section>
 
 <div th:replace="~{fragments/footer :: footer}"></div>
+<script>
+document.querySelectorAll("form[method='post']").forEach(function (form) {
+    form.addEventListener("submit", function () {
+        var button = form.querySelector("button[type='submit']");
+        if (!button || button.disabled) {
+            return;
+        }
+        button.disabled = true;
+        button.textContent = "Saving…";
+    });
+});
+</script>
 </body>
 </html>

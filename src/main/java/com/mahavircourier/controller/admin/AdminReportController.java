@@ -2,7 +2,6 @@ package com.mahavircourier.controller.admin;
 
 import com.mahavircourier.config.AppProperties;
 import com.mahavircourier.dto.PeriodReport;
-import com.mahavircourier.service.AuditService;
 import com.mahavircourier.service.CustomUserDetails;
 import com.mahavircourier.service.ReportService;
 import com.mahavircourier.service.notify.EmailService;
@@ -21,14 +20,11 @@ import java.time.LocalDate;
 public class AdminReportController {
 
     private final ReportService reportService;
-    private final AuditService auditService;
     private final AppProperties appProperties;
 
     public AdminReportController(ReportService reportService,
-                                 AuditService auditService,
                                  AppProperties appProperties) {
         this.reportService = reportService;
-        this.auditService = auditService;
         this.appProperties = appProperties;
     }
 
@@ -54,9 +50,6 @@ public class AdminReportController {
         CustomUserDetails principal = AdminAuth.requirePrincipal();
         PeriodReport report = resolve(period, from, to);
         EmailService.SendResult result = reportService.emailReport(report);
-        auditService.log(principal.getUser().getId(), principal.getUsername(),
-                "REPORT_EMAIL_MANUAL", "REPORT", report.getPeriodType().name(),
-                "to=" + appProperties.getReport().getEmail() + " status=" + result.status());
         if (result.success()) {
             redirectAttributes.addFlashAttribute("successMessage",
                     "Report emailed to " + appProperties.getReport().getEmail());
