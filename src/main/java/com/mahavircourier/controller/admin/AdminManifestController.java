@@ -258,6 +258,13 @@ public class AdminManifestController {
             line.setWeightKg(item.getWeightKg());
             line.setReceiverName(item.getReceiverName());
             line.setReceiverPhone(item.getReceiverPhone());
+            if (item.getShipmentId() != null) {
+                shipmentService.findById(item.getShipmentId()).ifPresent(shipment -> {
+                    line.setSenderName(shipment.getSenderName());
+                    String phone = shipment.getSenderPhone();
+                    line.setSenderPhone(phone != null && !"-".equals(phone.trim()) ? phone : "");
+                });
+            }
             form.getItems().add(line);
         }
         form.ensureMinRows(Math.max(BLANK_ROWS, form.getItems().size()));
@@ -296,7 +303,9 @@ public class AdminManifestController {
                     .append(",\"numberOfBoxes\":").append(s.getNumberOfBoxes() == null ? 1 : s.getNumberOfBoxes())
                     .append(",\"weightKg\":").append(s.getWeightKg() != null ? s.getWeightKg().toPlainString() : "0")
                     .append(",\"receiverName\":\"").append(jsonEscape(s.getReceiverName())).append("\"")
-                    .append(",\"receiverPhone\":\"").append(jsonEscape(s.getReceiverPhone())).append("\"}");
+                    .append(",\"receiverPhone\":\"").append(jsonEscape(s.getReceiverPhone())).append("\"")
+                    .append(",\"senderName\":\"").append(jsonEscape(s.getSenderName())).append("\"")
+                    .append(",\"senderPhone\":\"").append(jsonEscape(s.getSenderPhone())).append("\"}");
         }
         return json.append(']').toString();
     }

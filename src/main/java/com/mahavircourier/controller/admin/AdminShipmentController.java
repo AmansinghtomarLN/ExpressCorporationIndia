@@ -3,7 +3,9 @@ package com.mahavircourier.controller.admin;
 import com.mahavircourier.dto.AdminShipmentForm;
 import com.mahavircourier.dto.PageResult;
 import com.mahavircourier.model.Shipment;
+import com.mahavircourier.model.Branch;
 import com.mahavircourier.service.BranchService;
+import com.mahavircourier.service.CityService;
 import com.mahavircourier.service.CustomUserDetails;
 import com.mahavircourier.service.ManifestService;
 import com.mahavircourier.service.PartyService;
@@ -44,17 +46,20 @@ public class AdminShipmentController {
     private final PartyService partyService;
     private final ManifestService manifestService;
     private final WorkspaceService workspaceService;
+    private final CityService cityService;
 
     public AdminShipmentController(ShipmentService shipmentService,
                                    BranchService branchService,
                                    PartyService partyService,
                                    ManifestService manifestService,
-                                   WorkspaceService workspaceService) {
+                                   WorkspaceService workspaceService,
+                                   CityService cityService) {
         this.shipmentService = shipmentService;
         this.branchService = branchService;
         this.partyService = partyService;
         this.manifestService = manifestService;
         this.workspaceService = workspaceService;
+        this.cityService = cityService;
     }
 
     @GetMapping
@@ -87,16 +92,18 @@ public class AdminShipmentController {
             form.setOriginCity(WorkspaceService.DEFAULT_CITY);
         }
         if (branchId != null) {
-            form.setDestinationBranchId(branchId);
+            branchService.findById(branchId).map(Branch::getCity).ifPresent(form::setDestinationCity);
         } else if (manifestId != null) {
             manifestService.findById(manifestId).ifPresent(m -> {
-                form.setDestinationBranchId(m.getDestinationBranchId());
+                if (m.getDestinationBranchCity() != null) {
+                    form.setDestinationCity(m.getDestinationBranchCity());
+                }
                 form.setPartyId(m.getPartyId());
             });
         }
         model.addAttribute("form", form);
         model.addAttribute("manifestId", manifestId);
-        model.addAttribute("lockDestination", form.getDestinationBranchId() != null);
+        model.addAttribute("lockDestination", manifestId != null && form.getDestinationCity() != null);
         populateBookingLookups(model);
         return "admin/shipment-form";
     }
@@ -109,7 +116,7 @@ public class AdminShipmentController {
                          RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
             model.addAttribute("manifestId", manifestId);
-            model.addAttribute("lockDestination", form.getDestinationBranchId() != null && manifestId != null);
+            model.addAttribute("lockDestination", manifestId != null && form.getDestinationCity() != null);
             populateBookingLookups(model);
             return "admin/shipment-form";
         }
@@ -121,7 +128,7 @@ public class AdminShipmentController {
             return "redirect:/admin/shipments/" + created.getId();
         } catch (IllegalArgumentException ex) {
             model.addAttribute("manifestId", manifestId);
-            model.addAttribute("lockDestination", form.getDestinationBranchId() != null && manifestId != null);
+            model.addAttribute("lockDestination", manifestId != null && form.getDestinationCity() != null);
             populateBookingLookups(model);
             model.addAttribute("errorMessage", ex.getMessage());
             return "admin/shipment-form";
@@ -152,6 +159,14 @@ public class AdminShipmentController {
     private void populateBookingLookups(Model model) {
         model.addAttribute("branches", branchService.findAll());
         model.addAttribute("parties", partyService.findEnabled());
+        String localCity = WorkspaceService.DEFAULT_CITY;
+        try {
+            localCity = workspaceService.resolveCurrent(AdminAuth.requirePrincipal().getUser()).getCity();
+        } catch (RuntimeException ignored) {
+            // keep Indore
+        }
+        model.addAttribute("cityOptionsJson", cityService.manifestOptionsJson(localCity));
+        model.addAttribute("localCityJson", "\"" + jsonEscape(localCity) + "\"");
         try {
             model.addAttribute("nextLiveCno", String.valueOf(partyService.nextUnassignedConsignment()));
         } catch (RuntimeException ex) {
@@ -344,5 +359,12 @@ public class AdminShipmentController {
         response.setHeader(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate, max-age=0");
         response.setHeader(HttpHeaders.PRAGMA, "no-cache");
         response.setDateHeader(HttpHeaders.EXPIRES, 0);
+    }
+
+    private static String jsonEscape(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("\\", "\\\\").replace("\"", "\\\"").replace("<", "\\u003c");
     }
 }

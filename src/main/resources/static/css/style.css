@@ -652,6 +652,8 @@ table.manifest-lines .col-cno { width: 118px; }
 table.manifest-lines .col-dest { width: 22%; }
 table.manifest-lines .col-boxes { width: 88px; }
 table.manifest-lines .col-weight { width: 100px; }
+table.manifest-lines .col-sender { width: 16%; }
+table.manifest-lines .col-recv { width: 16%; }
 table.manifest-lines .col-party { width: auto; }
 table.manifest-lines .col-actions { width: 88px; }
 table.manifest-lines .row-index {

@@ -7,6 +7,7 @@ import com.mahavircourier.dto.BookingForm;
 import com.mahavircourier.dto.DashboardStats;
 import com.mahavircourier.dto.PageResult;
 import com.mahavircourier.model.Branch;
+import com.mahavircourier.model.City;
 import com.mahavircourier.model.Party;
 import com.mahavircourier.model.Shipment;
 import com.mahavircourier.model.TrackingEvent;
@@ -33,6 +34,7 @@ public class ShipmentService {
     private final ContactService contactService;
     private final BranchService branchService;
     private final PartyService partyService;
+    private final CityService cityService;
 
     public ShipmentService(ShipmentDao shipmentDao,
                            TrackingEventDao trackingEventDao,
@@ -40,7 +42,8 @@ public class ShipmentService {
                            NotificationService notificationService,
                            ContactService contactService,
                            BranchService branchService,
-                           PartyService partyService) {
+                           PartyService partyService,
+                           CityService cityService) {
         this.shipmentDao = shipmentDao;
         this.trackingEventDao = trackingEventDao;
         this.rateCardService = rateCardService;
@@ -48,6 +51,7 @@ public class ShipmentService {
         this.contactService = contactService;
         this.branchService = branchService;
         this.partyService = partyService;
+        this.cityService = cityService;
     }
 
     /**
@@ -83,9 +87,10 @@ public class ShipmentService {
 
     @Transactional
     public Shipment adminCreateShipment(AdminShipmentForm form, Long bookedByUserId) {
-        Branch branch = requireBranch(form.getDestinationBranchId());
+        String destinationCity = requireDestinationCity(form.getDestinationCity());
+        form.setDestinationCity(destinationCity);
         if (form.isWalkIn()) {
-            return bookWalkIn(form, branch, bookedByUserId);
+            return bookWalkIn(form, bookedByUserId);
         }
         if (form.getPartyId() == null) {
             throw new IllegalArgumentException("Select the sending party, or choose Live booking");
@@ -108,9 +113,9 @@ public class ShipmentService {
         shipment.setReceiverName(form.getReceiverName().trim());
         shipment.setReceiverPhone(form.getReceiverPhone().trim());
         shipment.setReceiverAddress(StringUtils.hasText(form.getReceiverAddress())
-                ? form.getReceiverAddress().trim() : branch.getCity());
+                ? form.getReceiverAddress().trim() : destinationCity);
         shipment.setOriginCity(StringUtils.hasText(form.getOriginCity()) ? form.getOriginCity().trim() : party.getCity());
-        applyDestinationBranch(shipment, branch);
+        applyDestinationCity(shipment, destinationCity);
         shipment.setWeightKg(form.getWeightKg());
         shipment.setNumberOfBoxes(form.getNumberOfBoxes() != null && form.getNumberOfBoxes() > 0
                 ? form.getNumberOfBoxes() : 1);
@@ -125,10 +130,10 @@ public class ShipmentService {
         shipment.setExpectedDelivery(form.getExpectedDelivery());
         applyFreight(shipment);
         return persistNewShipment(shipment, shipment.getOriginCity(),
-                "Booked to " + branch.getCity() + " — open until added to a manifest");
+                "Booked to " + destinationCity + " — open until added to a manifest");
     }
 
-    private Shipment bookWalkIn(AdminShipmentForm form, Branch branch, Long bookedByUserId) {
+    private Shipment bookWalkIn(AdminShipmentForm form, Long bookedByUserId) {
         Shipment shipment = new Shipment();
         shipment.setTrackingId(partyService.requireUnassignedConsignment(form.getConsignmentNo()));
         shipment.setSenderName(form.getSenderName().trim());
@@ -137,9 +142,9 @@ public class ShipmentService {
         shipment.setReceiverName(form.getReceiverName().trim());
         shipment.setReceiverPhone(form.getReceiverPhone().trim());
         shipment.setReceiverAddress(StringUtils.hasText(form.getReceiverAddress())
-                ? form.getReceiverAddress().trim() : branch.getCity());
+                ? form.getReceiverAddress().trim() : form.getDestinationCity());
         shipment.setOriginCity(form.getOriginCity().trim());
-        applyDestinationBranch(shipment, branch);
+        applyDestinationCity(shipment, form.getDestinationCity());
         shipment.setWeightKg(form.getWeightKg());
         shipment.setNumberOfBoxes(form.getNumberOfBoxes() != null && form.getNumberOfBoxes() > 0
                 ? form.getNumberOfBoxes() : 1);
@@ -227,9 +232,16 @@ public class ShipmentService {
     @Transactional
     public void syncFromManifestItem(Long shipmentId, String receiverName, String receiverPhone,
                                      String destinationCity, BigDecimal weightKg, Integer boxes,
-                                     String serviceType, String manifestLane) {
+                                     String serviceType, String manifestLane,
+                                     String senderName, String senderPhone) {
         Shipment existing = shipmentDao.findById(shipmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Shipment not found"));
+        if (StringUtils.hasText(senderName)) {
+            existing.setSenderName(senderName.trim());
+        }
+        if (StringUtils.hasText(senderPhone)) {
+            existing.setSenderPhone(senderPhone.trim());
+        }
         existing.setReceiverName(receiverName);
         if (StringUtils.hasText(receiverPhone)) {
             existing.setReceiverPhone(receiverPhone.trim());
@@ -597,6 +609,24 @@ public class ShipmentService {
         }
         return branchService.findById(branchId)
                 .orElseThrow(() -> new IllegalArgumentException("Destination branch not found"));
+    }
+
+    private String requireDestinationCity(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            throw new IllegalArgumentException("Select a destination city");
+        }
+        return cityService.findByName(raw.trim())
+                .map(City::getCityName)
+                .orElseThrow(() -> new IllegalArgumentException("Select a destination city from the list"));
+    }
+
+    private void applyDestinationCity(Shipment shipment, String city) {
+        shipment.setDestinationCity(city);
+        branchService.findByCity(city).ifPresent(branch -> {
+            shipment.setAssignedBranchId(branch.getId());
+            shipment.setBillingLane(StringUtils.hasText(branch.getBranchCategory())
+                    ? branch.getBranchCategory() : "DOMESTIC");
+        });
     }
 
     private void applyDestinationBranch(Shipment shipment, Branch branch) {

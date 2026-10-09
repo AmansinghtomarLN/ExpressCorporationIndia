@@ -33,9 +33,9 @@ public class AdminShipmentForm {
     @NotBlank(message = "Origin city is required")
     private String originCity;
 
+    @NotBlank(message = "Select a destination city")
     private String destinationCity;
 
-    @NotNull(message = "Select a destination branch")
     private Long destinationBranchId;
 
     private Long partyId;
@@ -55,7 +55,7 @@ public class AdminShipmentForm {
             regexp = "DOMESTIC_STANDARD|DOMESTIC_EXPRESS|INTERNATIONAL",
             message = "Please select a valid service type"
     )
-    private String serviceType;
+    private String serviceType = "DOMESTIC_STANDARD";
 
     private Long assignedBranchId;
     private String assignedHub;

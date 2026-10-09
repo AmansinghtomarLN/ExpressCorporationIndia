@@ -12,6 +12,8 @@ public class ManifestItemForm {
     private String destinationCity;
     private Integer numberOfBoxes;
     private BigDecimal weightKg;
+    private String senderName;
+    private String senderPhone;
     private String receiverName;
     private String receiverPhone;
 
@@ -77,6 +79,22 @@ public class ManifestItemForm {
 
     public void setWeightKg(BigDecimal weightKg) {
         this.weightKg = weightKg;
+    }
+
+    public String getSenderName() {
+        return senderName;
+    }
+
+    public void setSenderName(String senderName) {
+        this.senderName = senderName;
+    }
+
+    public String getSenderPhone() {
+        return senderPhone;
+    }
+
+    public void setSenderPhone(String senderPhone) {
+        this.senderPhone = senderPhone;
     }
 
     public String getReceiverName() {

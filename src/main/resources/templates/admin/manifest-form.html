@@ -16,7 +16,7 @@
         <span class="eyebrow">Operations</span>
         <h1 th:text="${editing} ? 'Edit Manifest' : 'Create Manifest'">Create Manifest</h1>
         <p>Enter the consignment number. A mapped number is billed to that party.
-            An unassigned number can be billed under the shipment sender name after you confirm.
+            An unassigned number needs a sender name on the row. After you confirm, that shipment is created and billed under the sender name.
             Destination city is searchable. A city that is the only match is selected for you.</p>
 
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
@@ -124,6 +124,7 @@
                     <col class="col-dest">
                     <col class="col-boxes">
                     <col class="col-weight">
+                    <col class="col-sender">
                     <col class="col-recv">
                     <col class="col-actions">
                 </colgroup>
@@ -134,8 +135,8 @@
                     <th>Destination city *</th>
                     <th>Boxes *</th>
                     <th>Weight *</th>
+                    <th>Sender / contact</th>
                     <th>Receiver / phone *</th>
-                    <th></th>
                 </tr>
                 </thead>
                 <tbody>
@@ -159,7 +160,11 @@
                     </td>
                     <td><input type="number" min="1" class="boxes-input nav-field" th:field="*{items[__${iter.index}__].numberOfBoxes}" placeholder="3"></td>
                     <td><input type="number" min="0.01" step="0.01" class="weight-input nav-field" th:field="*{items[__${iter.index}__].weightKg}" placeholder="40"></td>
-                    <td class="cell-stack">
+                    <td >
+                        <input type="text" class="sender-name nav-field" th:field="*{items[__${iter.index}__].senderName}" placeholder="Sender name">
+                        <input type="text" class="sender-phone nav-field" th:field="*{items[__${iter.index}__].senderPhone}" placeholder="Contact (optional)">
+                    </td>
+                    <td >
                         <input type="text" class="recv-name nav-field" th:field="*{items[__${iter.index}__].receiverName}" placeholder="Receiver name">
                         <input type="text" class="recv-phone nav-field" th:field="*{items[__${iter.index}__].receiverPhone}" placeholder="Phone (optional)">
                     </td>
@@ -169,7 +174,7 @@
                 </tr>
                 </tbody>
             </table>
-            <p class="muted" style="margin-top:8px;">Empty rows are ignored. A consignment assigned on C.No mapping is billed to that party. An unassigned number asks for confirmation and, if you continue, is billed under the shipment sender name. Enter moves to the next field.</p>
+            <p class="muted" style="margin-top:8px;">Empty rows are ignored. A consignment assigned on C.No mapping is billed to that party. For an unassigned number, enter the sender name and confirm. The shipment is created from that sender and the receiver already on the row, and the bill uses the sender name. Enter moves to the next field.</p>
             <div class="admin-filter-buttons" style="margin-top:18px;">
                     <button type="submit" class="btn btn-dark"
                             th:text="${editing} ? 'Save in-progress changes' : 'Save as in progress'">

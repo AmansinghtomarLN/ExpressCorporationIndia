@@ -38,7 +38,8 @@ public class ManifestDao {
         Manifest m = new Manifest();
         m.setId(rs.getLong("id"));
         m.setManifestNumber(rs.getString("manifest_number"));
-        m.setPartyId(rs.getLong("party_id"));
+        long partyId = rs.getLong("party_id");
+        m.setPartyId(rs.wasNull() ? null : partyId);
         Date date = rs.getDate("manifest_date");
         if (date != null) {
             m.setManifestDate(date.toLocalDate());

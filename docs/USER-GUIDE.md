@@ -199,8 +199,8 @@ flowchart TD
     G --> H["New manifest for the destination branch"]
     H --> I{"Is this C.No mapped to a party?"}
     I -->|Yes| J["Line is accepted. Party is taken from the mapping"]
-    I -->|No, and the shipment has a sender name| K["Confirm. Bill will be in the sender's name"]
-    I -->|No shipment at all| L["Stop. Book it first, or assign the number"]
+    I -->|No, sender name is on the row| K["Confirm. Shipment is created and billed in the sender's name"]
+    I -->|No sender name| L["Enter the sender name, or assign the number"]
     J --> M["Save. Manifest stays In progress"]
     K --> M
     M --> N["Add more lines, or Submit the manifest"]
@@ -250,9 +250,9 @@ Destination city is a search box. When the search matches exactly one city, that
 
 **C.No not assigned to a party**
 
-On save, the page asks you to confirm. The message names the sender. Choosing **Yes** keeps the line and, when you submit the manifest, bills it under that sender name. Choosing **Cancel** leaves the manifest unsaved.
+Type the sender name, and the contact number if you have it, on that manifest row. Receiver, destination, weight, and boxes are already on the row. On save, the page asks you to confirm. Choosing **Yes** creates the shipment with that consignment number and bills it under the sender name when you submit the manifest. Choosing **Cancel** leaves the manifest unsaved.
 
-If that number was never booked, there is no sender name to bill. Book the shipment first, or assign the number on C.No mapping, then add it.
+If the sender name is still blank, fill it on the row, or assign the number on C.No mapping, then save again.
 
 ### 4.3 Submit the manifest
 

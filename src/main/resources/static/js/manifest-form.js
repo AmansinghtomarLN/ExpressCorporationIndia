@@ -250,6 +250,9 @@ document.addEventListener("DOMContentLoaded", function () {
             '<td><input type="number" min="1" class="boxes-input nav-field" name="items[' + index + '].numberOfBoxes" placeholder="3"></td>' +
             '<td><input type="number" min="0.01" step="0.01" class="weight-input nav-field" name="items[' + index + '].weightKg" placeholder="40"></td>' +
             '<td class="cell-stack">' +
+            '<input type="text" class="sender-name nav-field" name="items[' + index + '].senderName" placeholder="Sender name">' +
+            '<input type="text" class="sender-phone nav-field" name="items[' + index + '].senderPhone" placeholder="Contact (optional)"></td>' +
+            '<td class="cell-stack">' +
             '<input type="text" class="recv-name nav-field" name="items[' + index + '].receiverName" placeholder="Receiver name">' +
             '<input type="text" class="recv-phone nav-field" name="items[' + index + '].receiverPhone" placeholder="Phone (optional)"></td>' +
             '<td><button type="button" class="btn btn-sm btn-dark btn-remove-row">Remove</button></td>';
@@ -309,6 +312,10 @@ document.addEventListener("DOMContentLoaded", function () {
         if (boxes) boxes.value = shipment.numberOfBoxes != null ? shipment.numberOfBoxes : "";
         var weight = tr.querySelector(".weight-input");
         if (weight) weight.value = shipment.weightKg != null ? shipment.weightKg : "";
+        var sender = tr.querySelector(".sender-name");
+        if (sender) sender.value = shipment.senderName || "";
+        var senderPhone = tr.querySelector(".sender-phone");
+        if (senderPhone) senderPhone.value = shipment.senderPhone && shipment.senderPhone !== "-" ? shipment.senderPhone : "";
         var recv = tr.querySelector(".recv-name");
         if (recv) recv.value = shipment.receiverName || "";
         var phone = tr.querySelector(".recv-phone");
@@ -329,7 +336,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         var combo = tr.querySelector(".city-combo");
         if (combo) selectBranch(combo, "", "", false);
-        ["boxes-input", "weight-input", "recv-name", "recv-phone"].forEach(function (cls) {
+        ["boxes-input", "weight-input", "sender-name", "sender-phone", "recv-name", "recv-phone"].forEach(function (cls) {
             var el = tr.querySelector("." + cls);
             if (el) el.value = "";
         });
@@ -495,6 +502,22 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
+    function senderOnRow(cno) {
+        var wanted = String(cno || "").trim();
+        var found = "";
+        tbody.querySelectorAll("tr").forEach(function (tr) {
+            var input = tr.querySelector(".cno-input");
+            var value = input ? String(input.value || "").trim() : "";
+            if (!value) return;
+            var same = value === wanted || (isFinite(Number(value)) && isFinite(Number(wanted)) && Number(value) === Number(wanted));
+            if (!same) return;
+            var name = tr.querySelector(".sender-name");
+            var typed = name ? String(name.value || "").trim() : "";
+            if (typed) found = typed;
+        });
+        return found;
+    }
+
     form.addEventListener("input", updateTotals);
     form.addEventListener("submit", function (ev) {
         tbody.querySelectorAll(".shipment-id").forEach(function (input) {
@@ -522,11 +545,20 @@ document.addEventListener("DOMContentLoaded", function () {
             })
             .then(function (rows) {
                 rows = rows || [];
-                var missing = rows.filter(function (row) { return !String(row.senderName || "").trim(); });
+                var missing = [];
+                rows.forEach(function (row) {
+                    if (String(row.senderName || "").trim()) return;
+                    var typed = senderOnRow(row.cno);
+                    if (typed) {
+                        row.senderName = typed;
+                        return;
+                    }
+                    missing.push(row);
+                });
                 if (missing.length) {
                     alert(missing.map(function (row) {
-                        return "C.No " + row.cno + " is not assigned to a party and has no sender name. "
-                            + "Book the shipment first, or assign it on C.No mapping.";
+                        return "C.No " + row.cno + " is not assigned to a party. "
+                            + "Enter the sender name on this row, or assign it on C.No mapping.";
                     }).join("\n"));
                     return;
                 }
@@ -537,7 +569,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
                 var message = rows.map(function (row) {
                     return "C.No " + row.cno + " is not assigned to a party. Assign it on C.No mapping, then add it to the manifest.\n"
-                        + "Continue and bill this consignment under the sender name " + row.senderName + "?";
+                        + "Continue and create the shipment under the sender name " + row.senderName + "?";
                 }).join("\n\n");
                 if (!window.confirm(message)) {
                     return;

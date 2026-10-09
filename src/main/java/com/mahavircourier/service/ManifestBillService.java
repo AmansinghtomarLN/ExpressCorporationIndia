@@ -427,10 +427,14 @@ public class ManifestBillService {
         if (item.getShipmentId() != null) {
             Optional<Shipment> shipment = shipmentDao.findById(item.getShipmentId());
             if (shipment.isPresent()) {
-                return shipment.get().getPartyId();
+                return positiveId(shipment.get().getPartyId());
             }
         }
-        return manifest.getPartyId();
+        return positiveId(manifest.getPartyId());
+    }
+
+    private static Long positiveId(Long id) {
+        return id != null && id > 0 ? id : null;
     }
 
     private Map<String, List<ManifestItem>> groupUnmappedBySender(Manifest manifest, List<ManifestItem> items) {

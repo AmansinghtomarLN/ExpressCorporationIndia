@@ -26,6 +26,13 @@ public class BranchService {
         return branchDao.findAll();
     }
 
+    public Optional<Branch> findByCity(String city) {
+        if (city == null || city.isBlank()) {
+            return Optional.empty();
+        }
+        return branchDao.findByCityIgnoreCase(city.trim());
+    }
+
     public Optional<Branch> findById(Long id) {
         return branchDao.findById(id);
     }

@@ -18,7 +18,7 @@
         </p>
         <span class="eyebrow">Admin Console</span>
         <h1>Book shipment</h1>
-        <p>Book one consignment to a destination branch. It stays open until you add it to a manifest.</p>
+        <p>Book one consignment to a destination city. Search the city and pick it. A single match is selected for you. The shipment stays open until you add it to a manifest.</p>
 
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
 
@@ -105,17 +105,16 @@
                         <div class="error-text" th:if="${#fields.hasErrors('originCity')}" th:errors="*{originCity}"></div>
                     </div>
                     <div class="form-group">
-                        <label for="destinationBranchId">Destination branch *</label>
-                        <input type="hidden" th:if="${lockDestination}" th:field="*{destinationBranchId}">
-                        <select id="destinationBranchId" th:unless="${lockDestination}"
-                                th:field="*{destinationBranchId}" required>
-                            <option value="">— Select branch —</option>
-                            <option th:each="b : ${branches}"
-                                    th:value="${b.id}"
-                                    th:text="${b.city + ' — ' + b.branchName}">Branch</option>
-                        </select>
-                        <p class="muted" th:if="${lockDestination}">Locked to this manifest’s destination branch.</p>
-                        <div class="error-text" th:if="${#fields.hasErrors('destinationBranchId')}" th:errors="*{destinationBranchId}"></div>
+                        <label for="destination-city-search">Destination city *</label>
+                        <div class="combo city-combo" id="destination-city-combo">
+                            <input type="hidden" id="destinationCity" class="combo-value dest-city" th:field="*{destinationCity}">
+                            <input type="search" id="destination-city-search" class="combo-search"
+                                   placeholder="Search city…" autocomplete="off"
+                                   th:readonly="${lockDestination}">
+                            <ul class="combo-list" hidden></ul>
+                        </div>
+                        <p class="muted" th:if="${lockDestination}">Locked to this manifest’s destination city.</p>
+                        <div class="error-text" th:if="${#fields.hasErrors('destinationCity')}" th:errors="*{destinationCity}"></div>
                     </div>
                 </div>
                 <div class="form-row">
@@ -128,45 +127,6 @@
                         <input type="number" step="0.1" min="0.1" id="weightKg" th:field="*{weightKg}" required>
                         <div class="error-text" th:if="${#fields.hasErrors('weightKg')}" th:errors="*{weightKg}"></div>
                     </div>
-                    <div class="form-group">
-                        <label for="serviceType">Service Type</label>
-                        <select id="serviceType" th:field="*{serviceType}" required>
-                            <option value="DOMESTIC_STANDARD">Domestic Standard (3-5 days)</option>
-                            <option value="DOMESTIC_EXPRESS">Domestic Express (1-2 days)</option>
-                            <option value="INTERNATIONAL">International (5-7 days)</option>
-                        </select>
-                        <div class="error-text" th:if="${#fields.hasErrors('serviceType')}" th:errors="*{serviceType}"></div>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="codAmount">COD Amount (Rs.)</label>
-                        <input type="number" step="0.01" min="0" id="codAmount" th:field="*{codAmount}">
-                        <div class="error-text" th:if="${#fields.hasErrors('codAmount')}" th:errors="*{codAmount}"></div>
-                    </div>
-                    <div class="form-group">
-                        <label for="expectedDelivery">Expected Delivery</label>
-                        <input type="date" id="expectedDelivery" th:field="*{expectedDelivery}">
-                        <div class="error-text" th:if="${#fields.hasErrors('expectedDelivery')}" th:errors="*{expectedDelivery}"></div>
-                    </div>
-                </div>
-
-                <h4 style="margin-top:20px;">Assignment (optional)</h4>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="assignedHub">Hub</label>
-                        <input type="text" id="assignedHub" th:field="*{assignedHub}" placeholder="e.g. Ahmedabad Hub">
-                    </div>
-                    <div class="form-group">
-                        <label for="courierName">Courier Name</label>
-                        <input type="text" id="courierName" th:field="*{courierName}">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="courierPhone">Courier Phone</label>
-                        <input type="text" id="courierPhone" th:field="*{courierPhone}">
-                    </div>
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-block">Book shipment</button>
@@ -176,6 +136,8 @@
 </section>
 
 <div th:replace="~{fragments/footer :: footer}"></div>
+<script type="application/json" id="city-options" th:utext="${cityOptionsJson}">[]</script>
+<script type="application/json" id="local-city" th:utext="${localCityJson}">""</script>
 <script>
 (function () {
     var partyRadio = document.getElementById("booking-party");
@@ -250,6 +212,125 @@
     });
     syncMode();
     if (partySelect.value) loadPartyHint();
+
+    var combo = document.getElementById("destination-city-combo");
+    var cities = [];
+    try {
+        cities = JSON.parse(document.getElementById("city-options").textContent);
+    } catch (e) {
+        cities = [];
+    }
+    if (!combo) return;
+    var hidden = combo.querySelector(".combo-value");
+    var search = combo.querySelector(".combo-search");
+    var list = combo.querySelector(".combo-list");
+
+    function escapeHtml(text) {
+        return String(text == null ? "" : text)
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function cityLabel(name) {
+        if (!name) return "";
+        var token = String(name).toLowerCase();
+        for (var i = 0; i < cities.length; i++) {
+            if (String(cities[i].city).toLowerCase() === token) return cities[i].label || cities[i].city;
+        }
+        return name;
+    }
+
+    function cityListHtml() {
+        var order = ["LOCAL", "MP", "CG", "NEARBY", "REST"];
+        var groups = {};
+        order.forEach(function (g) { groups[g] = []; });
+        cities.forEach(function (c) {
+            var cat = c.category || "REST";
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push(c);
+        });
+        var html = '<li data-value="" data-label="">— Select city —</li>';
+        order.forEach(function (g) {
+            var items = groups[g] || [];
+            if (!items.length) return;
+            html += '<li class="combo-group" data-group="1">' + escapeHtml(items[0].group || g) + "</li>";
+            items.forEach(function (c) {
+                var value = c.city || "";
+                var label = c.label || value;
+                html += '<li data-value="' + escapeHtml(value) + '" data-label="' + escapeHtml(label) + '">' +
+                    escapeHtml(label) + "</li>";
+            });
+        });
+        return html;
+    }
+
+    function visibleChoices() {
+        var items = [];
+        list.querySelectorAll("li").forEach(function (li) {
+            if (li.getAttribute("data-group") || li.hidden || !li.getAttribute("data-value")) return;
+            items.push(li);
+        });
+        return items;
+    }
+
+    function filterList(query) {
+        var q = (query || "").toLowerCase().trim();
+        list.querySelectorAll("li").forEach(function (li) {
+            if (li.getAttribute("data-group")) return;
+            var label = (li.getAttribute("data-label") || li.textContent || "").toLowerCase();
+            var empty = !li.getAttribute("data-value");
+            li.hidden = !!(!empty && q && label.indexOf(q) === -1);
+        });
+        var group = null;
+        var any = false;
+        list.querySelectorAll("li").forEach(function (li) {
+            if (li.getAttribute("data-group")) {
+                if (group) group.hidden = !any;
+                group = li;
+                any = false;
+                return;
+            }
+            if (!li.hidden && li.getAttribute("data-value")) any = true;
+        });
+        if (group) group.hidden = !any;
+    }
+
+    function choose(value, label) {
+        hidden.value = value || "";
+        search.value = label || "";
+        list.hidden = true;
+    }
+
+    list.innerHTML = cityListHtml();
+    if (hidden.value) search.value = cityLabel(hidden.value);
+    if (search.readOnly) return;
+
+    search.addEventListener("focus", function () {
+        filterList(search.value);
+        list.hidden = false;
+    });
+    search.addEventListener("input", function () {
+        list.hidden = false;
+        filterList(search.value);
+        if (!search.value.trim()) {
+            hidden.value = "";
+            return;
+        }
+        var matches = visibleChoices();
+        if (matches.length === 1) {
+            hidden.value = matches[0].getAttribute("data-value") || "";
+        } else {
+            hidden.value = "";
+        }
+    });
+    search.addEventListener("blur", function () {
+        if (hidden.value) search.value = cityLabel(hidden.value);
+    });
+    list.addEventListener("mousedown", function (ev) {
+        var li = ev.target.closest("li");
+        if (!li || li.getAttribute("data-group")) return;
+        ev.preventDefault();
+        choose(li.getAttribute("data-value"), li.getAttribute("data-label"));
+    });
 })();
 </script>
 </body>

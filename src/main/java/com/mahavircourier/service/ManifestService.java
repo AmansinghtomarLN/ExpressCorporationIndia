@@ -226,7 +226,9 @@ public class ManifestService {
                             item.getWeightKg(),
                             item.getNumberOfBoxes(),
                             existing.getServiceType(),
-                            existing.getBillingLane());
+                            existing.getBillingLane(),
+                            line.getSenderName(),
+                            line.getSenderPhone());
                 }
             } else {
                 addOrAttachLine(existing, party, line, serial++, null, form.isBillUnmappedBySender());
@@ -364,18 +366,79 @@ public class ManifestService {
                     return;
                 }
                 if (billUnmappedBySender) {
-                    throw new IllegalArgumentException(
-                            "C.No " + cno + " is not booked. Book the shipment so the sender name is known, "
-                                    + "or assign it on C.No mapping.");
+                    createSenderShipment(manifest, line, serial, bookedByUserId);
+                    return;
                 }
             }
         }
         addDraftLine(manifest, party, line, serial, bookedByUserId);
     }
 
+    /**
+     * An unmapped C.No confirmed on the manifest becomes a shipment billed under the sender typed on the row.
+     * Receiver, destination, weight, and boxes come from that same row.
+     */
+    private void createSenderShipment(Manifest manifest, ManifestItemForm line, int serial, Long bookedByUserId) {
+        String cno = normalizeConsignment(line.getConsignmentNo());
+        if (!StringUtils.hasText(line.getSenderName())) {
+            throw new IllegalArgumentException(
+                    "C.No " + cno + " is not assigned to a party and has no sender name. "
+                            + "Enter the sender name on this row, or assign it on C.No mapping.");
+        }
+        if (manifestItemDao.existsByConsignmentNo(cno) || shipmentDao.existsByTrackingId(cno)) {
+            throw new IllegalArgumentException("C.No " + cno + " is already used");
+        }
+        line.setPartyId(null);
+        line.setConsignmentNo(cno);
+        ManifestItem item = toItem(line, manifest.getId(), serial, manifest);
+        Long itemId = manifestItemDao.save(item);
+        item.setId(itemId);
+
+        String origin = originOf(manifest, null);
+        Shipment shipment = new Shipment();
+        shipment.setTrackingId(cno);
+        shipment.setSenderName(line.getSenderName().trim());
+        shipment.setSenderPhone(phoneOrDash(line.getSenderPhone()));
+        shipment.setSenderAddress(origin);
+        shipment.setReceiverName(item.getReceiverName());
+        shipment.setReceiverPhone(phoneOrDash(item.getReceiverPhone()));
+        shipment.setReceiverAddress(item.getDestinationCity());
+        shipment.setOriginCity(origin);
+        shipment.setDestinationCity(item.getDestinationCity());
+        shipment.setWeightKg(item.getWeightKg());
+        shipment.setNumberOfBoxes(item.getNumberOfBoxes());
+        shipment.setServiceType(manifest.getServiceType());
+        shipment.setBookedByUserId(bookedByUserId);
+        shipment.setCourierName(manifest.getThroughName());
+        shipment.setPartyId(null);
+        shipment.setManifestId(manifest.getId());
+        shipment.setCodAmount(BigDecimal.ZERO);
+        var quote = rateCardService.quote(
+                item.getDestinationCity(), manifest.getBillingLane(),
+                item.getWeightKg(), item.getNumberOfBoxes());
+        shipment.setBillingLane(quote.getLane());
+        shipment.setAssignedBranchId(quote.getBranchId());
+        shipment.setFreightCharge(quote.getAmount());
+
+        if (Manifest.STATUS_CREATED.equals(manifest.getStatus())) {
+            shipment.setStatus("DISPATCHED");
+            shipment = shipmentService.createFromManifest(
+                    shipment, origin, "Dispatched on manifest " + manifest.getManifestNumber());
+        } else {
+            shipment.setStatus("BOOKED");
+            shipment = shipmentService.persistNewShipment(
+                    shipment, origin, "Booked on in-progress manifest " + manifest.getManifestNumber());
+        }
+        manifestItemDao.updateShipmentId(itemId, shipment.getId());
+    }
+
     private void attachOpenShipment(Manifest manifest, ManifestItemForm line, int serial, boolean billUnmappedBySender) {
         Shipment shipment = shipmentDao.findById(line.getShipmentId())
                 .orElseThrow(() -> new IllegalArgumentException("Open shipment not found"));
+        if (!StringUtils.hasText(shipment.getSenderName()) && StringUtils.hasText(line.getSenderName())) {
+            shipment.setSenderName(line.getSenderName().trim());
+            shipment.setSenderPhone(phoneOrDash(line.getSenderPhone()));
+        }
         if ("CANCELLED".equalsIgnoreCase(shipment.getStatus())) {
             throw new IllegalArgumentException("C.No " + shipment.getTrackingId() + " is cancelled");
         }
@@ -482,11 +545,23 @@ public class ManifestService {
     }
 
     private Party resolvePartyForEdit(ManifestForm form, Manifest existing) {
-        Long partyId = form.getPartyId() != null ? form.getPartyId() : existing.getPartyId();
-        if (partyId == null) {
+        if (existing.getPartyId() != null && existing.getPartyId() <= 0) {
+            existing.setPartyId(null);
+        }
+        Long partyId = form.getPartyId() != null && form.getPartyId() > 0
+                ? form.getPartyId()
+                : existing.getPartyId();
+        if (partyId == null || partyId <= 0) {
             return null;
         }
-        Party party = requireEnabledParty(partyId);
+        Party party = partyDao.findById(partyId).orElse(null);
+        if (party == null) {
+            existing.setPartyId(null);
+            return null;
+        }
+        if (!party.isEnabled()) {
+            throw new IllegalArgumentException("Party " + party.getPartyName() + " is disabled");
+        }
         if (existing.getPartyId() != null && !party.getId().equals(existing.getPartyId())) {
             throw new IllegalArgumentException("Cannot change the sending party after a manifest is saved");
         }
@@ -714,5 +789,9 @@ public class ManifestService {
 
     private String trimToNull(String value) {
         return StringUtils.hasText(value) ? value.trim() : null;
+    }
+
+    private String phoneOrDash(String phone) {
+        return StringUtils.hasText(phone) ? phone.trim() : "-";
     }
 }
