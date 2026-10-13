@@ -15,10 +15,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 
@@ -73,6 +76,94 @@ public class PartyService {
         Long id = partyDao.save(party);
         party.setId(id);
         return party;
+    }
+
+    @Transactional
+    public ImportOutcome importExcel(InputStream input, String filename) throws IOException {
+        byte[] data = input == null ? new byte[0] : input.readAllBytes();
+        if (filename != null && !filename.isBlank()) {
+            String lower = filename.toLowerCase(Locale.ROOT);
+            if (!lower.endsWith(".xls") && !lower.endsWith(".xlsx")) {
+                throw new IllegalArgumentException("Use an Excel file (.xls or .xlsx)");
+            }
+        }
+        List<List<String>> grid = ExcelGridReader.read(data);
+        int header = headerRow(grid);
+        if (header < 0) {
+            throw new IllegalArgumentException("The sheet needs the columns S.No, PARTY NAME, and GST NO.");
+        }
+        List<String> titles = grid.get(header);
+        int nameCol = column(titles, "party");
+        int gstCol = column(titles, "gst");
+        if (nameCol < 0 || gstCol < 0) {
+            throw new IllegalArgumentException("The sheet needs the columns S.No, PARTY NAME, and GST NO.");
+        }
+        int created = 0;
+        int updated = 0;
+        List<String> problems = new ArrayList<>();
+        for (int r = header + 1; r < grid.size(); r++) {
+            List<String> row = grid.get(r);
+            String name = cell(row, nameCol);
+            String gst = cell(row, gstCol);
+            if (name.isBlank() && gst.isBlank()) {
+                continue;
+            }
+            int excelRow = r + 1;
+            if (name.isBlank()) {
+                addProblem(problems, "Row " + excelRow + " has no party name, so it was skipped.");
+                continue;
+            }
+            if (gst.isBlank()) {
+                addProblem(problems, "Row " + excelRow + " has no GST number, so it was skipped.");
+                continue;
+            }
+            String gstin;
+            try {
+                gstin = normalizeGstin(gst);
+            } catch (IllegalArgumentException ex) {
+                addProblem(problems, "Row " + excelRow + ", " + name.trim() + ". " + ex.getMessage() + ".");
+                continue;
+            }
+            if (name.trim().length() < 2) {
+                addProblem(problems, "Row " + excelRow + " party name is too short, so it was skipped.");
+                continue;
+            }
+            Optional<Party> byGst = partyDao.findByGstinIgnoreCase(gstin);
+            Optional<Party> byName = partyDao.findByNameIgnoreCase(name);
+            if (byGst.isPresent()) {
+                Party party = byGst.get();
+                if (byName.isPresent() && !byName.get().getId().equals(party.getId())) {
+                    addProblem(problems, "Row " + excelRow + ": GST " + gstin + " is already used by "
+                            + party.getPartyName() + ", and " + name.trim() + " is a different party.");
+                    continue;
+                }
+                party.setPartyName(name.trim());
+                party.setGstin(gstin);
+                update(party);
+                updated++;
+            } else if (byName.isPresent()) {
+                Party party = byName.get();
+                if (StringUtils.hasText(party.getGstin()) && !party.getGstin().equalsIgnoreCase(gstin)) {
+                    addProblem(problems, "Row " + excelRow + ": " + party.getPartyName()
+                            + " already has GST " + party.getGstin() + ".");
+                    continue;
+                }
+                party.setGstin(gstin);
+                update(party);
+                updated++;
+            } else {
+                Party party = new Party();
+                party.setPartyName(name.trim());
+                party.setGstin(gstin);
+                party.setEnabled(true);
+                create(party);
+                created++;
+            }
+        }
+        if (created == 0 && updated == 0 && problems.isEmpty()) {
+            throw new IllegalArgumentException("The sheet has no party rows under the header.");
+        }
+        return new ImportOutcome(created, updated, problems);
     }
 
     public List<PartyCityRate> findCityRates(Long partyId) {
@@ -506,8 +597,8 @@ public class PartyService {
 
     private void normalize(Party party) {
         party.setPartyName(trimRequired(party.getPartyName(), "Party name"));
-        party.setPhone(trimRequired(party.getPhone(), "Phone"));
-        party.setCity(trimRequired(party.getCity(), "City"));
+        party.setPhone(trimToNull(party.getPhone()));
+        party.setCity(trimToNull(party.getCity()));
         party.setContactPerson(trimToNull(party.getContactPerson()));
         party.setEmail(trimToNull(party.getEmail()));
         party.setGstin(normalizeGstin(party.getGstin()));
@@ -560,7 +651,7 @@ public class PartyService {
         if (!StringUtils.hasText(value)) {
             return null;
         }
-        String gstin = value.trim().toUpperCase();
+        String gstin = value.trim().toUpperCase().replaceAll("\\s+", "");
         if (!gstin.matches("[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][A-Z0-9]Z[A-Z0-9]")) {
             throw new IllegalArgumentException("Enter a valid 15-character GST number");
         }
@@ -576,5 +667,78 @@ public class PartyService {
 
     private String trimToNull(String value) {
         return StringUtils.hasText(value) ? value.trim() : null;
+    }
+
+    private static int headerRow(List<List<String>> grid) {
+        int last = Math.min(grid.size(), 20);
+        for (int i = 0; i < last; i++) {
+            if (column(grid.get(i), "party") >= 0 && column(grid.get(i), "gst") >= 0) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static int column(List<String> titles, String kind) {
+        for (int i = 0; i < titles.size(); i++) {
+            String key = titles.get(i) == null ? "" : titles.get(i).toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", " ").trim();
+            if (key.isEmpty()) {
+                continue;
+            }
+            boolean match = switch (kind) {
+                case "party" -> key.equals("party name") || key.equals("partyname");
+                case "gst" -> key.equals("gst no") || key.equals("gst number") || key.equals("gstin") || key.equals("gstno");
+                default -> false;
+            };
+            if (match) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static String cell(List<String> row, int index) {
+        if (index < 0 || index >= row.size() || row.get(index) == null) {
+            return "";
+        }
+        return row.get(index).trim();
+    }
+
+    private static void addProblem(List<String> problems, String message) {
+        if (problems.size() < 8) {
+            problems.add(message);
+        }
+    }
+
+    public static final class ImportOutcome {
+        private final int created;
+        private final int updated;
+        private final List<String> problems;
+
+        public ImportOutcome(int created, int updated, List<String> problems) {
+            this.created = created;
+            this.updated = updated;
+            this.problems = problems;
+        }
+
+        public String successText() {
+            int total = created + updated;
+            if (total == 0) {
+                return null;
+            }
+            String summary = "Imported " + total + " part" + (total == 1 ? "y" : "ies")
+                    + " from Excel. " + created + " new, " + updated + " updated.";
+            if (problems != null && !problems.isEmpty()) {
+                summary = summary + " " + String.join(" ", problems);
+            }
+            return summary;
+        }
+
+        public String problemText() {
+            if (problems == null || problems.isEmpty()) {
+                return null;
+            }
+            return String.join(" ");
+        }
     }
 }

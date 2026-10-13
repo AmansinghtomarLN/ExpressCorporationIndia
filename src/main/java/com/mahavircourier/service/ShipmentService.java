@@ -106,15 +106,18 @@ public class ShipmentService {
         Shipment shipment = new Shipment();
         shipment.setTrackingId(cno);
         shipment.setSenderName(StringUtils.hasText(form.getSenderName()) ? form.getSenderName().trim() : party.getPartyName());
-        shipment.setSenderPhone(StringUtils.hasText(form.getSenderPhone()) ? form.getSenderPhone().trim() : party.getPhone());
-        shipment.setSenderAddress(StringUtils.hasText(form.getSenderAddress())
-                ? form.getSenderAddress().trim()
-                : (StringUtils.hasText(party.getAddress()) ? party.getAddress() : party.getCity()));
+        String senderPhone = StringUtils.hasText(form.getSenderPhone()) ? form.getSenderPhone().trim() : party.getPhone();
+        shipment.setSenderPhone(StringUtils.hasText(senderPhone) ? senderPhone.trim() : "-");
+        String senderAddress = StringUtils.hasText(form.getSenderAddress()) ? form.getSenderAddress().trim()
+                : (StringUtils.hasText(party.getAddress()) ? party.getAddress() : party.getCity());
+        shipment.setSenderAddress(StringUtils.hasText(senderAddress) ? senderAddress : destinationCity);
         shipment.setReceiverName(form.getReceiverName().trim());
         shipment.setReceiverPhone(form.getReceiverPhone().trim());
         shipment.setReceiverAddress(StringUtils.hasText(form.getReceiverAddress())
                 ? form.getReceiverAddress().trim() : destinationCity);
-        shipment.setOriginCity(StringUtils.hasText(form.getOriginCity()) ? form.getOriginCity().trim() : party.getCity());
+        shipment.setOriginCity(StringUtils.hasText(form.getOriginCity())
+                ? form.getOriginCity().trim()
+                : (StringUtils.hasText(party.getCity()) ? party.getCity() : destinationCity));
         applyDestinationCity(shipment, destinationCity);
         shipment.setWeightKg(form.getWeightKg());
         shipment.setNumberOfBoxes(form.getNumberOfBoxes() != null && form.getNumberOfBoxes() > 0

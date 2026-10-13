@@ -17,7 +17,8 @@
         <div class="admin-toolbar" style="align-items:flex-start;">
             <div>
                 <h1 th:text="${party.partyName}">Party</h1>
-                <p class="muted" th:text="${party.city + (party.state != null ? ', ' + party.state : '')}">City</p>
+                <p class="muted" th:if="${party.city != null or party.state != null}"
+                   th:text="${(party.city != null ? party.city : '') + (party.state != null ? ', ' + party.state : '')}">City</p>
             </div>
             <div class="admin-filter-buttons">
                 <a class="btn btn-dark" th:href="@{/admin/party-rates(partyId=${party.id})}">City rates</a>
@@ -44,8 +45,8 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Phone *</label>
-                        <input type="text" name="phone" required th:value="${party.phone}">
+                        <label>Phone</label>
+                        <input type="text" name="phone" th:value="${party.phone}">
                     </div>
                     <div class="form-group">
                         <label>Email</label>
@@ -54,8 +55,8 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>City *</label>
-                        <input type="text" name="city" required th:value="${party.city}">
+                        <label>City</label>
+                        <input type="text" name="city" th:value="${party.city}">
                     </div>
                     <div class="form-group">
                         <label>State</label>
@@ -155,7 +156,7 @@
                         <td th:text="${r.rangeStart}">0</td>
                         <td th:text="${r.rangeEnd}">0</td>
                         <td th:text="${r.allocatedCount}">0</td>
-                        <td th:text="${r.notes != null ? r.notes : 'â€”'}">Notes</td>
+                        <td th:text="${r.notes != null ? r.notes : ''}">Notes</td>
                         <td>
                             <form th:action="@{/admin/parties/{id}/ranges/{rangeId}/delete(id=${party.id}, rangeId=${r.id})}"
                                   method="post"
@@ -189,7 +190,7 @@
                 <tr th:each="m : ${manifests}">
                     <td th:text="${m.manifestNumber}">11820</td>
                     <td th:text="${#temporals.format(m.manifestDate, 'dd/MM/yy')}">19/08/26</td>
-                    <td th:text="${m.throughName != null ? m.throughName : 'â€”'}">KALU</td>
+                    <td th:text="${m.throughName != null ? m.throughName : ''}">KALU</td>
                     <td th:text="${m.totalBoxes}">55</td>
                     <td th:text="${m.totalWeight}">325</td>
                     <td><a class="btn btn-sm btn-dark" th:href="@{/admin/manifests/{id}(id=${m.id})}">Open</a></td>

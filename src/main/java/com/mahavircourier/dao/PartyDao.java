@@ -164,4 +164,23 @@ public class PartyDao {
     public void deleteById(Long id) {
         jdbcTemplate.update("DELETE FROM parties WHERE id = ?", id);
     }
+
+    public Optional<Party> findByNameIgnoreCase(String partyName) {
+        return findOne("SELECT * FROM parties WHERE LOWER(party_name) = LOWER(?) LIMIT 1", partyName);
+    }
+
+    public Optional<Party> findByGstinIgnoreCase(String gstin) {
+        return findOne("SELECT * FROM parties WHERE gstin IS NOT NULL AND LOWER(gstin) = LOWER(?) LIMIT 1", gstin);
+    }
+
+    private Optional<Party> findOne(String sql, String value) {
+        if (value == null || value.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.ofNullable(jdbcTemplate.queryForObject(sql, ROW_MAPPER, value.trim()));
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
+        }
+    }
 }

@@ -131,11 +131,11 @@ CREATE TABLE IF NOT EXISTS parties (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
     party_name      VARCHAR(150) NOT NULL,
     contact_person  VARCHAR(120),
-    phone           VARCHAR(20)  NOT NULL,
+    phone           VARCHAR(20),
     email           VARCHAR(150),
     gstin           VARCHAR(20),
     address         VARCHAR(255),
-    city            VARCHAR(80)  NOT NULL,
+    city            VARCHAR(80),
     state           VARCHAR(80),
     pincode         VARCHAR(10),
     notes           VARCHAR(500),
@@ -534,6 +534,24 @@ SET @sql := (
     IFNULL((SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS
             WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'branches' AND COLUMN_NAME = 'phone'), 0) < 60,
     'ALTER TABLE branches MODIFY COLUMN phone VARCHAR(60) NULL',
+    'SELECT 1')
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(
+    (SELECT IS_NULLABLE FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'parties' AND COLUMN_NAME = 'phone') = 'NO',
+    'ALTER TABLE parties MODIFY COLUMN phone VARCHAR(20) NULL',
+    'SELECT 1')
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(
+    (SELECT IS_NULLABLE FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'parties' AND COLUMN_NAME = 'city') = 'NO',
+    'ALTER TABLE parties MODIFY COLUMN city VARCHAR(80) NULL',
     'SELECT 1')
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;

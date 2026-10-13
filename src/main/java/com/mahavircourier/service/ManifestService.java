@@ -707,12 +707,13 @@ public class ManifestService {
         String origin = originOf(manifest, party);
         String senderAddress = StringUtils.hasText(party.getAddress()) ? party.getAddress() : origin;
         String receiverPhone = StringUtils.hasText(item.getReceiverPhone())
-                ? item.getReceiverPhone() : party.getPhone();
+                ? item.getReceiverPhone()
+                : (StringUtils.hasText(party.getPhone()) ? party.getPhone() : "-");
 
         Shipment shipment = new Shipment();
         shipment.setTrackingId(item.getConsignmentNo());
         shipment.setSenderName(party.getPartyName());
-        shipment.setSenderPhone(party.getPhone());
+        shipment.setSenderPhone(StringUtils.hasText(party.getPhone()) ? party.getPhone() : "-");
         shipment.setSenderAddress(senderAddress);
         shipment.setReceiverName(item.getReceiverName());
         shipment.setReceiverPhone(receiverPhone);

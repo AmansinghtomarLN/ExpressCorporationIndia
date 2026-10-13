@@ -7,6 +7,7 @@ import com.mahavircourier.service.PartyService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
@@ -48,6 +49,28 @@ public class AdminPartyController {
             redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
             return "redirect:/admin/parties";
         }
+    }
+
+    @PostMapping("/import")
+    public String importExcel(@RequestParam("file") MultipartFile file, RedirectAttributes redirectAttributes) {
+        AdminAuth.requirePrincipal();
+        try {
+            if (file == null || file.isEmpty()) {
+                throw new IllegalArgumentException("Choose an Excel file");
+            }
+            PartyService.ImportOutcome outcome = partyService.importExcel(file.getInputStream(), file.getOriginalFilename());
+            if (outcome.successText() != null) {
+                redirectAttributes.addFlashAttribute("successMessage", outcome.successText());
+            } else if (outcome.problemText() != null) {
+                redirectAttributes.addFlashAttribute("errorMessage", outcome.problemText());
+            }
+        } catch (IllegalArgumentException ex) {
+            redirectAttributes.addFlashAttribute("errorMessage", ex.getMessage());
+        } catch (Exception ex) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Could not read that Excel file. Use the columns S.No, PARTY NAME, and GST NO.");
+        }
+        return "redirect:/admin/parties";
     }
 
     @GetMapping("/{id}")

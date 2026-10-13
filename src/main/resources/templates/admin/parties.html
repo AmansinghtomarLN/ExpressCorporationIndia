@@ -16,7 +16,7 @@
         <div class="admin-toolbar" style="align-items:flex-start;">
             <div>
                 <h1>Sending Parties</h1>
-                <p>Consignors. Assign a C.No range when you have one; booking can also generate a number.</p>
+                <p>Consignors. Party name and GST number are required. Assign a C.No range when you have one; booking can also generate a number.</p>
             </div>
             <a class="btn btn-primary" th:href="@{/admin/manifests/new}">New Manifest</a>
         </div>
@@ -39,6 +39,20 @@
         </form>
 
         <div class="form-card wide" style="margin:24px 0;">
+            <h3>Import parties from Excel</h3>
+            <p class="muted">Columns: S.No, PARTY NAME, GST NO. The GST number must be a valid 15-character GSTIN. A party with the same name or the same GST number is updated. Phone, city, and the other details stay blank until you add them.</p>
+            <form method="post" enctype="multipart/form-data" th:action="@{/admin/parties/import}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="party-file">Excel file (.xls or .xlsx)</label>
+                        <input type="file" id="party-file" name="file" accept=".xls,.xlsx" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Import parties</button>
+            </form>
+        </div>
+
+        <div class="form-card wide" style="margin:24px 0;">
             <h3 th:text="${editParty != null} ? 'Edit Party' : 'Add Party'">Add Party</h3>
             <form method="post"
                   th:action="${editParty != null} ? @{/admin/parties/{id}/edit(id=${editParty.id})} : @{/admin/parties}">
@@ -57,8 +71,8 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="phone">Phone *</label>
-                        <input type="text" id="phone" name="phone" required
+                        <label for="phone">Phone</label>
+                        <input type="text" id="phone" name="phone"
                                th:value="${editParty != null ? editParty.phone : ''}">
                     </div>
                     <div class="form-group">
@@ -69,8 +83,8 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="city">City *</label>
-                        <input type="text" id="city" name="city" required
+                        <label for="city">City</label>
+                        <input type="text" id="city" name="city"
                                th:value="${editParty != null ? editParty.city : ''}">
                     </div>
                     <div class="form-group">
@@ -139,7 +153,7 @@
         <div class="party-card-grid" th:if="${parties != null and !#lists.isEmpty(parties)}">
             <article class="party-card" th:each="p : ${parties}">
                 <h3 th:text="${p.partyName}">GWALIOR</h3>
-                <p class="muted" th:text="${p.city + (p.phone != null ? ' · ' + p.phone : '')}">City</p>
+                <p class="muted" th:text="${(p.city != null ? p.city : '') + (p.phone != null ? ' · ' + p.phone : (p.city != null ? '' : p.gstin))}">City</p>
                 <p style="margin:10px 0;">
                     <span class="meta-chip" th:text="${p.rangeCount} + ' range(s)'">1 range</span>
                     <span class="meta-chip" th:text="${p.manifestCount} + ' manifest(s)'">0 manifests</span>
@@ -175,8 +189,8 @@
                 <tr th:each="p : ${parties}">
                     <td><a th:href="@{/admin/parties/{id}(id=${p.id})}" th:text="${p.partyName}">Party</a></td>
                     <td th:text="${p.contactPerson != null ? p.contactPerson : '—'}">Contact</td>
-                    <td th:text="${p.phone}">Phone</td>
-                    <td th:text="${p.city}">City</td>
+                    <td th:text="${p.phone != null ? p.phone : '—'}">Phone</td>
+                    <td th:text="${p.city != null ? p.city : '—'}">City</td>
                     <td th:text="${p.gstin != null ? p.gstin : '—'}">GSTIN</td>
                     <td>
                         <span th:text="${p.perKgRate != null ? 'Rs. ' + #numbers.formatDecimal(p.perKgRate, 1, 2) : 'Branch'}">Branch</span>
