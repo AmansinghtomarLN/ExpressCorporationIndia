@@ -14,10 +14,24 @@
     <div class="container">
         <span class="eyebrow">Admin Console</span>
         <h1>Branches</h1>
-        <p>Manage the Express Corporation of India branch network.</p>
+        <p>Manage the Express Corporation of India branch network. Only the branch name is required. City, state, pincode, contact, mobile, address, and rate can be left blank.</p>
 
         <div class="alert alert-success" th:if="${successMessage}" th:text="${successMessage}"></div>
         <div class="alert alert-error" th:if="${errorMessage}" th:text="${errorMessage}"></div>
+
+        <div class="form-card wide" style="margin:24px 0;">
+            <h3>Import branches from Excel</h3>
+            <p class="muted">Columns: SR NO., BranchName, CONT. PERSONAL, MOBILE NO. Branch name, city, and address are taken from BranchName. Use three lines in that cell (branch, then city, then address), or <em>Branch, City, Address</em>, or <em>City - address</em> such as <em>INDORE - 12, Palasia Square</em>. A city that is already in the city list also fills the state. CONT. PERSONAL is the contact person. MOBILE NO is the mobile number. A branch with the same name is updated.</p>
+            <form method="post" enctype="multipart/form-data" th:action="@{/admin/branches/import}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="branch-file">Excel file (.xls or .xlsx)</label>
+                        <input type="file" id="branch-file" name="file" accept=".xls,.xlsx" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Import branches</button>
+            </form>
+        </div>
 
         <div class="form-card wide" style="margin:24px 0;">
             <h3 th:text="${editBranch != null} ? 'Edit Branch' : 'Create Branch'">Create Branch</h3>
@@ -25,34 +39,41 @@
                   th:action="${editBranch != null} ? @{/admin/branches/{id}/edit(id=${editBranch.id})} : @{/admin/branches}">
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="branchName">Branch Name</label>
+                        <label for="branchName">Branch Name *</label>
                         <input type="text" id="branchName" name="branchName" required
                                th:value="${editBranch != null ? editBranch.branchName : ''}">
                     </div>
                     <div class="form-group">
-                        <label for="phone">Phone</label>
+                        <label for="contactPerson">Contact person</label>
+                        <input type="text" id="contactPerson" name="contactPerson"
+                               th:value="${editBranch != null ? editBranch.contactPerson : ''}">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="phone">Mobile</label>
                         <input type="text" id="phone" name="phone"
                                th:value="${editBranch != null ? editBranch.phone : ''}">
                     </div>
-                </div>
-                <div class="form-row">
                     <div class="form-group">
                         <label for="city">City</label>
-                        <input type="text" id="city" name="city" required
+                        <input type="text" id="city" name="city"
                                th:value="${editBranch != null ? editBranch.city : ''}">
-                    </div>
-                    <div class="form-group">
-                        <label for="state">State</label>
-                        <input type="text" id="state" name="state" required
-                               th:value="${editBranch != null ? editBranch.state : ''}">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
+                        <label for="state">State</label>
+                        <input type="text" id="state" name="state"
+                               th:value="${editBranch != null ? editBranch.state : ''}">
+                    </div>
+                    <div class="form-group">
                         <label for="pincode">Pincode</label>
-                        <input type="text" id="pincode" name="pincode" required
+                        <input type="text" id="pincode" name="pincode"
                                th:value="${editBranch != null ? editBranch.pincode : ''}">
                     </div>
+                </div>
+                <div class="form-row">
                     <div class="form-group">
                         <label for="address">Address</label>
                         <input type="text" id="address" name="address"
@@ -93,7 +114,8 @@
                     <th>Category</th>
                     <th>Per kg</th>
                     <th>Pincode</th>
-                    <th>Phone</th>
+                    <th>Contact</th>
+                    <th>Mobile</th>
                     <th>Address</th>
                     <th>Actions</th>
                 </tr>
@@ -105,7 +127,8 @@
                     <td th:text="${b.state}">State</td>
                     <td th:text="${b.branchCategory == 'NATIONAL' ? 'National' : 'Domestic'}">Domestic</td>
                     <td th:text="${b.perKgRate != null ? 'Rs. ' + #numbers.formatDecimal(b.perKgRate, 1, 2) : '—'}">Rs. 8.00</td>
-                    <td th:text="${b.pincode}">000000</td>
+                    <td th:text="${b.pincode != null and !#strings.isEmpty(b.pincode) ? b.pincode : '—'}">000000</td>
+                    <td th:text="${b.contactPerson != null ? b.contactPerson : '—'}">Contact</td>
                     <td th:text="${b.phone != null ? b.phone : '—'}">Phone</td>
                     <td th:text="${b.address != null ? b.address : '—'}">Address</td>
                     <td>

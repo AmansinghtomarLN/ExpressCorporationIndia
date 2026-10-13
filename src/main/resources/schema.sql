@@ -21,8 +21,9 @@ CREATE TABLE IF NOT EXISTS branches (
     city            VARCHAR(80)  NOT NULL,
     state           VARCHAR(80)  NOT NULL,
     pincode         VARCHAR(10)  NOT NULL,
-    phone           VARCHAR(20),
+    phone           VARCHAR(60),
     address         VARCHAR(255),
+    contact_person  VARCHAR(120),
     branch_category VARCHAR(20)  NOT NULL DEFAULT 'DOMESTIC'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -516,6 +517,24 @@ SET @sql := (
     'SELECT 1')
   FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'manifest_bills' AND COLUMN_NAME = 'bill_to_name'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(COUNT(*) = 0,
+    'ALTER TABLE branches ADD COLUMN contact_person VARCHAR(120) NULL',
+    'SELECT 1')
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'branches' AND COLUMN_NAME = 'contact_person'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(
+    IFNULL((SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'branches' AND COLUMN_NAME = 'phone'), 0) < 60,
+    'ALTER TABLE branches MODIFY COLUMN phone VARCHAR(60) NULL',
+    'SELECT 1')
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 

@@ -11,6 +11,7 @@ public class Branch {
     private String pincode;
     private String phone;
     private String address;
+    private String contactPerson;
     private String branchCategory = "DOMESTIC";
     private BigDecimal perKgRate = BigDecimal.ZERO;
     private BigDecimal perBoxRate = BigDecimal.ZERO;
@@ -69,6 +70,14 @@ public class Branch {
 
     public void setAddress(String address) {
         this.address = address;
+    }
+
+    public String getContactPerson() {
+        return contactPerson;
+    }
+
+    public void setContactPerson(String contactPerson) {
+        this.contactPerson = contactPerson;
     }
 
     public String getBranchCategory() {

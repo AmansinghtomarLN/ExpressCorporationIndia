@@ -33,6 +33,11 @@ public class BranchDao {
         b.setPhone(rs.getString("phone"));
         b.setAddress(rs.getString("address"));
         try {
+            b.setContactPerson(rs.getString("contact_person"));
+        } catch (Exception ignored) {
+            b.setContactPerson(null);
+        }
+        try {
             b.setBranchCategory(rs.getString("branch_category"));
         } catch (Exception ignored) {
             b.setBranchCategory("DOMESTIC");
@@ -65,8 +70,8 @@ public class BranchDao {
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(
-                    "INSERT INTO branches (branch_name, city, state, pincode, phone, address, branch_category, " +
-                            "per_kg_rate, per_box_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO branches (branch_name, city, state, pincode, phone, address, contact_person, " +
+                            "branch_category, per_kg_rate, per_box_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     Statement.RETURN_GENERATED_KEYS);
             ps.setString(1, branch.getBranchName());
             ps.setString(2, branch.getCity());
@@ -74,9 +79,10 @@ public class BranchDao {
             ps.setString(4, branch.getPincode());
             ps.setString(5, branch.getPhone());
             ps.setString(6, branch.getAddress());
-            ps.setString(7, branch.getBranchCategory() != null ? branch.getBranchCategory() : "DOMESTIC");
-            ps.setBigDecimal(8, branch.getPerKgRate() != null ? branch.getPerKgRate() : BigDecimal.ZERO);
-            ps.setBigDecimal(9, branch.getPerBoxRate() != null ? branch.getPerBoxRate() : BigDecimal.ZERO);
+            ps.setString(7, branch.getContactPerson());
+            ps.setString(8, branch.getBranchCategory() != null ? branch.getBranchCategory() : "DOMESTIC");
+            ps.setBigDecimal(9, branch.getPerKgRate() != null ? branch.getPerKgRate() : BigDecimal.ZERO);
+            ps.setBigDecimal(10, branch.getPerBoxRate() != null ? branch.getPerBoxRate() : BigDecimal.ZERO);
             return ps;
         }, keyHolder);
         Number key = keyHolder.getKey();
@@ -86,13 +92,14 @@ public class BranchDao {
     public void update(Branch branch) {
         jdbcTemplate.update(
                 "UPDATE branches SET branch_name = ?, city = ?, state = ?, pincode = ?, phone = ?, address = ?, " +
-                        "branch_category = ?, per_kg_rate = ?, per_box_rate = ? WHERE id = ?",
+                        "contact_person = ?, branch_category = ?, per_kg_rate = ?, per_box_rate = ? WHERE id = ?",
                 branch.getBranchName(),
                 branch.getCity(),
                 branch.getState(),
                 branch.getPincode(),
                 branch.getPhone(),
                 branch.getAddress(),
+                branch.getContactPerson(),
                 branch.getBranchCategory() != null ? branch.getBranchCategory() : "DOMESTIC",
                 branch.getPerKgRate() != null ? branch.getPerKgRate() : BigDecimal.ZERO,
                 branch.getPerBoxRate() != null ? branch.getPerBoxRate() : BigDecimal.ZERO,
@@ -101,6 +108,19 @@ public class BranchDao {
 
     public void deleteById(Long id) {
         jdbcTemplate.update("DELETE FROM branches WHERE id = ?", id);
+    }
+
+    public Optional<Branch> findByNameIgnoreCase(String branchName) {
+        if (branchName == null || branchName.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.ofNullable(jdbcTemplate.queryForObject(
+                    "SELECT * FROM branches WHERE LOWER(branch_name) = LOWER(?) LIMIT 1",
+                    BRANCH_ROW_MAPPER, branchName.trim()));
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
+        }
     }
 
     public Optional<Branch> findByCityIgnoreCase(String city) {
